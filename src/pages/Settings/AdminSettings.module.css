@@ -1,0 +1,184 @@
+.wrapper {
+  max-width: 700px;
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+.pageDesc {
+  color: var(--gray-500);
+  font-size: 15px;
+  margin-bottom: 32px;
+}
+
+.section {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+
+.toggleItem {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+}
+
+.toggleItemBorder {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.toggleInfo {
+  flex: 1;
+}
+
+.toggleLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.toggleSub {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+
+.switch {
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.switchOn {
+  background: var(--amber);
+}
+
+.switchOff {
+  background: var(--gray-300);
+}
+
+.switchKnob {
+  width: 22px;
+  height: 22px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  transition: left 0.2s;
+  box-shadow: var(--shadow-sm);
+}
+
+.teamSection {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+
+.teamTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+
+.teamItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.teamItemBorder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.teamAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.teamInfo {
+  flex: 1;
+}
+
+.teamName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.teamEmail {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.teamRole {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.inviteBtn {
+  margin-top: 16px;
+  background: none;
+  border: 1px dashed var(--amber);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--amber);
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.saveBtn {
+  background: var(--amber);
+  color: var(--navy);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 14px 40px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-display);
+}

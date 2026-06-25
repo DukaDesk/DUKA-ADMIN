@@ -1,0 +1,1 @@
+import{j as e,a as t}from"./index-DGndzrUR.js";const o="_badge_1it4u_1",r={badge:o};function c({plan:s}){const a=t[s]||t.Starter;return e.jsx("span",{className:r.badge,style:{background:a.bg,color:a.color},children:s})}export{c as P};

@@ -1,0 +1,15 @@
+.row {
+  background: var(--gray-50);
+}
+
+.headerCell {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--gray-200);
+  white-space: nowrap;
+}

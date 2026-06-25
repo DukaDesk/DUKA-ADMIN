@@ -1,0 +1,115 @@
+export const revData = [
+  { m: "Jan", v: 3200000 },
+  { m: "Feb", v: 4100000 },
+  { m: "Mar", v: 5500000 },
+  { m: "Apr", v: 4900000 },
+  { m: "May", v: 7800000 },
+  { m: "Jun", v: 9200000 },
+];
+
+export const userGrowth = [
+  { w: "W1", users: 1200 },
+  { w: "W2", users: 1850 },
+  { w: "W3", users: 2400 },
+  { w: "W4", users: 2847 },
+];
+
+export const appsBycat = [
+  { cat: "Restaurant", count: 420 },
+  { cat: "Ecommerce", count: 380 },
+  { cat: "Grocery", count: 210 },
+  { cat: "Church", count: 180 },
+  { cat: "School", count: 150 },
+  { cat: "Booking", count: 252 },
+];
+
+export const recentMerchants = [
+  { name: "Ada Okafor", biz: "Mama's Kitchen", plan: "Starter", status: "Active", apps: 1, joined: "Jun 22" },
+  { name: "Ibrahim Musa", biz: "IB Fashions", plan: "Growth", status: "Active", apps: 2, joined: "Jun 21" },
+  { name: "Grace Eze", biz: "Grace Salon", plan: "Business", status: "Active", apps: 1, joined: "Jun 20" },
+  { name: "Emeka Obi", biz: "Emeka Groceries", plan: "Starter", status: "Suspended", apps: 1, joined: "Jun 19" },
+  { name: "Fatima Bello", biz: "Fatima's Bakes", plan: "Growth", status: "Active", apps: 3, joined: "Jun 18" },
+];
+
+export const pendingApps = [
+  { merchant: "Ada Okafor", app: "Mama's Kitchen", time: "2 hrs ago" },
+  { merchant: "New Founder", app: "Fresh Mart", time: "4 hrs ago" },
+  { merchant: "David Church", app: "Grace Assembly", time: "5 hrs ago" },
+];
+
+export const usersData = [
+  { id: 1, name: "Ada Okafor", email: "ada@gmail.com", role: "Merchant", status: "Active", plan: "Starter", apps: 1, joined: "Jun 1", lastActive: "Today" },
+  { id: 2, name: "Chika Obi", email: "chika@gmail.com", role: "Consumer", status: "Active", plan: "—", apps: 0, joined: "Jun 3", lastActive: "Yesterday" },
+  { id: 3, name: "Tunde Adeyemi", email: "tunde@gmail.com", role: "Consumer", status: "Active", plan: "—", apps: 0, joined: "Jun 5", lastActive: "2 days ago" },
+  { id: 4, name: "Ibrahim Musa", email: "ibrahim@gmail.com", role: "Merchant", status: "Suspended", plan: "Growth", apps: 2, joined: "May 3", lastActive: "Jun 10" },
+  { id: 5, name: "Grace Eze", email: "grace@gmail.com", role: "Merchant", status: "Active", plan: "Business", apps: 1, joined: "Apr 15", lastActive: "Today" },
+  { id: 6, name: "Fatima Bello", email: "fatima@gmail.com", role: "Consumer", status: "Banned", plan: "—", apps: 0, joined: "May 20", lastActive: "Jun 1" },
+  { id: 7, name: "David Nwachukwu", email: "david@gmail.com", role: "Merchant", status: "Active", plan: "Growth", apps: 3, joined: "Mar 10", lastActive: "Today" },
+  { id: 8, name: "Amaka Johnson", email: "amaka@gmail.com", role: "Consumer", status: "Active", plan: "—", apps: 0, joined: "Jun 15", lastActive: "Today" },
+];
+
+export const merchantsData = [
+  { id: 1, name: "Ada Okafor", biz: "Mama's Kitchen", cat: "Restaurant", plan: "Starter", status: "Active", apps: 1, customers: 1204, revenue: 48200, joined: "Jun 1" },
+  { id: 2, name: "Ibrahim Musa", biz: "IB Fashions", cat: "Ecommerce", plan: "Growth", status: "Active", apps: 2, customers: 892, revenue: 124000, joined: "Apr 5" },
+  { id: 3, name: "Grace Eze", biz: "Grace Salon", cat: "Booking", plan: "Business", status: "Active", apps: 1, customers: 540, revenue: 87000, joined: "Mar 10" },
+  { id: 4, name: "David Nwachukwu", biz: "Grace Assembly", cat: "Church", plan: "Growth", status: "Active", apps: 3, customers: 2100, revenue: 0, joined: "Jan 15" },
+  { id: 5, name: "Emeka Obi", biz: "Emeka Groceries", cat: "Grocery", plan: "Starter", status: "Suspended", apps: 1, customers: 234, revenue: 15000, joined: "May 3" },
+];
+
+export const appsData = [
+  { id: 1, name: "Mama's Kitchen", merchant: "Ada Okafor", cat: "Restaurant", status: "Under Review", submitted: "2 hrs ago", logo: "🍛", checklist: [true, true, true, true, true, false] },
+  { id: 2, name: "Fresh Mart", merchant: "Emeka Obi", cat: "Grocery", status: "Under Review", submitted: "4 hrs ago", logo: "🛒", checklist: [true, true, true, false, false, false] },
+  { id: 3, name: "Grace Assembly", merchant: "David Nwachukwu", cat: "Church", status: "Under Review", submitted: "5 hrs ago", logo: "⛪", checklist: [true, true, true, true, false, true] },
+  { id: 4, name: "IB Fashions", merchant: "Ibrahim Musa", cat: "Ecommerce", status: "Live", submitted: "Jun 10", logo: "👗", checklist: [true, true, true, true, true, true] },
+  { id: 5, name: "Grace Salon", merchant: "Grace Eze", cat: "Booking", status: "Live", submitted: "Jun 5", logo: "💇", checklist: [true, true, true, true, true, true] },
+  { id: 6, name: "Fake Ecommerce", merchant: "Unknown", cat: "Ecommerce", status: "Rejected", submitted: "Jun 8", logo: "❌", checklist: [false, false, true, false, false, false] },
+];
+
+export const checkItems = [
+  "Business name present",
+  "Logo uploaded",
+  "Category correctly selected",
+  "Template applied",
+  "Payment integration connected",
+  "Business hours set",
+];
+
+export const reportsData = [
+  { id: "MOD-041", reporter: "Chika Obi", subject: "Mama's Kitchen", type: "Fraud", priority: "Critical", status: "Under Review", submitted: "2 hrs ago", assigned: "Admin A", desc: "This business took my payment and never delivered the food. I have screenshots of the transaction." },
+  { id: "MOD-040", reporter: "Tunde Adeyemi", subject: "IB Fashions", type: "Harassment", priority: "Critical", status: "Under Review", submitted: "4 hrs ago", assigned: "Unassigned", desc: "The merchant sent me threatening messages when I asked for a refund." },
+  { id: "MOD-039", reporter: "Fatima Bello", subject: "Unknown Store", type: "Spam", priority: "Medium", status: "Under Review", submitted: "1 day ago", assigned: "Admin B", desc: "This merchant is sending unsolicited promotional messages to my number repeatedly." },
+  { id: "MOD-038", reporter: "Ibrahim Musa", subject: "Fresh Mart", type: "Fake Business", priority: "High", status: "Under Review", submitted: "2 days ago", assigned: "Unassigned", desc: "This store claims to be a licensed grocery but I suspect it is not real." },
+  { id: "MOD-037", reporter: "Grace Eze", subject: "Dodgy Shop", type: "Scam", priority: "High", status: "Resolved", submitted: "Jun 18", assigned: "Admin A", desc: "Products listed don't match what was delivered." },
+];
+
+export const revMonths = [
+  { m: "Jan", v: 3.2 },
+  { m: "Feb", v: 4.1 },
+  { m: "Mar", v: 5.5 },
+  { m: "Apr", v: 4.9 },
+  { m: "May", v: 7.8 },
+  { m: "Jun", v: 9.2 },
+];
+
+export const planData = [
+  { name: "Starter (Free)", mrr: 0, merchants: 2092, churn: "8%" },
+  { name: "Growth", mrr: 5198000, merchants: 520, churn: "3%" },
+  { name: "Business", mrr: 4999800, merchants: 200, churn: "2%" },
+  { name: "Enterprise", mrr: 1700000, merchants: 35, churn: "0%" },
+];
+
+export const planPie = [
+  { name: "Growth", value: 56 },
+  { name: "Business", value: 22 },
+  { name: "Enterprise", value: 18 },
+  { name: "Other", value: 4 },
+];
+
+export const waitlistData = [
+  { id: 1, name: "Ngozi Adichie", email: "ngozi@gmail.com", type: "Restaurant", city: "Lagos", signed: "Jun 1", status: "Invited" },
+  { id: 2, name: "Chidi Okeke", email: "chidi@gmail.com", type: "Fashion", city: "Abuja", signed: "Jun 3", status: "Not Invited" },
+  { id: 3, name: "Amara Osei", email: "amara@gmail.com", type: "Salon", city: "PH", signed: "Jun 5", status: "Joined" },
+  { id: 4, name: "Tolu Balogun", email: "tolu@gmail.com", type: "Grocery", city: "Lagos", signed: "Jun 6", status: "Not Invited" },
+  { id: 5, name: "Kemi Adeyemi", email: "kemi@gmail.com", type: "School", city: "Ibadan", signed: "Jun 8", status: "Invited" },
+  { id: 6, name: "Femi Oladele", email: "femi@gmail.com", type: "Church", city: "Lagos", signed: "Jun 10", status: "Joined" },
+];

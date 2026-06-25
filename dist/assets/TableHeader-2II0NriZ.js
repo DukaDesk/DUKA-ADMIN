@@ -1,0 +1,1 @@
+import{j as e}from"./index-DGndzrUR.js";const l="_row_uvvac_1",t="_headerCell_uvvac_5",a={row:l,headerCell:t};function c({cols:s}){return e.jsx("thead",{children:e.jsx("tr",{className:a.row,children:s.map(r=>e.jsx("th",{className:a.headerCell,children:r},r))})})}export{c as T};

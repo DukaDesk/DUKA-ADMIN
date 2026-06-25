@@ -1,0 +1,255 @@
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--navy);
+  margin: 0;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-top: 4px;
+}
+
+.exportBtn {
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--navy);
+}
+
+.bulkBar {
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 10px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.bulkCount {
+  font-size: 14px;
+}
+
+.bulkSuspendBtn {
+  background: var(--orange);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bulkExportBtn {
+  background: none;
+  border: 1px solid var(--gray-500);
+  color: var(--gray-300);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bulkClearBtn {
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  margin-left: auto;
+}
+
+.tableWrapper {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.userAvatar {
+  width: 34px;
+  height: 34px;
+  background: var(--amber);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  flex-shrink: 0;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.userEmail {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.roleBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-lg);
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--amber);
+}
+
+.actionBtn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.actionView {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.actionSuspend {
+  color: var(--orange);
+}
+
+.actionRestore {
+  color: var(--green);
+}
+
+.actionBan {
+  color: var(--red);
+}
+
+.detailAvatar {
+  width: 72px;
+  height: 72px;
+  background: var(--amber);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0 auto 12px;
+}
+
+.detailName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--navy);
+}
+
+.detailEmail {
+  color: var(--gray-500);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.detailBadges {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.detailSection {
+  background: var(--gray-50);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.detailLabel {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.detailValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.detailSectionTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+
+.activityItem {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.activityDot {
+  color: var(--amber);
+}
+
+.noUsers {
+  padding: 40px;
+  text-align: center;
+  color: var(--gray-400);
+}
+
+.footerBtn {
+  flex: 1;
+  border-radius: 20px;
+  height: 44px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.footerResetPw {
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  color: var(--navy);
+}
+
+.footerBan {
+  background: #FEF2F2;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-weight: 600;
+}

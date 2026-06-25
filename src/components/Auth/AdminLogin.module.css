@@ -1,0 +1,313 @@
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.leftPanel {
+  width: 520px;
+  background: var(--navy);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px 48px 40px;
+  flex-shrink: 0;
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.amberBadge {
+  background: var(--amber);
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brandTitle {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.adminTag {
+  background: rgba(244, 160, 38, 0.15);
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-left: 8px;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  margin: 32px 0 12px;
+}
+
+.commandAccent {
+  color: var(--amber);
+}
+
+.description {
+  color: var(--gray-400);
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 40px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.statItem {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statIcon {
+  font-size: 24px;
+}
+
+.statInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.statValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.securityFooter {
+  border-top: 2px solid var(--red);
+  padding-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--gray-400);
+}
+
+.securityIcon {
+  font-size: 18px;
+}
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.loginContainer {
+  width: 420px;
+}
+
+.signInHeading {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0 0 6px;
+}
+
+.signInSub {
+  font-size: 15px;
+  color: var(--gray-500);
+  margin: 0 0 28px;
+}
+
+.passwordWrapper {
+  position: relative;
+}
+
+.showPwBtn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--gray-400);
+  padding: 0;
+}
+
+.forgotLink {
+  text-align: right;
+  margin: -8px 0 24px;
+}
+
+.forgotLink button {
+  background: none;
+  border: none;
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.forgotLink button:hover {
+  text-decoration: underline;
+}
+
+.demoBox {
+  background: #FFFDF5;
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.demoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.demoLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.demoText {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.fillDemoBtn {
+  background: var(--amber);
+  color: var(--navy);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fillDemoBtn:hover {
+  opacity: 0.9;
+}
+
+.authIcon {
+  width: 64px;
+  height: 64px;
+  background: #FFFDF5;
+  border: 2px solid var(--amber);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 20px;
+}
+
+.otpContainer {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.otpInput {
+  width: 52px;
+  height: 60px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  border-radius: var(--radius-md);
+  outline: none;
+  border: 2px solid var(--gray-200);
+  color: var(--navy);
+  transition: border-color 0.2s;
+}
+
+.otpInput:focus {
+  border-color: var(--amber);
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.backBtn:hover {
+  border-color: var(--gray-300);
+}
+
+.verifyActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.resendLink {
+  background: none;
+  border: none;
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.resendLink:hover {
+  text-decoration: underline;
+}
+
+.resendText {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--gray-500);
+}

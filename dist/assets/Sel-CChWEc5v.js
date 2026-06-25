@@ -1,0 +1,1 @@
+import{j as s}from"./index-DGndzrUR.js";const n="_select_abpzo_1",o={select:n};function r({value:t,onChange:c,options:l}){return s.jsx("select",{className:o.select,value:t,onChange:e=>c(e.target.value),children:l.map(e=>s.jsx("option",{children:e},e))})}export{r as S};

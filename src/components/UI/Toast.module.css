@@ -1,0 +1,34 @@
+.wrapper {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  border-radius: var(--radius-xl);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  max-width: 400px;
+  min-width: 280px;
+}
+
+.icon {
+  font-size: 18px;
+}
+
+.text {
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.dismiss {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--gray-400);
+  padding: 0 0 0 4px;
+  line-height: 1;
+}

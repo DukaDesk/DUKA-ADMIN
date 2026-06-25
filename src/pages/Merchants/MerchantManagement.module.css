@@ -1,0 +1,211 @@
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.pageTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--navy);
+  margin: 0;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-top: 4px;
+}
+
+.exportBtn {
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--navy);
+}
+
+.tableWrapper {
+  background: #fff;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.merchantAvatar {
+  width: 34px;
+  height: 34px;
+  background: var(--amber);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  flex-shrink: 0;
+}
+
+.merchantCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.merchantName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.merchantEmail {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.bizCell {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--navy);
+}
+
+.catBadge {
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-lg);
+}
+
+.appsCell {
+  font-size: 13px;
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.customersCell {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.revenueCell {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+}
+
+.joinedCell {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.actionBtn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.actionView {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.actionSuspend {
+  color: var(--orange);
+}
+
+.actionRestore {
+  color: var(--green);
+}
+
+.detailLogo {
+  width: 56px;
+  height: 56px;
+  background: var(--amber);
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.detailBizName {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--navy);
+}
+
+.detailOwner {
+  color: var(--gray-500);
+  font-size: 13px;
+}
+
+.detailBadges {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.metricCard {
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+}
+
+.metricValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--navy);
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 4px;
+}
+
+.footerBtn {
+  flex: 1;
+  border-radius: 20px;
+  height: 44px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.footerSuspend {
+  background: #FFF8ED;
+  border: 1px solid var(--orange);
+  color: #92400E;
+  font-weight: 600;
+}
+
+.footerRestore {
+  background: #F0FDF4;
+  border: 1px solid var(--green);
+  color: #065F46;
+  font-weight: 600;
+}
+
+.footerMsg {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}

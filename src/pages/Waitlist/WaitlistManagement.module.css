@@ -1,0 +1,349 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.headerTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--navy);
+  margin: 0;
+}
+
+.headerSub {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-top: 4px;
+}
+
+.exportBtn {
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--navy);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: #fff;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.statLabel {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 8px;
+}
+
+.statValue {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 7px 20px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--gray-200);
+  background: #fff;
+  color: var(--gray-500);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.tabActive {
+  padding: 7px 20px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--amber);
+  background: var(--gray-50);
+  color: #92400E;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bulkBar {
+  background: var(--amber);
+  color: var(--navy);
+  border-radius: var(--radius-sm);
+  padding: 10px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.bulkCount {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bulkInviteBtn {
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.bulkExportBtn {
+  background: rgba(0,0,0,0.1);
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--navy);
+}
+
+.bulkClearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--navy);
+}
+
+.tableWrap {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableRow {
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.tableRowSelected {
+  border-bottom: 1px solid var(--gray-100);
+  background: var(--gray-50);
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--amber);
+}
+
+.cellNum {
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+}
+
+.cellName {
+  padding: 12px 14px;
+}
+
+.nameWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  background: var(--amber);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  flex-shrink: 0;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--navy);
+}
+
+.cellEmail {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.cellType {
+  padding: 12px 14px;
+}
+
+.typeBadge {
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.cellCity {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.cellSigned {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.cellStatus {
+  padding: 12px 14px;
+}
+
+.statusBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.cellActions {
+  padding: 12px 14px;
+}
+
+.actionsWrap {
+  display: flex;
+  gap: 8px;
+}
+
+.inviteBtn {
+  background: var(--amber);
+  color: var(--navy);
+  border: none;
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.activeLabel {
+  font-size: 12px;
+  color: var(--green);
+  font-weight: 600;
+}
+
+.pendingLabel {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  background: #fff;
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  width: 480px;
+  z-index: 201;
+  box-shadow: var(--shadow-lg);
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--navy);
+  margin: 0 0 16px;
+}
+
+.previewBox {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.previewLine {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+
+.previewSubject {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 12px;
+}
+
+.previewBody {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+}
+
+.sendBtn {
+  flex: 1;
+  background: var(--amber);
+  color: var(--navy);
+  border: none;
+  border-radius: var(--radius-full);
+  height: 48px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  flex: 1;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  height: 48px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--gray-500);
+}

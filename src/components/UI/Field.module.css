@@ -1,0 +1,28 @@
+.wrapper {
+  margin-bottom: 16px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  font-size: 15px;
+  color: var(--navy);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.errorText {
+  color: var(--red);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
