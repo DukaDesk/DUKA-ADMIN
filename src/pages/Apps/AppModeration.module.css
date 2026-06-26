@@ -359,3 +359,45 @@
   cursor: pointer;
   color: var(--gray-500);
 }
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .headerTitle {
+    font-size: 22px;
+  }
+
+  .modal {
+    width: calc(100% - 32px);
+    padding: 24px 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .detailHeader {
+    flex-wrap: wrap;
+  }
+
+  .footerBtnWrap {
+    gap: 6px;
+  }
+}

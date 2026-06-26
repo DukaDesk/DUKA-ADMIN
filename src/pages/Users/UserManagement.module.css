@@ -253,3 +253,39 @@
   color: var(--red);
   font-weight: 600;
 }
+
+@media (max-width: 768px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .pageTitle {
+    font-size: 22px;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+  }
+
+  .tableWrapper table {
+    min-width: 700px;
+  }
+
+  .bulkBar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .detailSection {
+    padding: 12px;
+  }
+
+  .footerBtn {
+    height: 40px;
+    font-size: 12px;
+  }
+}

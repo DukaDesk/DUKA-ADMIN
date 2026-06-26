@@ -52,3 +52,30 @@
   padding: 20px 24px;
   border-top: 1px solid var(--gray-200);
 }
+
+@media (max-width: 640px) {
+  .panel {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .header {
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .body {
+    padding: 16px;
+  }
+
+  .footer {
+    padding: 16px;
+  }
+
+  .footer :global(div) {
+    flex-direction: column;
+  }
+}

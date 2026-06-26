@@ -350,3 +350,33 @@
   color: var(--green);
   font-weight: 600;
 }
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .headerTitle {
+    font-size: 22px;
+  }
+
+  .tableWrap {
+    overflow-x: auto;
+  }
+
+  .tableWrap table {
+    min-width: 750px;
+  }
+
+  .detailInfoGrid {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .footerRow {
+    flex-direction: column;
+  }
+}

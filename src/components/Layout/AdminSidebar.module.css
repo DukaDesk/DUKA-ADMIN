@@ -178,3 +178,37 @@
   color: #E74C3C;
   border-color: #E74C3C;
 }
+
+.closeBtn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: -300px;
+    top: 0;
+    bottom: 0;
+    z-index: 400;
+    transition: left 0.3s ease;
+  }
+
+  .sidebarOpen {
+    left: 0;
+  }
+
+  .closeBtn {
+    display: block;
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 4px;
+    margin-left: auto;
+  }
+
+  .closeBtn:hover {
+    color: #fff;
+  }
+}

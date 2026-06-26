@@ -93,3 +93,20 @@
   font-size: 14px;
   font-weight: 700;
 }
+
+@media (max-width: 640px) {
+  .modal {
+    width: calc(100% - 32px);
+    padding: 24px 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+
+  .btnRow {
+    flex-direction: column;
+  }
+}

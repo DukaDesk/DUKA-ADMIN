@@ -13,7 +13,7 @@ const navItems = [
   { id: "settings", icon: "⚙️", label: "Settings" },
 ];
 
-function AdminSidebar({ page, setPage, admin, showToast }) {
+function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSidebar }) {
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -22,8 +22,13 @@ function AdminSidebar({ page, setPage, admin, showToast }) {
     if (showToast) showToast("Logged out successfully", "info");
   };
 
+  const visible = collapsed ? 68 : 260;
+
   return (
-    <nav className={styles.sidebar} style={{ width: collapsed ? 68 : 260 }}>
+    <nav
+      className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
+      style={{ width: visible }}
+    >
       <div className={styles.logoArea}>
         <div className={styles.appBadge}>D</div>
         {!collapsed && (
@@ -32,6 +37,7 @@ function AdminSidebar({ page, setPage, admin, showToast }) {
             <div className={styles.portalLabel}>ADMIN PORTAL</div>
           </div>
         )}
+        <button className={styles.closeBtn} onClick={closeSidebar}>×</button>
       </div>
 
       <ul className={styles.navList}>

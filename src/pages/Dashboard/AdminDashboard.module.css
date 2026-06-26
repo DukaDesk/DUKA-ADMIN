@@ -247,3 +247,55 @@
   font-weight: 500;
   cursor: pointer;
 }
+
+@media (max-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .chartsRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tablesRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .kpiCard {
+    padding: 14px;
+  }
+
+  .kpiValue {
+    font-size: 20px;
+  }
+
+  .chartsRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .chartCard {
+    padding: 16px;
+  }
+
+  .criticalAlert {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .tableCard {
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .tablesRow {
+    gap: 12px;
+  }
+}

@@ -40,10 +40,15 @@ export default function App() {
     return PAGE_ROUTES.includes(path) ? path : "404";
   });
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const setPage = (name) => {
     setPageState(name);
+    setSidebarOpen(false);
     navigate("/" + name, { replace: true });
   };
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   useEffect(() => {
     const path = location.pathname.replace(/^\//, "") || "dashboard";
@@ -81,9 +86,10 @@ export default function App() {
   return (
     <div className={styles.layout}>
       {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
-      <AdminSidebar page={page} setPage={setPage} admin={admin} showToast={showToast} />
+      {sidebarOpen && <div className={styles.backdrop} onClick={closeSidebar} />}
+      <AdminSidebar page={page} setPage={setPage} admin={admin} showToast={showToast} sidebarOpen={sidebarOpen} closeSidebar={closeSidebar} />
       <div className={styles.mainArea}>
-        <AdminTopbar page={page} showToast={showToast} setPage={setPage} />
+        <AdminTopbar page={page} showToast={showToast} setPage={setPage} onMenuClick={() => setSidebarOpen(true)} />
         <main className={styles.content}>
           <Suspense fallback={<Loading />}>
             {page === "dashboard" && <AdminDashboard setPage={setPage} showToast={showToast} />}

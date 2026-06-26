@@ -184,3 +184,49 @@
   font-size: 16px;
   color: var(--green);
 }
+
+@media (max-width: 1024px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .headerTitle {
+    font-size: 22px;
+  }
+
+  .kpiGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .kpiCard, .kpiCardDanger {
+    padding: 14px;
+  }
+
+  .kpiValue {
+    font-size: 20px;
+  }
+
+  .chartCard {
+    padding: 16px;
+  }
+
+  .tableCard {
+    padding: 16px;
+    overflow-x: auto;
+  }
+}

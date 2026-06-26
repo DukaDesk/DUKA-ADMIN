@@ -182,3 +182,27 @@
   cursor: pointer;
   font-family: var(--font-display);
 }
+
+@media (max-width: 640px) {
+  .pageTitle {
+    font-size: 22px;
+  }
+
+  .section {
+    padding: 16px;
+  }
+
+  .toggleItem, .toggleItemBorder {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .teamSection {
+    padding: 16px;
+  }
+
+  .saveBtn {
+    width: 100%;
+    text-align: center;
+  }
+}

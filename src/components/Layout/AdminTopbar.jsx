@@ -19,12 +19,13 @@ const notifications = [
   { icon: "👥", text: "50 new merchant signups today", time: "3 hrs ago" },
 ];
 
-function AdminTopbar({ page, showToast, setPage }) {
+function AdminTopbar({ page, showToast, setPage, onMenuClick }) {
   const [notifOpen, setNotifOpen] = useState(false);
 
   return (
     <header className={styles.topbar}>
       <div className={styles.leftSection}>
+        <button className={styles.menuBtn} onClick={onMenuClick}>☰</button>
         <h1 className={styles.pageTitle}>{pageLabels[page] || "Dashboard"}</h1>
         <div
           className={styles.alertBanner}
