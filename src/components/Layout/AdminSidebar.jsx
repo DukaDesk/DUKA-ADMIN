@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./AdminSidebar.module.css";
 
 const navItems = [
@@ -12,8 +13,14 @@ const navItems = [
   { id: "settings", icon: "⚙️", label: "Settings" },
 ];
 
-function AdminSidebar({ page, setPage, admin }) {
+function AdminSidebar({ page, setPage, admin, showToast }) {
+  const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    if (showToast) showToast("Logged out successfully", "info");
+  };
 
   return (
     <nav className={styles.sidebar} style={{ width: collapsed ? 68 : 260 }}>
@@ -83,6 +90,11 @@ function AdminSidebar({ page, setPage, admin }) {
         >
           {collapsed ? "▶" : "◀"}
         </button>
+        {!collapsed && (
+          <button className={styles.logoutBtn} onClick={handleLogout}>
+            🚪 Logout
+          </button>
+        )}
       </div>
     </nav>
   );

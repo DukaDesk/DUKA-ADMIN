@@ -159,3 +159,22 @@
 .collapseBtn:hover {
   color: #fff;
 }
+
+.logoutBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--gray-400);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  margin-left: auto;
+  flex-shrink: 0;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.logoutBtn:hover {
+  color: #E74C3C;
+  border-color: #E74C3C;
+}

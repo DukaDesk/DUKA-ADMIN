@@ -81,7 +81,7 @@ export default function App() {
   return (
     <div className={styles.layout}>
       {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
-      <AdminSidebar page={page} setPage={setPage} admin={admin} />
+      <AdminSidebar page={page} setPage={setPage} admin={admin} showToast={showToast} />
       <div className={styles.mainArea}>
         <AdminTopbar page={page} showToast={showToast} setPage={setPage} />
         <main className={styles.content}>
