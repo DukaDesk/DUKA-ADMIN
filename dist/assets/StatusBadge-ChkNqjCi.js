@@ -1,1 +1,0 @@
-import{j as t,s as a}from"./index-DGndzrUR.js";const e="_badge_1it4u_1",r={badge:e};function n({status:s}){const o=a[s]||{bg:"#F3F4F6",color:"#6B7280"};return t.jsx("span",{className:r.badge,style:{background:o.bg,color:o.color},children:s})}export{n as S};
