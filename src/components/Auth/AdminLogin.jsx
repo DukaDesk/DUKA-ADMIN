@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import Field from "../UI/Field";
 import PrimaryBtn from "../UI/PrimaryBtn";
 import ErrBanner from "../UI/ErrBanner";
+import api, { USE_MOCK } from "../../services/api";
 import styles from "./AdminLogin.module.css";
 
 function AdminLogin({ onLogin, showToast }) {
@@ -12,6 +13,7 @@ function AdminLogin({ onLogin, showToast }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authResult, setAuthResult] = useState(null);
 
   const otpRefs = useRef([]);
 
@@ -23,10 +25,23 @@ function AdminLogin({ onLogin, showToast }) {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+    api.post("/auth/login", { email, password })
+      .then(async (result) => {
+        await api.post("/auth/send-otp", { email });
+        setAuthResult(result);
+        setStep("2fa");
+      })
+.catch((requestError) => {
+        const msg = requestError.message || "";
+        if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
+          setError("Cannot reach the server. This is likely a CORS issue — backend must allow this domain.");
+        } else {
+          setError(msg || "Unable to sign in. Please try again.");
+        }
+      })
+      .finally(() => {
       setLoading(false);
-      setStep("2fa");
-    }, 1200);
+      });
   };
 
   const handleOtp = (e) => {
@@ -38,10 +53,17 @@ function AdminLogin({ onLogin, showToast }) {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onLogin({ name: "Super Admin", email, role: "super_admin" });
-    }, 1000);
+    api.post("/auth/verify-otp", { email, otp: code })
+      .then((result) => onLogin(result?.token ? result : authResult || result))
+.catch((requestError) => {
+        const msg = requestError.message || "";
+        if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
+          setError("Cannot reach the server. This is likely a CORS issue — backend must allow this domain.");
+        } else {
+          setError(msg || "Unable to verify the code. Please try again.");
+        }
+      })
+      .finally(() => setLoading(false));
   };
 
   const handleOtpInput = (idx, val) => {
@@ -169,17 +191,19 @@ function AdminLogin({ onLogin, showToast }) {
                 </div>
                 <PrimaryBtn loading={loading}>Continue →</PrimaryBtn>
               </form>
-              <div className={styles.demoBox}>
-                <div className={styles.demoInfo}>
-                  <span className={styles.demoLabel}>Demo Credentials</span>
-                  <span className={styles.demoText}>
-                    Click to auto-fill test admin account
-                  </span>
+              {USE_MOCK && (
+                <div className={styles.demoBox}>
+                  <div className={styles.demoInfo}>
+                    <span className={styles.demoLabel}>Demo Credentials</span>
+                    <span className={styles.demoText}>
+                      Click to auto-fill test admin account
+                    </span>
+                  </div>
+                  <button type="button" className={styles.fillDemoBtn} onClick={fillDemo}>
+                    Auto-fill
+                  </button>
                 </div>
-                <button type="button" className={styles.fillDemoBtn} onClick={fillDemo}>
-                  Auto-fill
-                </button>
-              </div>
+              )}
             </>
           ) : (
             <>
@@ -219,9 +243,11 @@ function AdminLogin({ onLogin, showToast }) {
                 <PrimaryBtn loading={loading}>Verify &amp; Sign In</PrimaryBtn>
               </form>
               <div className={styles.verifyActions}>
-                <button type="button" className={styles.fillDemoBtn} onClick={fillDemoOtp}>
-                  Auto-fill Demo Code
-                </button>
+                {USE_MOCK && (
+                  <button type="button" className={styles.fillDemoBtn} onClick={fillDemoOtp}>
+                    Auto-fill Demo Code
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.backBtn}
@@ -239,7 +265,19 @@ function AdminLogin({ onLogin, showToast }) {
                 <button
                   type="button"
                   className={styles.resendLink}
-                  onClick={() => showToast("Verification code resent", "info")}
+                  onClick={async () => {
+                    try {
+                      await api.post("/auth/send-otp", { email });
+                      showToast("Verification code resent", "info");
+} catch (requestError) {
+                      const msg = requestError.message || "";
+                      if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
+                        setError("Cannot reach the server. This is likely a CORS issue — backend must allow this domain.");
+                      } else {
+                        setError(msg || "Unable to resend the verification code.");
+                      }
+                    }
+                  }}
                 >
                   Resend code
                 </button>

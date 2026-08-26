@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { recordAuditEvent } from "../services/audit";
 
 const AuthContext = createContext(null);
 
@@ -23,12 +24,25 @@ export function AuthProvider({ children }) {
   }, [admin]);
 
   const login = useCallback((data) => {
-    setAdmin(data);
+    const nextAdmin = data.admin || data;
+    if (data.token) localStorage.setItem("admin_token", data.token);
+    setAdmin(nextAdmin);
+    recordAuditEvent({
+      admin: nextAdmin,
+      action: "admin.session.started",
+      target: "admin-portal",
+    });
   }, []);
 
   const logout = useCallback(() => {
+    recordAuditEvent({
+      admin,
+      action: "admin.session.ended",
+      target: "admin-portal",
+    });
+    localStorage.removeItem("admin_token");
     setAdmin(null);
-  }, []);
+  }, [admin]);
 
   return (
     <AuthContext.Provider value={{ admin, login, logout }}>

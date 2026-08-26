@@ -6,19 +6,19 @@ import Toast from "./components/UI/Toast";
 import AdminLogin from "./components/Auth/AdminLogin";
 import AdminSidebar from "./components/Layout/AdminSidebar";
 import AdminTopbar from "./components/Layout/AdminTopbar";
+import { canAccessPage, getDefaultPage } from "./services/permissions";
+import ErrorBoundary from "./components/UI/ErrorBoundary";
 import styles from "./App.module.css";
 
 const AdminDashboard = lazy(() => import("./pages/Dashboard/AdminDashboard"));
-const UserManagement = lazy(() => import("./pages/Users/UserManagement"));
 const MerchantManagement = lazy(() => import("./pages/Merchants/MerchantManagement"));
-const AppModeration = lazy(() => import("./pages/Apps/AppModeration"));
-const ReportsQueue = lazy(() => import("./pages/Reports/ReportsQueue"));
-const RevenueDashboard = lazy(() => import("./pages/Revenue/RevenueDashboard"));
-const WaitlistManagement = lazy(() => import("./pages/Waitlist/WaitlistManagement"));
-const AdminSettings = lazy(() => import("./pages/Settings/AdminSettings"));
+const MarketplaceListings = lazy(() => import("./pages/Marketplace/MarketplaceListings"));
+const AuditLog = lazy(() => import("./pages/Audit/AuditLog"));
+const SubscriptionManagement = lazy(() => import("./pages/Subscriptions/SubscriptionManagement"));
+const Settings = lazy(() => import("./pages/Settings/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
-const PAGE_ROUTES = ["dashboard", "users", "merchants", "apps", "reports", "revenue", "waitlist", "settings"];
+const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings"];
 
 function Loading() {
   return (
@@ -43,6 +43,10 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const setPage = (name) => {
+    if (!canAccessPage(admin, name)) {
+      showToast("You do not have permission to open that section", "error");
+      return;
+    }
     setPageState(name);
     setSidebarOpen(false);
     navigate("/" + name, { replace: true });
@@ -65,7 +69,16 @@ export default function App() {
       return;
     }
 
-    setPageState(PAGE_ROUTES.includes(path) ? path : "404");
+    if (PAGE_ROUTES.includes(path) && canAccessPage(admin, path)) {
+      setPageState(path);
+      return;
+    }
+
+    const fallback = getDefaultPage(admin);
+    if (fallback) {
+      setPageState(fallback);
+      navigate(`/${fallback}`, { replace: true });
+    }
   }, [location.pathname, admin]);
 
   const handleLogin = (data) => {
@@ -83,7 +96,7 @@ export default function App() {
     );
   }
 
-  return (
+return (
     <div className={styles.layout}>
       {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
       {sidebarOpen && <div className={styles.backdrop} onClick={closeSidebar} />}
@@ -91,17 +104,17 @@ export default function App() {
       <div className={styles.mainArea}>
         <AdminTopbar page={page} showToast={showToast} setPage={setPage} onMenuClick={() => setSidebarOpen(true)} />
         <main className={styles.content}>
-          <Suspense fallback={<Loading />}>
-            {page === "dashboard" && <AdminDashboard setPage={setPage} showToast={showToast} />}
-            {page === "users" && <UserManagement showToast={showToast} />}
-            {page === "merchants" && <MerchantManagement showToast={showToast} />}
-            {page === "apps" && <AppModeration showToast={showToast} />}
-            {page === "reports" && <ReportsQueue showToast={showToast} />}
-            {page === "revenue" && <RevenueDashboard showToast={showToast} />}
-            {page === "waitlist" && <WaitlistManagement showToast={showToast} />}
-            {page === "settings" && <AdminSettings showToast={showToast} />}
-            {page === "404" && <NotFound setPage={setPage} />}
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<Loading />}>
+              {page === "dashboard" && <AdminDashboard setPage={setPage} showToast={showToast} />}
+              {page === "merchants" && <MerchantManagement showToast={showToast} />}
+              {page === "marketplace" && <MarketplaceListings />}
+              {page === "audit" && <AuditLog />}
+              {page === "subscriptions" && <SubscriptionManagement />}
+              {page === "settings" && <Settings showToast={showToast} />}
+              {page === "404" && <NotFound setPage={setPage} />}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

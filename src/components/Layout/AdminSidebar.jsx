@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { canAccessPage } from "../../services/permissions";
 import styles from "./AdminSidebar.module.css";
 
 const navItems = [
-  { id: "dashboard", icon: "📊", label: "Overview" },
-  { id: "users", icon: "👥", label: "Users" },
-  { id: "merchants", icon: "🏪", label: "Merchants" },
-  { id: "apps", icon: "📱", label: "Apps", badge: 8 },
-  { id: "reports", icon: "🛡️", label: "Moderation", badge: 23, badgeColor: "#E74C3C" },
-  { id: "revenue", icon: "💰", label: "Revenue" },
-  { id: "waitlist", icon: "📋", label: "Waitlist" },
-  { id: "settings", icon: "⚙️", label: "Settings" },
+  { id: "dashboard", icon: "Overview", label: "Overview" },
+  { id: "merchants", icon: "Stores", label: "Merchants" },
+  { id: "marketplace", icon: "Apps", label: "Marketplace" },
+  { id: "audit", icon: "Audit", label: "Audit Log" },
+  { id: "subscriptions", icon: "Plans", label: "Subscriptions" },
+  { id: "settings", icon: "Config", label: "Settings" },
 ];
 
 function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSidebar }) {
@@ -19,88 +18,27 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
 
   const handleLogout = () => {
     logout();
-    if (showToast) showToast("Logged out successfully", "info");
+    showToast?.("Logged out successfully", "info");
   };
 
-  const visible = collapsed ? 68 : 260;
-
   return (
-    <nav
-      className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
-      style={{ width: visible }}
-    >
+    <nav className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`} style={{ width: collapsed ? 68 : 260 }} aria-label="Admin navigation">
       <div className={styles.logoArea}>
         <div className={styles.appBadge}>D</div>
-        {!collapsed && (
-          <div>
-            <div className={styles.appTitle}>DukaDesk</div>
-            <div className={styles.portalLabel}>ADMIN PORTAL</div>
-          </div>
-        )}
-        <button className={styles.closeBtn} onClick={closeSidebar}>×</button>
+        {!collapsed && <div><div className={styles.appTitle}>DukaDesk</div><div className={styles.portalLabel}>ADMIN PORTAL</div></div>}
+        <button className={styles.closeBtn} onClick={closeSidebar} aria-label="Close navigation">x</button>
       </div>
-
       <ul className={styles.navList}>
-        {navItems.map((item) => {
+        {navItems.filter((item) => canAccessPage(admin, item.id)).map((item) => {
           const active = page === item.id;
-          return (
-            <li key={item.id}>
-              <button
-                className={styles.navItem}
-                style={{
-                  background: active ? "#252547" : "none",
-                  borderLeft: active ? "3px solid var(--amber)" : "3px solid transparent",
-                  paddingLeft: active ? 13 : 16,
-                  color: active ? "#fff" : "var(--gray-400)",
-                }}
-                onClick={() => setPage(item.id)}
-              >
-                <span className={styles.navIcon}>{item.icon}</span>
-                {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
-                {!collapsed && item.badge != null && (
-                  <span
-                    className={styles.badge}
-                    style={{ background: item.badgeColor || "#F4A026" }}
-                  >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            </li>
-          );
+          return <li key={item.id}><button className={styles.navItem} style={{ background: active ? "#252547" : "none", borderLeft: active ? "3px solid var(--amber)" : "3px solid transparent", paddingLeft: active ? 13 : 16, color: active ? "#fff" : "var(--gray-400)" }} onClick={() => setPage(item.id)}><span className={styles.navIcon}>{collapsed ? item.label[0] : item.icon}</span>{!collapsed && <span className={styles.navLabel}>{item.label}</span>}</button></li>;
         })}
       </ul>
-
       <div className={styles.profile}>
-        <div className={styles.profileAvatar}>
-          {admin?.name
-            ? admin.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-            : "SA"}
-        </div>
-        {!collapsed && (
-          <div className={styles.profileInfo}>
-            <span className={styles.profileName}>
-              {admin?.name || "Super Admin"}
-            </span>
-            <span className={styles.profileRole}>
-              {admin?.role || "super_admin"}
-            </span>
-          </div>
-        )}
-        <button
-          className={styles.collapseBtn}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? "▶" : "◀"}
-        </button>
-        {!collapsed && (
-          <button className={styles.logoutBtn} onClick={handleLogout}>
-            🚪 Logout
-          </button>
-        )}
+        <div className={styles.profileAvatar}>{admin?.name ? admin.name.split(" ").map((name) => name[0]).join("") : "SA"}</div>
+        {!collapsed && <div className={styles.profileInfo}><span className={styles.profileName}>{admin?.name || "Administrator"}</span><span className={styles.profileRole}>{admin?.role || "admin"}</span></div>}
+        <button className={styles.collapseBtn} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>{collapsed ? ">" : "<"}</button>
+        {!collapsed && <button className={styles.logoutBtn} onClick={handleLogout}>Log out</button>}
       </div>
     </nav>
   );

@@ -1,57 +1,38 @@
-import mockApi from "./mockApi";
+import { apiClient, setAuthToken, getAuthToken, clearAuthToken, USE_MOCK } from "./apiClient";
 
-const BASE_URL = import.meta.env.VITE_API_URL;
-const USE_MOCK = !BASE_URL;
-
+const BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const API_PREFIX = (import.meta.env.VITE_API_PREFIX || "/api/v1").replace(/\/$/, "");
 const tokenKey = "admin_token";
 
-async function realRequest(endpoint, options = {}) {
+function getVersionedBaseUrl() {
+  if (!BASE_URL) throw new Error("VITE_API_URL is not configured.");
+  if (BASE_URL.endsWith(API_PREFIX)) return BASE_URL;
+  if (BASE_URL.endsWith("/api") && API_PREFIX.startsWith("/api/")) return `${BASE_URL}${API_PREFIX.slice(4)}`;
+  return `${BASE_URL}${API_PREFIX}`;
+}
+
+async function request(method, endpoint, data) {
   const token = localStorage.getItem(tokenKey);
-
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
+  const response = await fetch(`${getVersionedBaseUrl()}${endpoint}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
 
-  if (!res.ok) {
-    const error = new Error("API request failed");
-    error.status = res.status;
+  if (!response.ok) {
+    let message = "API request failed";
+    try { message = (await response.json()).message || message; } catch { /* The response has no JSON error body. */ }
+    const error = new Error(Array.isArray(message) ? message.join(", ") : message);
+    error.status = response.status;
     throw error;
   }
 
-  return res.json();
+  if (response.status === 204) return null;
+  return response.json();
 }
-
-function parseEndpoint(endpoint) {
-  const [path, qs] = endpoint.split("?");
-  const query = {};
-  if (qs) {
-    qs.split("&").forEach((p) => {
-      const [k, v] = p.split("=");
-      if (k) query[decodeURIComponent(k)] = decodeURIComponent(v || "");
-    });
-  }
-  return { path: path.replace(/\/+$/, ""), query };
-}
-
-const request = USE_MOCK
-  ? async (method, endpoint, data) => {
-      const { path, query } = parseEndpoint(endpoint);
-      const url = query && Object.keys(query).length > 0
-        ? `${path}?${new URLSearchParams(query)}`
-        : path;
-      return mockApi(method, url, data);
-    }
-  : async (method, endpoint, data) => {
-      const opts = data ? { method, body: JSON.stringify(data) } : { method };
-      return realRequest(endpoint, opts);
-    };
 
 export const api = {
   get: (endpoint) => request("GET", endpoint),
@@ -60,5 +41,5 @@ export const api = {
   delete: (endpoint) => request("DELETE", endpoint),
 };
 
-export { USE_MOCK };
+export { apiClient, setAuthToken, getAuthToken, clearAuthToken, USE_MOCK };
 export default api;
