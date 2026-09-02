@@ -15,8 +15,12 @@ export const PAGE_PERMISSIONS = {
   settings: "settings:manage",
 };
 
+function normalizeRole(role) {
+  return String(role || "").toLowerCase().trim().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
 export function canPerform(admin, permission) {
-  const permissions = ROLE_PERMISSIONS[admin?.role?.toLowerCase()] || [];
+  const permissions = ROLE_PERMISSIONS[normalizeRole(admin?.role)] || [];
   return permissions.includes("*") || permissions.includes(permission);
 }
 

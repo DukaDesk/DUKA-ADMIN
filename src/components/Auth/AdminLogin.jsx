@@ -3,7 +3,10 @@ import Field from "../UI/Field";
 import PrimaryBtn from "../UI/PrimaryBtn";
 import ErrBanner from "../UI/ErrBanner";
 import api, { USE_MOCK } from "../../services/api";
+import { unwrapAuth } from "../../utils/unwrapAuth";
 import styles from "./AdminLogin.module.css";
+
+export { unwrapAuth };
 
 function AdminLogin({ onLogin, showToast }) {
   const [step, setStep] = useState("credentials");
@@ -17,7 +20,7 @@ function AdminLogin({ onLogin, showToast }) {
 
   const otpRefs = useRef([]);
 
-  const handleCredentials = (e) => {
+const handleCredentials = (e) => {
     e.preventDefault();
     setError("");
     if (!email || !password) {
@@ -28,10 +31,11 @@ function AdminLogin({ onLogin, showToast }) {
     api.post("/auth/login", { email, password })
       .then(async (result) => {
         await api.post("/auth/send-otp", { email });
-        setAuthResult(result);
+        const { token, admin } = unwrapAuth(result);
+        setAuthResult({ token, admin });
         setStep("2fa");
       })
-.catch((requestError) => {
+      .catch((requestError) => {
         const msg = requestError.message || "";
         if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
           setError("Cannot reach the server. This is likely a CORS issue — backend must allow this domain.");
@@ -40,11 +44,11 @@ function AdminLogin({ onLogin, showToast }) {
         }
       })
       .finally(() => {
-      setLoading(false);
+        setLoading(false);
       });
   };
 
-  const handleOtp = (e) => {
+const handleOtp = (e) => {
     e.preventDefault();
     setError("");
     const code = otp.join("");
@@ -53,9 +57,14 @@ function AdminLogin({ onLogin, showToast }) {
       return;
     }
     setLoading(true);
-    api.post("/auth/verify-otp", { email, otp: code })
-      .then((result) => onLogin(result?.token ? result : authResult || result))
-.catch((requestError) => {
+    api.post("/auth/verify-otp", { email, otp: code, code })
+      .then((result) => {
+        const { token, admin } = unwrapAuth(result);
+        const fallback = authResult ? { token: authResult.token, admin: authResult.admin } : null;
+        const payload = token ? { token, admin } : fallback;
+        onLogin(payload);
+      })
+      .catch((requestError) => {
         const msg = requestError.message || "";
         if (msg.includes("Failed to fetch") || msg.includes("CORS") || msg.includes("NetworkError")) {
           setError("Cannot reach the server. This is likely a CORS issue — backend must allow this domain.");

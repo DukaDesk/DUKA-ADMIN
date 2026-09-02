@@ -9,6 +9,7 @@ import AdminTopbar from "./components/Layout/AdminTopbar";
 import { canAccessPage, getDefaultPage } from "./services/permissions";
 import ErrorBoundary from "./components/UI/ErrorBoundary";
 import styles from "./App.module.css";
+import { unwrapAuth } from "./utils/unwrapAuth";
 
 const AdminDashboard = lazy(() => import("./pages/Dashboard/AdminDashboard"));
 const MerchantManagement = lazy(() => import("./pages/Merchants/MerchantManagement"));
@@ -54,40 +55,57 @@ export default function App() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  useEffect(() => {
+useEffect(() => {
     const path = location.pathname.replace(/^\//, "") || "dashboard";
     if (path === page) return;
 
-    if (!admin && path !== "login") {
+    let persisted = null;
+    try {
+      const raw = localStorage.getItem("dukadesk_admin");
+      persisted = raw ? JSON.parse(raw) : null;
+    } catch {
+      persisted = null;
+    }
+    const hasAdmin = admin || persisted;
+
+    if (!hasAdmin && path !== "login") {
       setPageState("login");
       return;
     }
 
-    if (admin && path === "login") {
-      setPageState("dashboard");
-      navigate("/dashboard", { replace: true });
+    if (hasAdmin && path === "login") {
+      const target = getDefaultPage(hasAdmin) || "dashboard";
+      setPageState(target);
+      navigate(`/${target}`, { replace: true });
       return;
     }
 
-    if (PAGE_ROUTES.includes(path) && canAccessPage(admin, path)) {
+    if (PAGE_ROUTES.includes(path) && canAccessPage(hasAdmin, path)) {
       setPageState(path);
       return;
     }
 
-    const fallback = getDefaultPage(admin);
+    const fallback = getDefaultPage(hasAdmin);
     if (fallback) {
       setPageState(fallback);
       navigate(`/${fallback}`, { replace: true });
+    } else if (hasAdmin) {
+      setPageState("dashboard");
+      navigate("/dashboard", { replace: true });
     }
-  }, [location.pathname, admin]);
+  }, [location.pathname, admin, page]);
 
   const handleLogin = (data) => {
-    login(data);
+    const { token, admin } = unwrapAuth(data);
+    const nextAdmin = { ...admin, token };
+    login(nextAdmin);
+    const nextPage = getDefaultPage(nextAdmin) || "dashboard";
+    setPageState(nextPage);
     showToast("Authenticated successfully", "success");
-    navigate("/dashboard", { replace: true });
+    navigate(`/${nextPage}`, { replace: true });
   };
 
-  if (page === "login" || !admin) {
+  if (!admin) {
     return (
       <>
         {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
