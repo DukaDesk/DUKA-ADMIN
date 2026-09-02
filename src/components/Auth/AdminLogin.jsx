@@ -57,7 +57,7 @@ const handleOtp = (e) => {
       return;
     }
     setLoading(true);
-    api.post("/auth/verify-otp", { email, otp: code, code })
+    api.post("/auth/verify-otp", { email, otp: code })
       .then((result) => {
         const { token, admin } = unwrapAuth(result);
         const fallback = authResult ? { token: authResult.token, admin: authResult.admin } : null;

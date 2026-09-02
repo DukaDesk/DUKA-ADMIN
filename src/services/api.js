@@ -24,7 +24,13 @@ async function request(method, endpoint, data) {
 
   if (!response.ok) {
     let message = "API request failed";
-    try { message = (await response.json()).message || message; } catch { /* The response has no JSON error body. */ }
+    try {
+      const body = await response.json();
+      message = body.message || body.errors?.join(", ") || (Array.isArray(body.errors) ? body.errors.join(", ") : null) || message;
+      // backend sometimes returns {success:false, errors:[...]} without message
+      if (Array.isArray(body.errors) && !body.message) message = body.errors.join(", ");
+      if (Array.isArray(body.message)) message = body.message.join(", ");
+    } catch { /* The response has no JSON error body. */ }
     const error = new Error(Array.isArray(message) ? message.join(", ") : message);
     error.status = response.status;
     throw error;

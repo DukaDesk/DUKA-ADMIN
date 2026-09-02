@@ -19,10 +19,23 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (admin) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(admin));
+      if (admin.token) localStorage.setItem("admin_token", admin.token);
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
   }, [admin]);
+
+  useEffect(() => {
+    // heal split-brain: if dukadesk_admin has token but admin_token missing (e.g. after refresh)
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      if (stored?.token && !localStorage.getItem("admin_token")) {
+        localStorage.setItem("admin_token", stored.token);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
 const login = useCallback((data) => {
     const { token, admin } = unwrapAuth(data);

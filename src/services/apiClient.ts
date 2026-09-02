@@ -72,7 +72,9 @@ export async function request<T>(
         let errorData: unknown;
         try {
           errorData = await response.json();
-          message = (errorData as { message?: string }).message || message;
+          const body = errorData as { message?: string | string[]; errors?: string[]; error?: string };
+          message = (Array.isArray(body.message) ? body.message.join(", ") : body.message) || body.errors?.join(", ") || body.error || message;
+          if (Array.isArray(body.errors) && !body.message) message = body.errors.join(", ");
         } catch {
           // No JSON body
         }
