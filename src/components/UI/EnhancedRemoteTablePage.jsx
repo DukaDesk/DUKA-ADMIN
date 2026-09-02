@@ -242,7 +242,7 @@ export default function EnhancedRemoteTablePage({
                             disabled={action.disabled?.(row)}
                             aria-label={action.ariaLabel?.(row) || action.label}
                           >
-                            {action.icon && <span aria-hidden="true">{action.icon}</span>}
+                            {action.icon && <span aria-hidden="true">{typeof action.icon === "string" ? action.icon : (() => { const Ico = action.icon; return <Ico size={14} />; })()}</span>}
                             <span className={styles.actionText}>{action.label}</span>
                           </button>
                         ))}

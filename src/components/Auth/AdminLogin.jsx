@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Users, Store, Smartphone, Banknote, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
 import Field from "../UI/Field";
 import PrimaryBtn from "../UI/PrimaryBtn";
 import ErrBanner from "../UI/ErrBanner";
@@ -126,28 +127,28 @@ const handleOtp = (e) => {
           </p>
           <div className={styles.statsGrid}>
             <div className={styles.statItem}>
-              <span className={styles.statIcon}>👥</span>
+              <span className={styles.statIcon}><Users size={18} /></span>
               <div className={styles.statInfo}>
                 <span className={styles.statLabel}>Active Users</span>
                 <span className={styles.statValue}>14,500+</span>
               </div>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statIcon}>🏪</span>
+              <span className={styles.statIcon}><Store size={18} /></span>
               <div className={styles.statInfo}>
                 <span className={styles.statLabel}>Merchants</span>
                 <span className={styles.statValue}>6,800+</span>
               </div>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statIcon}>📱</span>
+              <span className={styles.statIcon}><Smartphone size={18} /></span>
               <div className={styles.statInfo}>
                 <span className={styles.statLabel}>Apps Listed</span>
                 <span className={styles.statValue}>2,340+</span>
               </div>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statIcon}>💰</span>
+              <span className={styles.statIcon}><Banknote size={18} /></span>
               <div className={styles.statInfo}>
                 <span className={styles.statLabel}>Total Revenue</span>
                 <span className={styles.statValue}>₦8.2B+</span>
@@ -156,7 +157,7 @@ const handleOtp = (e) => {
           </div>
         </div>
         <div className={styles.securityFooter}>
-          <span className={styles.securityIcon}>🔒</span>
+          <span className={styles.securityIcon}><Lock size={14} /></span>
           <span>Protected by AES-256 encryption • SOC 2 compliant</span>
         </div>
       </div>
@@ -191,14 +192,15 @@ const handleOtp = (e) => {
                     className={styles.showPwBtn}
                     onClick={() => setShowPw(!showPw)}
                     tabIndex={-1}
+                    aria-label={showPw ? "Hide password" : "Show password"}
                   >
-                    {showPw ? "👁️" : "👁️‍🗨️"}
+                    {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
                 <div className={styles.forgotLink}>
                   <button type="button">Forgot password?</button>
                 </div>
-                <PrimaryBtn loading={loading}>Continue →</PrimaryBtn>
+                <PrimaryBtn loading={loading}>Continue <ArrowRight size={14} style={{ marginLeft: 6 }} /></PrimaryBtn>
               </form>
               {USE_MOCK && (
                 <div className={styles.demoBox}>
@@ -216,7 +218,7 @@ const handleOtp = (e) => {
             </>
           ) : (
             <>
-              <div className={styles.authIcon}>🔐</div>
+              <div className={styles.authIcon}><ShieldCheck size={28} /></div>
               <h2 className={styles.signInHeading} style={{ textAlign: "center" }}>
                 Two-Factor Authentication
               </h2>
@@ -266,7 +268,7 @@ const handleOtp = (e) => {
                     setOtp(["", "", "", "", "", ""]);
                   }}
                 >
-                  ← Back
+                  <ArrowLeft size={14} style={{ marginRight: 6 }} /> Back
                 </button>
               </div>
               <div className={styles.resendText}>

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Eye, ArrowLeftRight, Pause, X } from "lucide-react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
@@ -116,7 +117,7 @@ export default function SubscriptionManagement({ showToast }) {
     {
       key: "view",
       label: "View",
-      icon: "👁",
+      icon: Eye,
       variant: "Ghost",
       ariaLabel: (row) => `View subscription for ${row.merchantName}`,
       onClick: (row) => {
@@ -126,7 +127,7 @@ export default function SubscriptionManagement({ showToast }) {
     {
       key: "change_plan",
       label: "Change Plan",
-      icon: "⇄",
+      icon: ArrowLeftRight,
       variant: "Secondary",
       disabled: (row) => row.status === "canceled" || !canManage,
       ariaLabel: (row) => `Change plan for ${row.merchantName}`,
@@ -141,7 +142,7 @@ export default function SubscriptionManagement({ showToast }) {
     {
       key: "pause",
       label: "Pause",
-      icon: "⏸",
+      icon: Pause,
       variant: "Secondary",
       disabled: (row) => row.status !== "active" || !canManage,
       ariaLabel: (row) => `Pause subscription for ${row.merchantName}`,
@@ -156,7 +157,7 @@ export default function SubscriptionManagement({ showToast }) {
     {
       key: "cancel",
       label: "Cancel",
-      icon: "✕",
+      icon: X,
       variant: "Danger",
       disabled: (row) => row.status === "canceled" || !canManage,
       ariaLabel: (row) => `Cancel subscription for ${row.merchantName}`,

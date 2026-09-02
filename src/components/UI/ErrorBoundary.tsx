@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from "react";
+import { TriangleAlert } from "lucide-react";
 import styles from "./ErrorBoundary.module.css";
 
 interface Props {
@@ -54,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
       }
       return (
         <div className={styles.container} role="alert">
-          <div className={styles.icon} aria-hidden="true">⚠️</div>
+          <div className={styles.icon} aria-hidden="true"><TriangleAlert size={32} /></div>
           <h2 className={styles.title}>Something went wrong</h2>
           <p className={styles.message}>
             We encountered an unexpected error. Please try refreshing the page.

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, ShoppingBag, Globe, Activity, TrendingDown, Zap, HardDrive } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import styles from "./AdminDashboard.module.css";
 
@@ -16,14 +17,14 @@ function formatCurrency(value, currency = "NGN") {
 }
 
 const METRIC_CARDS = [
-  { key: "totalMerchants", label: "Total Merchants", icon: "🏪", color: "var(--blue)", trend: "+12%", trendLabel: "vs last month" },
-  { key: "activeMerchants", label: "Active Merchants", icon: "✅", color: "var(--green)", trend: "+8%", trendLabel: "vs last month" },
-  { key: "pendingMerchants", label: "Pending Review", icon: "⏳", color: "var(--amber)", trend: "-3%", trendLabel: "vs last month" },
-  { key: "monthlyRevenue", label: "Monthly Revenue", icon: "💰", color: "var(--purple)", trend: "+23%", trendLabel: "vs last month", formatter: formatCurrency },
-  { key: "totalSubscriptions", label: "Total Subscriptions", icon: "📋", color: "var(--indigo)", trend: "+15%", trendLabel: "vs last month" },
-  { key: "activeSubscriptions", label: "Active Subscriptions", icon: "🟢", color: "var(--teal)", trend: "+10%", trendLabel: "vs last month" },
-  { key: "totalMarketplaceListings", label: "Marketplace Listings", icon: "📱", color: "var(--orange)", trend: "+5%", trendLabel: "vs last month" },
-  { key: "publishedListings", label: "Published Listings", icon: "🌐", color: "var(--cyan)", trend: "+7%", trendLabel: "vs last month" },
+  { key: "totalMerchants", label: "Total Merchants", icon: Store, color: "var(--blue)", trend: "+12%", trendLabel: "vs last month" },
+  { key: "activeMerchants", label: "Active Merchants", icon: BadgeCheck, color: "var(--green)", trend: "+8%", trendLabel: "vs last month" },
+  { key: "pendingMerchants", label: "Pending Review", icon: Hourglass, color: "var(--amber)", trend: "-3%", trendLabel: "vs last month" },
+  { key: "monthlyRevenue", label: "Monthly Revenue", icon: Wallet, color: "var(--purple)", trend: "+23%", trendLabel: "vs last month", formatter: formatCurrency },
+  { key: "totalSubscriptions", label: "Total Subscriptions", icon: ClipboardList, color: "var(--indigo)", trend: "+15%", trendLabel: "vs last month" },
+  { key: "activeSubscriptions", label: "Active Subscriptions", icon: CircleDot, color: "var(--teal)", trend: "+10%", trendLabel: "vs last month" },
+  { key: "totalMarketplaceListings", label: "Marketplace Listings", icon: ShoppingBag, color: "var(--orange)", trend: "+5%", trendLabel: "vs last month" },
+  { key: "publishedListings", label: "Published Listings", icon: Globe, color: "var(--cyan)", trend: "+7%", trendLabel: "vs last month" },
 ];
 
 function SkeletonCard() {
@@ -44,7 +45,7 @@ function MetricCard({ metric, value, loading }) {
     <article className={styles.metricCard}>
       <div className={styles.metricHeader}>
         <span className={styles.metricIcon} style={{ background: metric.color + "22", color: metric.color }}>
-          {Icon}
+          <Icon size={18} />
         </span>
         {metric.trend && (
           <span className={styles.metricTrend} style={{ color: metric.trend.startsWith("-") ? "var(--red)" : "var(--green)" }}>
@@ -234,25 +235,25 @@ export default function AdminDashboard({ showToast }) {
           <QuickStat
             label="API Uptime"
             value={health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "99.97%"}
-            icon="🟢"
+            icon={Activity}
             color="var(--green)"
           />
           <QuickStat
             label="Error Rate (24h)"
             value={statsData.errorRate ? statsData.errorRate + "%" : "0.12%"}
-            icon="📉"
+            icon={TrendingDown}
             color="var(--red)"
           />
           <QuickStat
             label="Avg Response Time"
             value={statsData.avgResponseTime ? statsData.avgResponseTime + "ms" : "145ms"}
-            icon="⚡"
+            icon={Zap}
             color="var(--amber)"
           />
           <QuickStat
             label="Storage Used"
             value={statsData.storageUsedGB ? statsData.storageUsedGB + " GB" : "245 GB"}
-            icon="💾"
+            icon={HardDrive}
             color="var(--purple)"
           />
         </div>
@@ -261,11 +262,11 @@ export default function AdminDashboard({ showToast }) {
   );
 }
 
-function QuickStat({ label, value, icon, color }) {
+function QuickStat({ label, value, icon: Icon, color }) {
   return (
     <article className={styles.quickStat}>
       <div className={styles.quickStatIcon} style={{ background: color + "22", color }}>
-        {icon}
+        <Icon size={18} />
       </div>
       <div className={styles.quickStatValue}>{value}</div>
       <div className={styles.quickStatLabel}>{label}</div>

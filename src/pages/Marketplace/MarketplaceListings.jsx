@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Check, X, Star, Eye, Trash2 } from "lucide-react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
@@ -89,7 +90,7 @@ export default function MarketplaceListings({ showToast }) {
       render: (value) => typeof value === "number" ? value.toLocaleString() : String(value)
     },
     { key: "rating", label: "Rating", width: 80, sortable: true,
-      render: (value) => value ? `★ ${Number(value).toFixed(1)}` : "—"
+      render: (value) => value ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Star size={12} /> {Number(value).toFixed(1)}</span> : "—"
     },
     { key: "createdAt", label: "Created", width: 160, sortable: true,
       render: (value) => value ? new Date(value).toLocaleDateString() : "—"
@@ -108,7 +109,7 @@ export default function MarketplaceListings({ showToast }) {
     {
       key: "approve",
       label: "Approve",
-      icon: "✓",
+      icon: Check,
       variant: "Primary",
       disabled: (row) => row.status === "published" || !canModerate,
       ariaLabel: (row) => `Approve listing ${row.name}`,
@@ -125,7 +126,7 @@ export default function MarketplaceListings({ showToast }) {
     {
       key: "reject",
       label: "Reject",
-      icon: "✕",
+      icon: X,
       variant: "Danger",
       disabled: (row) => row.status === "rejected" || !canModerate,
       ariaLabel: (row) => `Reject listing ${row.name}`,
@@ -142,7 +143,7 @@ export default function MarketplaceListings({ showToast }) {
     {
       key: "feature",
       label: "Feature",
-      icon: "★",
+      icon: Star,
       variant: "Secondary",
       disabled: (row) => row.featured || !canModerate,
       ariaLabel: (row) => `Feature listing ${row.name}`,
@@ -159,7 +160,7 @@ export default function MarketplaceListings({ showToast }) {
     {
       key: "view",
       label: "View",
-      icon: "👁",
+      icon: Eye,
       variant: "Ghost",
       ariaLabel: (row) => `View listing ${row.name}`,
       onClick: async (row) => {
@@ -175,7 +176,7 @@ export default function MarketplaceListings({ showToast }) {
     {
       key: "delete",
       label: "Delete",
-      icon: "🗑",
+      icon: Trash2,
       variant: "Danger",
       disabled: () => !canModerate,
       ariaLabel: (row) => `Delete listing ${row.name}`,

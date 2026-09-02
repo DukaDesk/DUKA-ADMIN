@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Check, Pause, Eye, Trash2 } from "lucide-react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
 import SlideOver from "../../components/UI/SlideOver";
 import ConfirmModal from "../../components/UI/ConfirmModal";
@@ -82,7 +83,7 @@ export default function MerchantManagement({ showToast }) {
     {
       key: "approve",
       label: "Approve",
-      icon: "✓",
+      icon: Check,
       variant: "Primary",
       disabled: (row) => row.status === "active" || !canApprove,
       ariaLabel: (row) => `Approve merchant ${row.name}`,
@@ -90,6 +91,7 @@ export default function MerchantManagement({ showToast }) {
         try {
           await businessDashboardApi.approveMerchant(row.id);
           showToast?.(`${row.name} approved`, "success");
+          setTableKey((k) => k + 1);
         } catch (err) {
           showToast?.(err.message || "Failed to approve", "error");
         }
@@ -98,7 +100,7 @@ export default function MerchantManagement({ showToast }) {
     {
       key: "suspend",
       label: "Suspend",
-      icon: "⏸",
+      icon: Pause,
       variant: "Danger",
       disabled: (row) => row.status === "suspended" || !canSuspend,
       ariaLabel: (row) => `Suspend merchant ${row.name}`,
@@ -106,6 +108,7 @@ export default function MerchantManagement({ showToast }) {
         try {
           await businessDashboardApi.suspendMerchant(row.id);
           showToast?.(`${row.name} suspended`, "success");
+          setTableKey((k) => k + 1);
         } catch (err) {
           showToast?.(err.message || "Failed to suspend", "error");
         }
@@ -114,7 +117,7 @@ export default function MerchantManagement({ showToast }) {
     {
       key: "view",
       label: "View",
-      icon: "👁",
+      icon: Eye,
       variant: "Ghost",
       ariaLabel: (row) => `View merchant ${row.name}`,
       onClick: async (row) => {
@@ -133,7 +136,7 @@ export default function MerchantManagement({ showToast }) {
     {
       key: "delete",
       label: "Delete",
-      icon: "🗑",
+      icon: Trash2,
       variant: "Danger",
       disabled: () => !canDelete,
       ariaLabel: (row) => `Delete merchant ${row.name}`,

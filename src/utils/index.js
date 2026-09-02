@@ -36,8 +36,8 @@ export const typeStyles = {
 export const PIE_COLORS = [AMBER, NAVY, "#2ECC71", "#7C3AED", "#E74C3C", "#0D9488"];
 
 export const toastConfig = {
-  success: { bg: "#F0FDF4", border: "#2ECC71", text: "#065F46", icon: "✓" },
-  error: { bg: "#FEF2F2", border: "#E74C3C", text: "#991B1B", icon: "✕" },
-  info: { bg: "#FFF8ED", border: AMBER, text: "#92400E", icon: "ℹ" },
-  warning: { bg: "#FFFBEB", border: "#F59E0B", text: "#92400E", icon: "⚠" },
+  success: { bg: "#F0FDF4", border: "#2ECC71", text: "#065F46", icon: "success" },
+  error: { bg: "#FEF2F2", border: "#E74C3C", text: "#991B1B", icon: "error" },
+  info: { bg: "#FFF8ED", border: AMBER, text: "#92400E", icon: "info" },
+  warning: { bg: "#FFFBEB", border: "#F59E0B", text: "#92400E", icon: "warning" },
 };
