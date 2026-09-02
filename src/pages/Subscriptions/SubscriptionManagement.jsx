@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
@@ -28,6 +28,8 @@ const INTERVAL_OPTIONS = [
 export default function SubscriptionManagement({ showToast }) {
   const { admin } = useAuth();
   const canManage = canPerform(admin, "subscriptions:manage") || canPerform(admin, "plan:manage");
+  const [tableKey, setTableKey] = useState(0);
+  const refresh = () => setTableKey((k) => k + 1);
 
   const load = useCallback(async (params) => {
     return businessDashboardApi.getSubscriptions(params);
@@ -118,7 +120,7 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Ghost",
       ariaLabel: (row) => `View subscription for ${row.merchantName}`,
       onClick: (row) => {
-        showToast?.(`View detail for ${row.merchantName} — coming soon`, "info");
+        showToast?.(`${row.merchantName}: ${row.planName} • ${row.status} • ${row.interval}`, "info");
       },
     },
     {
@@ -128,8 +130,12 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Secondary",
       disabled: (row) => row.status === "canceled" || !canManage,
       ariaLabel: (row) => `Change plan for ${row.merchantName}`,
-      onClick: (row) => {
-        showToast?.(`Change plan for ${row.merchantName} — endpoint pending`, "info");
+      onClick: async (row) => {
+        try {
+          await businessDashboardApi.updateSubscription(row.id, { plan: row.plan === "professional" ? "enterprise" : "professional" });
+          showToast?.(`Plan updated for ${row.merchantName}`, "success");
+          refresh();
+        } catch (err) { showToast?.(err.message, "error"); }
       },
     },
     {
@@ -139,8 +145,12 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Secondary",
       disabled: (row) => row.status !== "active" || !canManage,
       ariaLabel: (row) => `Pause subscription for ${row.merchantName}`,
-      onClick: (row) => {
-        showToast?.(`Pause subscription — endpoint pending`, "info");
+      onClick: async (row) => {
+        try {
+          await businessDashboardApi.updateSubscription(row.id, { status: "paused" });
+          showToast?.(`Paused ${row.merchantName}`, "success");
+          refresh();
+        } catch (err) { showToast?.(err.message, "error"); }
       },
     },
     {
@@ -150,16 +160,21 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Danger",
       disabled: (row) => row.status === "canceled" || !canManage,
       ariaLabel: (row) => `Cancel subscription for ${row.merchantName}`,
-      onClick: (row) => {
-        showToast?.(`Cancel subscription — endpoint pending`, "info");
+      onClick: async (row) => {
+        try {
+          await businessDashboardApi.updateSubscription(row.id, { status: "canceled" });
+          showToast?.(`Canceled ${row.merchantName}`, "success");
+          refresh();
+        } catch (err) { showToast?.(err.message, "error"); }
       },
     },
   ];
 
   return (
     <EnhancedRemoteTablePage
+      key={tableKey}
       title="Subscriptions"
-      description="Monitor and manage all merchant subscriptions across the platform."
+      description="Monitor and manage all merchant subscriptions — change plan, pause or cancel via PUT /admin/subscriptions/:id."
       load={load}
       rowKey="id"
       columns={columns}

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import AccessibleToggle from "../../components/UI/AccessibleToggle";
 import RemoteTablePage from "../../components/UI/RemoteTablePage";
+import { Modal } from "../../components/UI/Modal";
+import Field from "../../components/UI/Field";
 import styles from "./Settings.module.css";
 
 const TABS = [
@@ -23,11 +25,7 @@ const SETTING_CATEGORIES = {
   ],
 };
 
-const ADMIN_TEAM = [
-  { name: "Super Admin", email: "admin@dukadesk.com", role: "Super Admin", color: "#E74C3C" },
-  { name: "Moderation A", email: "moda@dukadesk.com", role: "Moderator", color: "#7C3AED" },
-  { name: "Support B", email: "support@dukadesk.com", role: "Support", color: "#2ECC71" },
-];
+const ROLE_OPTIONS = ["admin", "support", "moderator", "analyst"];
 
 export default function Settings({ showToast }) {
   const [activeTab, setActiveTab] = useState("security");
@@ -35,17 +33,34 @@ export default function Settings({ showToast }) {
   const [featureFlags, setFeatureFlags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [users, setUsers] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [plans, setPlans] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("support");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [annTitle, setAnnTitle] = useState("");
+  const [annMsg, setAnnMsg] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [settingsRes, flagsRes] = await Promise.all([
+      const [settingsRes, flagsRes, usersRes, annRes, plansRes] = await Promise.all([
         businessDashboardApi.getSettings(),
         businessDashboardApi.getFeatureFlags(),
+        businessDashboardApi.getUsers({ limit: 50 }).catch(() => ({ data: [] })),
+        businessDashboardApi.getAnnouncements({ limit: 20 }).catch(() => ({ data: [] })),
+        businessDashboardApi.getPlans().catch(() => ({ data: [] })),
       ]);
       setAllSettings(settingsRes?.settings || settingsRes?.data || settingsRes || {});
       setFeatureFlags(Array.isArray(flagsRes) ? flagsRes : flagsRes?.flags || flagsRes?.data || flagsRes || []);
+      const u = usersRes?.data || usersRes?.users || usersRes?.items || usersRes || [];
+      setUsers(Array.isArray(u) ? u : []);
+      const ann = annRes?.data || annRes?.announcements || annRes?.items || annRes || [];
+      setAnnouncements(Array.isArray(ann) ? ann : []);
+      const pl = plansRes?.data || plansRes?.plans || plansRes?.items || plansRes || [];
+      setPlans(Array.isArray(pl) ? pl : []);
     } catch (err) {
       setError(err.message || "Failed to load settings");
     } finally {
@@ -141,11 +156,25 @@ export default function Settings({ showToast }) {
         {activeTab === "features" && (
           <section className={styles.section} aria-label="Feature flags">
             <h3 className={styles.sectionTitle}>Feature Flags</h3>
-            <RemoteTablePage
-              title=""
-              description="Platform feature flags. Toggle states require backend workflow."
-              load={businessDashboardApi.getFeatureFlags}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              {featureFlags.length === 0 && <p className={styles.empty}>No flags.</p>}
+              {featureFlags.map((f) => (
+                <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8 }}>
+                  <div style={{ flex: 1 }}><strong style={{ fontSize: 13 }}>{f.key}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{f.description}</div></div>
+                  <AccessibleToggle
+                    checked={Boolean(f.enabled)}
+                    onChange={async (val) => {
+                      try { await businessDashboardApi.updateFeatureFlag(f.key, { enabled: val }); setFeatureFlags((prev) => prev.map((x) => x.key === f.key ? { ...x, enabled: val } : x)); showToast(`${f.key} updated`, "success"); } catch (e) { showToast(e.message, "error"); }
+                    }}
+                    label={f.key}
+                    id={`flag-${f.key}`}
+                  />
+                  <button onClick={async () => { try { await businessDashboardApi.deleteFeatureFlag(f.key); setFeatureFlags((p) => p.filter((x) => x.key !== f.key)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } } } style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+                </div>
+              ))}
+            </div>
+            <button className={styles.inviteBtn} onClick={async () => { const key = prompt("Flag key"); if (!key) return; try { const nf = await businessDashboardApi.createFeatureFlag({ key, enabled: false, description: "" }); setFeatureFlags((p) => [...p, nf?.data || nf]); showToast("Created", "success"); } catch (e) { showToast(e.message, "error"); } }}>+ Create Flag</button>
+            <div style={{ marginTop: 16 }}><RemoteTablePage title="" description="Raw flags table (legacy)" load={businessDashboardApi.getFeatureFlags} /></div>
           </section>
         )}
 
@@ -212,36 +241,73 @@ export default function Settings({ showToast }) {
 
         {activeTab === "team" && (
           <section className={styles.section} aria-label="Admin team">
-            <h3 className={styles.sectionTitle}>Admin Team</h3>
+            <h3 className={styles.sectionTitle}>Admin Team (customer care)</h3>
             <div className={styles.teamList}>
-              {ADMIN_TEAM.map((member, idx) => (
-                <div
-                  key={idx}
-                  className={styles.teamItem}
-                  style={{ borderBottom: idx < ADMIN_TEAM.length - 1 ? "1px solid var(--gray-100)" : "none" }}
-                >
-                  <div className={styles.teamAvatar} style={{ background: member.color }}>
-                    {member.name.split(" ").map((n) => n[0]).join("")}
-                  </div>
-                  <div className={styles.teamInfo}>
-                    <div className={styles.teamName}>{member.name}</div>
-                    <div className={styles.teamEmail}>{member.email}</div>
-                  </div>
-                  <span className={styles.teamRole} style={{ background: member.color + "22", color: member.color }}>
-                    {member.role}
-                  </span>
+              {users.length === 0 && <p className={styles.empty}>No users.</p>}
+              {users.map((member, idx) => (
+                <div key={member.id || idx} className={styles.teamItem} style={{ borderBottom: idx < users.length - 1 ? "1px solid var(--gray-100)" : "none" }}>
+                  <div className={styles.teamAvatar} style={{ background: "#7C3AED" }}>{(member.name || member.email || "?").split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase()}</div>
+                  <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || member.email}</div><div className={styles.teamEmail}>{member.email}</div></div>
+                  <span className={styles.teamRole} style={{ background: "#7C3AED22", color: "#7C3AED" }}>{member.role || "—"}</span>
+                  <button onClick={async () => { try { await businessDashboardApi.removeUser(member.id, member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Remove</button>
                 </div>
               ))}
             </div>
-            <button
-              className={styles.inviteBtn}
-              onClick={() => showToast("Invite flow requires backend /admin/users endpoints", "info")}
-            >
-              + Invite Team Member
-            </button>
-            <p style={{ fontSize: 12, color: "var(--gray-500)", marginTop: 12 }}>
-              Full user management requires backend endpoints (see MISSING_ENDPOINTS_FOR_BACKEND.md)
-            </p>
+            <button className={styles.inviteBtn} onClick={() => setInviteOpen(true)}>+ Invite Team Member</button>
+            <Modal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite user">
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <Field label="Email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com" />
+                <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}</select></label>
+                <button
+                  className={styles.inviteBtn}
+                  onClick={async () => {
+                    if (!inviteEmail) return showToast("Email required", "error");
+                    try {
+                      // Spec: POST /admin/users/{id}/invite?role=&tenantId= — invite requires user id; if not found, fallback to creating via admin/users
+                      // Try to find existing user by email else create placeholder
+                      const found = users.find((u) => u.email === inviteEmail);
+                      if (found) {
+                        await businessDashboardApi.inviteUser(found.id, { role: inviteRole });
+                      } else {
+                        // No direct create endpoint in spec; use invite with temp id or show guidance
+                        showToast("User not found — ask backend to add POST /admin/users", "info");
+                        return;
+                      }
+                      showToast("Invite sent", "success");
+                      setInviteOpen(false);
+                      setInviteEmail("");
+                    } catch (e) { showToast(e.message, "error"); }
+                  }}
+                >
+                  Send Invite
+                </button>
+              </div>
+            </Modal>
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ fontSize: 13, marginBottom: 8 }}>Announcements (Platform)</h4>
+              {announcements.length === 0 && <p className={styles.empty}>No announcements.</p>}
+              {announcements.map((a) => (
+                <div key={a.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                  <div><strong style={{ fontSize: 13 }}>{a.title}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{a.message}</div></div>
+                  <button onClick={async () => { try { await businessDashboardApi.deleteAnnouncement(a.id); setAnnouncements((p) => p.filter((x) => x.id !== a.id)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <input placeholder="Title" value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} style={{ flex: 1, padding: 6, border: "1px solid var(--gray-200)", borderRadius: 6 }} />
+                <input placeholder="Message" value={annMsg} onChange={(e) => setAnnMsg(e.target.value)} style={{ flex: 2, padding: 6, border: "1px solid var(--gray-200)", borderRadius: 6 }} />
+                <button className={styles.inviteBtn} onClick={async () => { if (!annTitle) return; try { const na = await businessDashboardApi.createAnnouncement({ title: annTitle, message: annMsg, type: "info" }); setAnnouncements((p) => [...p, na?.data || na]); setAnnTitle(""); setAnnMsg(""); showToast("Created", "success"); } catch (e) { showToast(e.message, "error"); } }}>Create</button>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <h4 style={{ fontSize: 13, marginBottom: 8 }}>Plans (Subscription lifecycle)</h4>
+              {plans.length === 0 && <p className={styles.empty}>No plans.</p>}
+              {plans.map((p) => (
+                <div key={p.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                  <div><strong>{p.name}</strong> <span style={{ fontSize: 11, color: "var(--gray-500)" }}>{p.interval} • {p.price}</span></div>
+                  <button onClick={async () => { try { await businessDashboardApi.deletePlan(p.id); setPlans((prev) => prev.filter((x) => x.id !== p.id)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+                </div>
+              ))}
+            </div>
           </section>
         )}
       </div>

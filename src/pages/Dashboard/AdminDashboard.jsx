@@ -119,9 +119,11 @@ function MerchantGrowthChart({ data }) {
   );
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ showToast }) {
   const [overview, setOverview] = useState(null);
   const [platformStats, setPlatformStats] = useState(null);
+  const [health, setHealth] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -130,11 +132,15 @@ export default function AdminDashboard() {
     Promise.all([
       businessDashboardApi.getOverview(),
       businessDashboardApi.getPlatformStats(),
+      businessDashboardApi.getHealth().catch(() => null),
+      businessDashboardApi.getBffAnalytics().catch(() => null),
     ])
-      .then(([overviewRes, statsRes]) => {
+      .then(([overviewRes, statsRes, healthRes, analyticsRes]) => {
         if (active) {
           setOverview(overviewRes?.overview || overviewRes?.stats || overviewRes?.data || overviewRes);
           setPlatformStats(statsRes?.stats || statsRes?.data || statsRes);
+          setHealth(healthRes?.data || healthRes);
+          setAnalytics(analyticsRes?.data || analyticsRes);
         }
       })
       .catch((err) => {
@@ -209,25 +215,25 @@ export default function AdminDashboard() {
         <section className={styles.chartCard} aria-labelledby="revenue-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="revenue-chart-title" className={styles.chartTitle}>Revenue Trend (12 months)</h3>
-            <p className={styles.chartDesc}>Monthly revenue in NGN</p>
+            <p className={styles.chartDesc}>Monthly revenue in NGN {analytics ? "· live via bff/admin/analytics" : ""}</p>
           </header>
-          <RevenueChart data={overviewData.revenueTrend || mockRevenueData} />
+          <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || mockRevenueData} />
         </section>
         <section className={styles.chartCard} aria-labelledby="merchant-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="merchant-chart-title" className={styles.chartTitle}>Merchant Growth (12 months)</h3>
-            <p className={styles.chartDesc}>Active merchants count</p>
+            <p className={styles.chartDesc}>Active merchants count {analytics ? "· live" : ""}</p>
           </header>
-          <MerchantGrowthChart data={overviewData.merchantGrowth || mockMerchantData} />
+          <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || mockMerchantData} />
         </section>
       </div>
 
       <section className={styles.quickStats} aria-labelledby="quick-stats-title">
-        <h3 id="quick-stats-title" className={styles.sectionTitle}>Platform Health</h3>
+        <h3 id="quick-stats-title" className={styles.sectionTitle}>Platform Health {health ? `· ${health.status}` : ""}</h3>
         <div className={styles.quickStatsGrid}>
           <QuickStat
             label="API Uptime"
-            value={statsData.platformUptime ? statsData.platformUptime + "%" : "99.97%"}
+            value={health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "99.97%"}
             icon="🟢"
             color="var(--green)"
           />

@@ -1,5 +1,7 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
+import SlideOver from "../../components/UI/SlideOver";
+import ConfirmModal from "../../components/UI/ConfirmModal";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
@@ -20,9 +22,14 @@ const PLAN_OPTIONS = [
 
 export default function MerchantManagement({ showToast }) {
   const { admin } = useAuth();
+  const [detail, setDetail] = useState(null);
+  const [quota, setQuota] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [tableKey, setTableKey] = useState(0);
 
   const canApprove = canPerform(admin, "merchants:manage");
   const canSuspend = canPerform(admin, "merchants:manage");
+  const canDelete = canPerform(admin, "merchants:manage");
 
   const load = useCallback(async (params) => {
     return businessDashboardApi.getMerchants(params);
@@ -110,28 +117,85 @@ export default function MerchantManagement({ showToast }) {
       icon: "👁",
       variant: "Ghost",
       ariaLabel: (row) => `View merchant ${row.name}`,
-      onClick: (row) => {
-        showToast?.(`View detail for ${row.name} — coming soon`, "info");
+      onClick: async (row) => {
+        try {
+          const res = await businessDashboardApi.getTenantDetail(row.id);
+          const data = res?.data || res?.tenant || res;
+          let q = null;
+          try { q = await businessDashboardApi.getQuota(row.id); } catch { /* ignore */ }
+          setDetail(data);
+          setQuota(q?.quota || q);
+        } catch (err) {
+          showToast?.(err.message || "Failed to load detail", "error");
+        }
       },
+    },
+    {
+      key: "delete",
+      label: "Delete",
+      icon: "🗑",
+      variant: "Danger",
+      disabled: () => !canDelete,
+      ariaLabel: (row) => `Delete merchant ${row.name}`,
+      onClick: (row) => setDeleteTarget(row),
     },
   ];
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await businessDashboardApi.deleteTenant(deleteTarget.id);
+      showToast?.(`${deleteTarget.name} deleted`, "success");
+      setDeleteTarget(null);
+      setTableKey((k) => k + 1);
+    } catch (err) {
+      showToast?.(err.message || "Failed to delete", "error");
+    }
+  };
+
   return (
-    <EnhancedRemoteTablePage
-      title="Merchants"
-      description="Manage merchant accounts, approve applications, and monitor platform partners."
-      load={load}
-      rowKey="id"
-      columns={columns}
-      searchable={true}
-      sortable={true}
-      pagination={true}
-      pageSize={10}
-      pageSizeOptions={[10, 25, 50, 100]}
-      filters={filters}
-      defaultSort={{ key: "createdAt", direction: "desc" }}
-      actions={actions}
-      emptyMessage="No merchants found matching your criteria."
-    />
+    <>
+      <EnhancedRemoteTablePage
+        key={tableKey}
+        title="Merchants"
+        description="Manage merchant accounts, approve, suspend or delete — customer care + overview of Builder/Mobile activity."
+        load={load}
+        rowKey="id"
+        columns={columns}
+        searchable={true}
+        sortable={true}
+        pagination={true}
+        pageSize={10}
+        pageSizeOptions={[10, 25, 50, 100]}
+        filters={filters}
+        defaultSort={{ key: "createdAt", direction: "desc" }}
+        actions={actions}
+        emptyMessage="No merchants found matching your criteria."
+      />
+      <SlideOver open={!!detail} onClose={() => setDetail(null)} title={detail?.name || "Merchant detail"}>
+        {detail && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ fontSize: 13, color: "var(--gray-600)" }}>{detail.email} · {detail.status} · {detail.plan}</div>
+            {quota && <div style={{ fontSize: 12, padding: 10, background: "var(--gray-50)", borderRadius: 8 }}>Quota: {quota.used ?? "—"}/{quota.limit ?? "—"}</div>}
+            <div style={{ fontSize: 12, color: "var(--gray-500)" }}>
+              Tenant ID: {detail.id} · Created {detail.createdAt ? new Date(detail.createdAt).toLocaleString() : "—"}
+              <br />
+              <a href={`https://builder.dukadesk.com/${detail.id}`} target="_blank" rel="noreferrer" style={{ color: "var(--primary)", textDecoration: "underline" }}>
+                Open in Builder (separate website) →
+              </a>
+            </div>
+          </div>
+        )}
+      </SlideOver>
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Delete merchant?"
+        message={deleteTarget ? `Delete ${deleteTarget.name}? This cannot be undone. Use Suspend for reversible action.` : ""}
+        confirmLabel="Delete"
+        variant="Danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </>
   );
 }

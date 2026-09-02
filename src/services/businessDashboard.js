@@ -192,12 +192,62 @@ async function mockCall(fn, mockData, params = {}) {
   return mockResponse(data, total);
 }
 
+const MOCK_USERS = Array.from({ length: 24 }, (_, i) => ({
+  id: `usr_${String(i + 1).padStart(3, "0")}`,
+  email: `user${i + 1}@example.com`,
+  name: `User ${i + 1}`,
+  role: ["admin", "support", "moderator", "analyst"][i % 4],
+  status: ["active", "pending", "suspended"][i % 3],
+  tenantId: MOCK_MERCHANTS[i % MOCK_MERCHANTS.length].id,
+  createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+}));
+
+const MOCK_ANNOUNCEMENTS = [
+  { id: "ann_001", title: "Scheduled maintenance", message: "Downtime July 1", type: "info", active: true, createdAt: new Date().toISOString() },
+  { id: "ann_002", title: "New feature: AI recommendations", message: "Try AI now", type: "success", active: true, createdAt: new Date().toISOString() },
+];
+
 export const businessDashboardApi = {
+  // Overview / BFF
   getOverview: () => mockCall(() => apiClient.get(`${BFF_ADMIN}/overview`), MOCK_OVERVIEW),
+  getBffAnalytics: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/analytics${queryString(params)}`), { revenueTrend: [2.1,2.3,2.8,3.2,3.6], userGrowth: [10,14,18,22,30] }, params),
+  getBffRevenue: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/revenue${queryString(params)}`), { total: 12450000, breakdown: MOCK_OVERVIEW }, params),
+  getTenantAnalytics: (tenantId, params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/tenants/${tenantId}/analytics${queryString(params)}`), { tenantId, revenueTrend: [1,2,3] }, params),
   getMerchants: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/merchants${queryString(params)}`), MOCK_MERCHANTS, params),
   getAuditLog: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`), MOCK_AUDIT, params),
   getPlatformStats: () => mockCall(() => apiClient.get(`${ADMIN}/stats`), MOCK_PLATFORM_STATS),
+  // Keep alias for backwards compat — spec is /admin/merchants === tenants (Builder separate website, overview only)
   getPlatformMerchants: (params) => mockCall(() => apiClient.get(`${ADMIN}/merchants${queryString(params)}`), MOCK_MERCHANTS, params),
+  getTenantDetail: (id) => {
+    if (!USE_MOCK) return apiClient.get(`${ADMIN}/merchants/${id}`);
+    const m = MOCK_MERCHANTS.find((x) => x.id === id);
+    return delay().then(() => m ? { data: m } : Promise.reject(new Error("Tenant not found")));
+  },
+  updateTenant: (id, patch) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/merchants/${id}`, patch);
+    return delay().then(() => {
+      const m = MOCK_MERCHANTS.find((x) => x.id === id);
+      if (m) Object.assign(m, patch);
+      return { success: true, data: m };
+    });
+  },
+  deleteTenant: (id) => {
+    if (!USE_MOCK) return apiClient.delete(`${ADMIN}/merchants/${id}`);
+    return delay().then(() => {
+      const idx = MOCK_MERCHANTS.findIndex((x) => x.id === id);
+      if (idx !== -1) MOCK_MERCHANTS.splice(idx, 1);
+      return { success: true };
+    });
+  },
+  cleanupDeactivated: () => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/cleanup-deactivated`);
+    return delay().then(() => ({ success: true }));
+  },
+  getTenantSettings: (tenantId, params) => mockCall(() => apiClient.get(`${ADMIN}/merchants/${tenantId}/settings${queryString(params)}`), MOCK_SETTINGS, params),
+  updateTenantSetting: (tenantId, key, value) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/merchants/${tenantId}/settings/${key}`, value);
+    return delay().then(() => ({ success: true, key, value }));
+  },
   approveMerchant: (merchantId) => {
     if (!USE_MOCK) return apiClient.post(`${ADMIN}/merchants/${merchantId}/approve`);
     return delay().then(() => {
@@ -214,6 +264,16 @@ export const businessDashboardApi = {
       return { success: true };
     });
   },
+  // Quotas
+  getQuota: (tenantId) => {
+    if (!USE_MOCK) return apiClient.get(`${ADMIN}/quotas/${tenantId}`);
+    return delay().then(() => ({ tenantId, limit: 1000, used: 342 }));
+  },
+  updateQuota: (tenantId, payload) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/quotas/${tenantId}`, payload);
+    return delay().then(() => ({ success: true, tenantId, ...payload }));
+  },
+  // Settings (spec: GET /admin/settings/:key, DELETE too)
   getSettings: (category) => {
     if (!USE_MOCK) return apiClient.get(`${ADMIN}/settings${queryString({ category })}`);
     return delay().then(() => {
@@ -229,6 +289,10 @@ export const businessDashboardApi = {
       return { settings: MOCK_SETTINGS };
     });
   },
+  getSetting: (key) => {
+    if (!USE_MOCK) return apiClient.get(`${ADMIN}/settings/${key}`);
+    return delay().then(() => ({ key, value: MOCK_SETTINGS[key] }));
+  },
   updateSetting: (key, value) => {
     if (!USE_MOCK) return apiClient.put(`${ADMIN}/settings/${key}`, value);
     return delay().then(() => {
@@ -236,10 +300,169 @@ export const businessDashboardApi = {
       return { success: true, key, value };
     });
   },
+  deleteSetting: (key) => {
+    if (!USE_MOCK) return apiClient.delete(`${ADMIN}/settings/${key}`);
+    return delay().then(() => {
+      delete MOCK_SETTINGS[key];
+      return { success: true };
+    });
+  },
+  // Feature flags CRUD
   getMarketplaceListings: (params) => mockCall(() => apiClient.get(`/marketplace/listings/all${queryString(params)}`), MOCK_MARKETPLACE, params),
   getSubscriptions: (params) => mockCall(() => apiClient.get(`${ADMIN}/subscriptions${queryString(params)}`), MOCK_SUBSCRIPTIONS, params),
   getPlans: () => mockCall(() => apiClient.get(`${ADMIN}/plans`), MOCK_PLANS),
+  getPlan: (id) => {
+    if (!USE_MOCK) return apiClient.get(`${ADMIN}/plans/${id}`);
+    const p = MOCK_PLANS.find((x) => x.id === id);
+    return delay().then(() => p || Promise.reject(new Error("Plan not found")));
+  },
+  createPlan: (payload) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/plans`, payload);
+    const p = { id: `plan_${Date.now()}`, ...payload };
+    MOCK_PLANS.push(p);
+    return delay().then(() => p);
+  },
+  updatePlan: (id, payload) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/plans/${id}`, payload);
+    const p = MOCK_PLANS.find((x) => x.id === id);
+    if (p) Object.assign(p, payload);
+    return delay().then(() => p);
+  },
+  deletePlan: (id) => {
+    if (!USE_MOCK) return apiClient.delete(`${ADMIN}/plans/${id}`);
+    const idx = MOCK_PLANS.findIndex((x) => x.id === id);
+    if (idx !== -1) MOCK_PLANS.splice(idx, 1);
+    return delay().then(() => ({ success: true }));
+  },
+  updateSubscription: (id, payload) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/subscriptions/${id}`, payload);
+    const s = MOCK_SUBSCRIPTIONS.find((x) => x.id === id);
+    if (s) Object.assign(s, payload);
+    return delay().then(() => ({ success: true, data: s }));
+  },
+  // Feature flags
   getFeatureFlags: () => mockCall(() => apiClient.get(`${ADMIN}/feature-flags`), MOCK_FEATURE_FLAGS),
+  getFeatureFlag: (key) => {
+    if (!USE_MOCK) return apiClient.get(`${ADMIN}/feature-flags/${key}`);
+    const f = MOCK_FEATURE_FLAGS.find((x) => x.key === key);
+    return delay().then(() => f || Promise.reject(new Error("Flag not found")));
+  },
+  createFeatureFlag: (payload) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/feature-flags`, payload);
+    MOCK_FEATURE_FLAGS.push(payload);
+    return delay().then(() => payload);
+  },
+  updateFeatureFlag: (key, payload) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/feature-flags/${key}`, payload);
+    const f = MOCK_FEATURE_FLAGS.find((x) => x.key === key);
+    if (f) Object.assign(f, payload);
+    return delay().then(() => ({ success: true, data: f }));
+  },
+  deleteFeatureFlag: (key) => {
+    if (!USE_MOCK) return apiClient.delete(`${ADMIN}/feature-flags/${key}`);
+    const idx = MOCK_FEATURE_FLAGS.findIndex((x) => x.key === key);
+    if (idx !== -1) MOCK_FEATURE_FLAGS.splice(idx, 1);
+    return delay().then(() => ({ success: true }));
+  },
+  // Announcements
+  getAnnouncements: (params) => mockCall(() => apiClient.get(`${ADMIN}/announcements${queryString(params)}`), MOCK_ANNOUNCEMENTS, params),
+  getActiveAnnouncements: (params) => mockCall(() => apiClient.get(`${ADMIN}/announcements/active${queryString(params)}`), MOCK_ANNOUNCEMENTS.filter((a) => a.active), params),
+  createAnnouncement: (payload) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/announcements`, payload);
+    const a = { id: `ann_${Date.now()}`, createdAt: new Date().toISOString(), active: true, ...payload };
+    MOCK_ANNOUNCEMENTS.push(a);
+    return delay().then(() => a);
+  },
+  updateAnnouncement: (id, payload) => {
+    if (!USE_MOCK) return apiClient.put(`${ADMIN}/announcements/${id}`, payload);
+    const a = MOCK_ANNOUNCEMENTS.find((x) => x.id === id);
+    if (a) Object.assign(a, payload);
+    return delay().then(() => a);
+  },
+  deleteAnnouncement: (id) => {
+    if (!USE_MOCK) return apiClient.delete(`${ADMIN}/announcements/${id}`);
+    const idx = MOCK_ANNOUNCEMENTS.findIndex((x) => x.id === id);
+    if (idx !== -1) MOCK_ANNOUNCEMENTS.splice(idx, 1);
+    return delay().then(() => ({ success: true }));
+  },
+  // Users (admin portal - customer care)
+  getUsers: (params) => mockCall(() => apiClient.get(`${ADMIN}/users${queryString(params)}`), MOCK_USERS, params),
+  getUser: (id) => {
+    if (!USE_MOCK) return apiClient.get(`${ADMIN}/users/${id}`);
+    const u = MOCK_USERS.find((x) => x.id === id);
+    return delay().then(() => u || Promise.reject(new Error("User not found")));
+  },
+  getTenantUsers: (tenantId, params) => mockCall(() => apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(params)}`), MOCK_USERS.filter((u) => u.tenantId === tenantId), params),
+  inviteUser: (id, payload) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/users/${id}/invite`, payload);
+    return delay().then(() => ({ success: true, id, ...payload }));
+  },
+  assignRoles: (id, payload) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/users/${id}/roles`, payload);
+    const u = MOCK_USERS.find((x) => x.id === id);
+    if (u && payload.roles) u.role = payload.roles[0];
+    return delay().then(() => ({ success: true }));
+  },
+  removeUser: (id, tenantId) => {
+    if (!USE_MOCK) return apiClient.delete(`${ADMIN}/users/${id}${queryString({ tenantId })}`);
+    const idx = MOCK_USERS.findIndex((x) => x.id === id);
+    if (idx !== -1) MOCK_USERS.splice(idx, 1);
+    return delay().then(() => ({ success: true }));
+  },
+  // Marketplace detail / moderation
+  getListing: (slug) => {
+    if (!USE_MOCK) return apiClient.get(`/marketplace/listings/${slug}`);
+    const l = MOCK_MARKETPLACE.find((x) => x.slug === slug);
+    return delay().then(() => l || Promise.reject(new Error("Listing not found")));
+  },
+  updateListing: (slug, payload) => {
+    if (!USE_MOCK) return apiClient.put(`/marketplace/listings/${slug}`, payload);
+    const l = MOCK_MARKETPLACE.find((x) => x.slug === slug);
+    if (l) Object.assign(l, payload);
+    return delay().then(() => ({ success: true, data: l }));
+  },
+  deleteListing: (slug) => {
+    if (!USE_MOCK) return apiClient.delete(`/marketplace/listings/${slug}`);
+    const idx = MOCK_MARKETPLACE.findIndex((x) => x.slug === slug);
+    if (idx !== -1) MOCK_MARKETPLACE.splice(idx, 1);
+    return delay().then(() => ({ success: true }));
+  },
+  recordDownload: (slug) => {
+    if (!USE_MOCK) return apiClient.post(`/marketplace/listings/${slug}/download`);
+    return delay().then(() => ({ success: true }));
+  },
+  getMarketplaceStats: () => {
+    if (!USE_MOCK) return apiClient.get(`/marketplace/stats`);
+    return delay().then(() => ({ total: MOCK_MARKETPLACE.length, published: MOCK_MARKETPLACE.filter((x) => x.status === "published").length }));
+  },
+  // Health / Infra
+  getHealth: () => {
+    if (!USE_MOCK) return apiClient.get(`/health`);
+    return delay().then(() => ({ status: "ok", uptime: 99.97, timestamp: new Date().toISOString() }));
+  },
+  getInfraHealth: (params) => mockCall(() => apiClient.get(`/infra/health${queryString(params)}`), { status: "healthy", checks: [] }, params),
+  getHealthHistory: (params) => mockCall(() => apiClient.get(`/infra/health/history${queryString(params)}`), [], params),
+  // Analytics reports (revenue/users/bookings/saved)
+  getRevenueReport: (params) => mockCall(() => apiClient.get(`/analytics/reports/revenue${queryString(params)}`), { data: [2.1,2.3,2.8] }, params),
+  getUserAnalytics: (params) => mockCall(() => apiClient.get(`/analytics/reports/users${queryString(params)}`), { data: [10,14,18] }, params),
+  getBookingAnalytics: (params) => mockCall(() => apiClient.get(`/analytics/reports/bookings${queryString(params)}`), { data: [] }, params),
+  getSavedReports: (params) => mockCall(() => apiClient.get(`/analytics/reports/saved${queryString(params)}`), [], params),
+  createReport: (payload) => {
+    if (!USE_MOCK) return apiClient.post(`/analytics/reports`, payload);
+    return delay().then(() => ({ id: `rep_${Date.now()}`, ...payload }));
+  },
+  getReport: (id, params) => {
+    if (!USE_MOCK) return apiClient.get(`/analytics/reports/${id}${queryString(params)}`);
+    return delay().then(() => ({ id }));
+  },
+  updateReport: (id, payload) => {
+    if (!USE_MOCK) return apiClient.post(`/analytics/reports/${id}`, payload);
+    return delay().then(() => ({ id, ...payload }));
+  },
+  deleteReport: (id, params) => {
+    if (!USE_MOCK) return apiClient.delete(`/analytics/reports/${id}${queryString(params)}`);
+    return delay().then(() => ({ success: true }));
+  },
 };
 
 export default businessDashboardApi;
