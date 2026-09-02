@@ -16,7 +16,9 @@ export const PAGE_PERMISSIONS = {
 };
 
 function normalizeRole(role) {
-  return String(role || "").toLowerCase().trim().replace(/\s+/g, "_").replace(/-/g, "_");
+  const raw = String(role || "").toLowerCase().trim().replace(/\s+/g, "_").replace(/-/g, "_");
+  if (raw === "superadmin") return "super_admin";
+  return raw;
 }
 
 export function canPerform(admin, permission) {

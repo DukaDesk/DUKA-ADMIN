@@ -179,6 +179,27 @@
   border-color: #E74C3C;
 }
 
+.logoutIconBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--gray-400);
+  cursor: pointer;
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.logoutIconBtn:hover {
+  color: #E74C3C;
+  border-color: #E74C3C;
+}
+
 .closeBtn {
   display: none;
 }

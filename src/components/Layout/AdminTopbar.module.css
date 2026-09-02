@@ -208,6 +208,51 @@
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  border: none;
+  font-family: var(--font-sans);
+}
+
+.avatarWrap {
+  position: relative;
+}
+
+.avatarDropdown {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: 220px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.avatarDropdownInfo {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  gap: 2px;
+  font-size: 13px;
+  color: var(--navy);
+}
+
+.avatarLogout {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--red);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.avatarLogout:hover {
+  background: var(--gray-50);
 }
 
 .menuBtn {
