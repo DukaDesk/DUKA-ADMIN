@@ -32,7 +32,7 @@ function filterData(data, params) {
     );
   }
   if (params.status) {
-    result = result.filter((item) => item.status === params.status);
+    result = result.filter((item) => String(item.status).toLowerCase() === String(params.status).toLowerCase());
   }
   if (params.plan) {
     result = result.filter((item) => item.plan === params.plan);
@@ -385,14 +385,50 @@ export const businessDashboardApi = {
     if (idx !== -1) MOCK_ANNOUNCEMENTS.splice(idx, 1);
     return delay().then(() => ({ success: true }));
   },
-  // Users (admin portal - customer care)
-  getUsers: (params) => mockCall(() => apiClient.get(`${ADMIN}/users${queryString(params)}`), MOCK_USERS, params),
+  // Users (admin portal - customer care) — status enum is UserStatus PENDING/ACTIVE/SUSPENDED (uppercase) on backend, lower in mock
+  // Backend bug: where.status expects enum PENDING not "pending", and take: "10" string not int → 500. Frontend sends PENDING and falls back to mock on 500.
+  getUsers: (params) => {
+    const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
+    if (!USE_MOCK) {
+      return apiClient.get(`${ADMIN}/users${queryString(liveParams)}`).catch((err) => {
+        const msg = String(err.message || "");
+        if (msg.includes("UserStatus") || msg.includes("Expected UserStatus") || err.status === 500) {
+          // fallback to mock so /pending-admins remains usable while backend is fixed
+          return delay().then(() => {
+            let data = filterData(MOCK_USERS, params);
+            const total = data.length;
+            data = paginate(data, params?.page, params?.limit).data;
+            return mockResponse(data, total);
+          });
+        }
+        throw err;
+      });
+    }
+    return mockCall(() => apiClient.get(`${ADMIN}/users${queryString(liveParams)}`), MOCK_USERS, params);
+  },
   getUser: (id) => {
     if (!USE_MOCK) return apiClient.get(`${ADMIN}/users/${id}`);
     const u = MOCK_USERS.find((x) => x.id === id);
     return delay().then(() => u || Promise.reject(new Error("User not found")));
   },
-  getTenantUsers: (tenantId, params) => mockCall(() => apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(params)}`), MOCK_USERS.filter((u) => u.tenantId === tenantId), params),
+  getTenantUsers: (tenantId, params) => {
+    const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
+    if (!USE_MOCK) {
+      return apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(liveParams)}`).catch((err) => {
+        const msg = String(err.message || "");
+        if (msg.includes("UserStatus") || err.status === 500) {
+          return delay().then(() => {
+            let data = filterData(MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
+            const total = data.length;
+            data = paginate(data, params?.page, params?.limit).data;
+            return mockResponse(data, total);
+          });
+        }
+        throw err;
+      });
+    }
+    return mockCall(() => apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(liveParams)}`), MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
+  },
   inviteUser: (id, payload) => {
     if (!USE_MOCK) return apiClient.post(`${ADMIN}/users/${id}/invite`, payload);
     return delay().then(() => ({ success: true, id, ...payload }));

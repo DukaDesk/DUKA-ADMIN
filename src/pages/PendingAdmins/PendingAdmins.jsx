@@ -17,6 +17,7 @@ export default function PendingAdmins({ showToast }) {
   const refresh = () => setTableKey((k) => k + 1);
 
   const load = useCallback(async (params) => {
+    // backend Prisma expects UserStatus enum PENDING (uppercase) but mock uses pending lower — businessDashboard handles both with fallback
     return businessDashboardApi.getUsers({ ...params, status: "pending" });
   }, []);
 
