@@ -54,8 +54,22 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
       </div>
       <ul className={styles.navList}>
         {(() => {
-          const visible = navItems.filter((item) => canAccessPage(admin, item.id));
-          if (visible.length === 0) return <li style={{ padding: 16, fontSize: 12, color: "var(--gray-500)" }}>No navigation — check role</li>;
+          let visible = navItems.filter((item) => canAccessPage(admin, item.id));
+          // safety net: any authenticated admin should at least see dashboard (prevents "No navigation" for legacy role payloads like getdukadesk/admin)
+          if (visible.length === 0 && admin?.email) {
+            visible = navItems.filter((item) => item.id === "dashboard");
+          }
+          if (visible.length === 0) return (
+            <li style={{ padding: 16, fontSize: 12, color: "var(--gray-500)", lineHeight: 1.5 }}>
+              No navigation — check role
+              <br />
+              <span style={{ fontSize: 11, opacity: 0.8 }}>role: {String(admin?.role || admin?.roles?.[0] || "—")}</span>
+              <br />
+              <button onClick={() => { localStorage.clear(); window.location.reload(); }} style={{ marginTop: 8, fontSize: 11, color: "var(--amber)", background: "none", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>
+                Clear cache & reload
+              </button>
+            </li>
+          );
           return visible.map((item) => {
             const active = page === item.id;
             const Icon = item.icon;

@@ -14,9 +14,14 @@ export function unwrapAuth(raw) {
     cur = cur.data;
   }
   const token = cur?.token ?? cur?.accessToken ?? cur?.access_token ?? cur?.jwt ?? null;
-  const adminSrc = cur?.admin ?? cur?.user ?? null;
+  let adminSrc = cur?.admin ?? cur?.user ?? cur?.profile ?? cur?.data?.admin ?? cur?.data?.user ?? null;
+  // handle roles array like {roles:["admin"]} or {role:"admin"} at top level
+  if (!adminSrc && (cur?.roles || cur?.role)) adminSrc = cur;
   const admin = adminSrc && typeof adminSrc === "object" ? adminSrc : cur;
   const clean = { ...admin };
+  // normalize roles array to role string
+  if (Array.isArray(clean.roles) && clean.roles[0] && !clean.role) clean.role = clean.roles[0];
+  if (Array.isArray(clean.role) && clean.role[0]) clean.role = clean.role[0];
   delete clean.success;
   delete clean.message;
   delete clean.data;
@@ -24,5 +29,6 @@ export function unwrapAuth(raw) {
   delete clean.accessToken;
   delete clean.access_token;
   delete clean.jwt;
+  delete clean.roles;
   return { token, admin: clean };
 }
