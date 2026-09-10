@@ -4,8 +4,9 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import SlideOver from "../../components/UI/SlideOver";
 import ConfirmModal from "../../components/UI/ConfirmModal";
 import { businessDashboardApi } from "../../services/businessDashboard";
-import { canPerform } from "../../services/permissions";
+import { canPerform, isInvestor, canViewEmail } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
+import { maskEmail } from "../../utils/maskEmail";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
@@ -28,17 +29,18 @@ export default function MerchantManagement({ showToast }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [tableKey, setTableKey] = useState(0);
 
-  const canApprove = canPerform(admin, "merchants:manage");
-  const canSuspend = canPerform(admin, "merchants:manage");
-  const canDelete = canPerform(admin, "merchants:manage");
+  const canApprove = !readOnly && canPerform(admin, "merchants:manage");
+  const canSuspend = !readOnly && canPerform(admin, "merchants:manage");
+  const canDelete = !readOnly && canPerform(admin, "merchants:manage");
 
   const load = useCallback(async (params) => {
     return businessDashboardApi.getMerchants(params);
   }, []);
 
+  const readOnly = isInvestor(admin);
   const columns = [
     { key: "name", label: "Merchant", width: 200, sortable: true },
-    { key: "email", label: "Email", width: 200, sortable: true },
+    { key: "email", label: "Email", width: 200, sortable: true, render: (v) => canViewEmail(admin) ? v : maskEmail(v) },
     { key: "status", label: "Status", width: 120, sortable: true,
       render: (value) => {
         const status = String(value).toLowerCase();
@@ -178,7 +180,7 @@ export default function MerchantManagement({ showToast }) {
       <SlideOver open={!!detail} onClose={() => setDetail(null)} title={detail?.name || "Merchant detail"}>
         {detail && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ fontSize: 13, color: "var(--gray-600)" }}>{detail.email} · {detail.status} · {detail.plan}</div>
+            <div style={{ fontSize: 13, color: "var(--gray-600)" }}>{canViewEmail(admin) ? detail.email : maskEmail(detail.email)} · {detail.status} · {detail.plan}</div>
             {quota && <div style={{ fontSize: 12, padding: 10, background: "var(--gray-50)", borderRadius: 8 }}>Quota: {quota.used ?? "—"}/{quota.limit ?? "—"}</div>}
             <div style={{ fontSize: 12, color: "var(--gray-500)" }}>
               Tenant ID: {detail.id} · Created {detail.createdAt ? new Date(detail.createdAt).toLocaleString() : "—"}

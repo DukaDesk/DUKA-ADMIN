@@ -403,6 +403,18 @@ export const businessDashboardApi = {
     if (u && payload.roles) u.role = payload.roles[0];
     return delay().then(() => ({ success: true }));
   },
+  approveUser: (id) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/users/${id}/approve`);
+    const u = MOCK_USERS.find((x) => x.id === id);
+    if (u) u.status = "active";
+    return delay().then(() => ({ success: true, data: u }));
+  },
+  rejectUser: (id) => {
+    if (!USE_MOCK) return apiClient.post(`${ADMIN}/users/${id}/reject`);
+    const u = MOCK_USERS.find((x) => x.id === id);
+    if (u) u.status = "rejected";
+    return delay().then(() => ({ success: true, data: u }));
+  },
   removeUser: (id, tenantId) => {
     if (!USE_MOCK) return apiClient.delete(`${ADMIN}/users/${id}${queryString({ tenantId })}`);
     const idx = MOCK_USERS.findIndex((x) => x.id === id);

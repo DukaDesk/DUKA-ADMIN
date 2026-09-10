@@ -4,6 +4,9 @@ import AccessibleToggle from "../../components/UI/AccessibleToggle";
 import RemoteTablePage from "../../components/UI/RemoteTablePage";
 import { Modal } from "../../components/UI/Modal";
 import Field from "../../components/UI/Field";
+import { maskEmail } from "../../utils/maskEmail";
+import { canViewEmail, isInvestor } from "../../services/permissions";
+import { useAuth } from "../../context/AuthContext";
 import styles from "./Settings.module.css";
 
 const TABS = [
@@ -28,6 +31,8 @@ const SETTING_CATEGORIES = {
 const ROLE_OPTIONS = ["admin", "support", "moderator", "analyst"];
 
 export default function Settings({ showToast }) {
+  const { admin } = useAuth();
+  const readOnly = isInvestor(admin);
   const [activeTab, setActiveTab] = useState("security");
   const [allSettings, setAllSettings] = useState({});
   const [featureFlags, setFeatureFlags] = useState([]);
@@ -241,13 +246,13 @@ export default function Settings({ showToast }) {
 
         {activeTab === "team" && (
           <section className={styles.section} aria-label="Admin team">
-            <h3 className={styles.sectionTitle}>Admin Team (customer care)</h3>
+            <h3 className={styles.sectionTitle}>Admin Team (customer care) — {users.length} shown</h3>
             <div className={styles.teamList}>
               {users.length === 0 && <p className={styles.empty}>No users.</p>}
               {users.map((member, idx) => (
                 <div key={member.id || idx} className={styles.teamItem} style={{ borderBottom: idx < users.length - 1 ? "1px solid var(--gray-100)" : "none" }}>
                   <div className={styles.teamAvatar} style={{ background: "#7C3AED" }}>{(member.name || member.email || "?").split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase()}</div>
-                  <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || member.email}</div><div className={styles.teamEmail}>{member.email}</div></div>
+                  <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || member.email}</div><div className={styles.teamEmail}>{canViewEmail(admin) ? member.email : maskEmail(member.email)}</div></div>
                   <span className={styles.teamRole} style={{ background: "#7C3AED22", color: "#7C3AED" }}>{member.role || "—"}</span>
                   <button onClick={async () => { try { await businessDashboardApi.removeUser(member.id, member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Remove</button>
                 </div>

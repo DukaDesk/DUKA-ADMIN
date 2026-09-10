@@ -16,10 +16,12 @@ const MerchantManagement = lazy(() => import("./pages/Merchants/MerchantManageme
 const MarketplaceListings = lazy(() => import("./pages/Marketplace/MarketplaceListings"));
 const AuditLog = lazy(() => import("./pages/Audit/AuditLog"));
 const SubscriptionManagement = lazy(() => import("./pages/Subscriptions/SubscriptionManagement"));
+const PendingAdmins = lazy(() => import("./pages/PendingAdmins/PendingAdmins"));
+const Register = lazy(() => import("./pages/Auth/Register"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 
-const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings"];
+const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register"];
 
 function Loading() {
   return (
@@ -106,6 +108,15 @@ useEffect(() => {
   };
 
   if (!admin) {
+    const path = location.pathname.replace(/^\//, "");
+    if (path === "register") {
+      return (
+        <>
+          {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
+          <Suspense fallback={<Loading />}><Register showToast={showToast} onDone={() => navigate("/dashboard", { replace: true })} /></Suspense>
+        </>
+      );
+    }
     return (
       <>
         {toasts.map((t) => <Toast key={t.id} toast={t} onDismiss={dismissToast} />)}
@@ -129,6 +140,7 @@ return (
               {page === "marketplace" && <MarketplaceListings />}
               {page === "audit" && <AuditLog />}
               {page === "subscriptions" && <SubscriptionManagement />}
+              {page === "pending-admins" && <PendingAdmins showToast={showToast} />}
               {page === "settings" && <Settings showToast={showToast} />}
               {page === "404" && <NotFound setPage={setPage} />}
             </Suspense>

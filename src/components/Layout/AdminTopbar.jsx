@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import styles from "./AdminTopbar.module.css";
 
-const pageLabels = { dashboard: "Platform Overview", merchants: "Merchant Management", marketplace: "Marketplace", audit: "Audit Log", subscriptions: "Subscriptions", settings: "Platform Configuration" };
+const pageLabels = { dashboard: "Platform Overview", merchants: "Merchant Management", "pending-admins": "Pending Admins", marketplace: "Marketplace", audit: "Audit Log", subscriptions: "Subscriptions", settings: "Platform Configuration" };
 
 function AdminTopbar({ page, onMenuClick }) {
   const { admin, logout } = useAuth();

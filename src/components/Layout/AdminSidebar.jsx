@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck } from "lucide-react";
+import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { canAccessPage } from "../../services/permissions";
 import styles from "./AdminSidebar.module.css";
@@ -7,6 +8,7 @@ import styles from "./AdminSidebar.module.css";
 const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
   { id: "merchants", icon: Store, label: "Merchants" },
+  { id: "pending-admins", icon: UserCheck, label: "Pending Admins" },
   { id: "marketplace", icon: Puzzle, label: "Marketplace" },
   { id: "audit", icon: ClipboardList, label: "Audit Log" },
   { id: "subscriptions", icon: CreditCard, label: "Subscriptions" },
@@ -16,6 +18,26 @@ const navItems = [
 function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSidebar }) {
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingMerchants, setPendingMerchants] = useState(0);
+  const [pendingAdmins, setPendingAdmins] = useState(0);
+  // badges: pending merchants (filter) + pending admins (separate nav)
+  // poll counts when admin changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const fetchBadges = async () => {
+    try {
+      if (canAccessPage(admin, "merchants")) {
+        const r = await businessDashboardApi.getMerchants({ status: "pending", page: 1, limit: 1 });
+        setPendingMerchants(r.total ?? 0);
+      }
+    } catch { /* ignore */ }
+    try {
+      if (canAccessPage(admin, "pending-admins")) {
+        const r = await businessDashboardApi.getUsers({ status: "pending", page: 1, limit: 1 });
+        setPendingAdmins(r.total ?? 0);
+      }
+    } catch { /* ignore */ }
+  };
+  useEffect(() => { fetchBadges(); }, [admin]);
 
   const handleLogout = () => {
     logout();
@@ -36,7 +58,8 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
           return visible.map((item) => {
             const active = page === item.id;
             const Icon = item.icon;
-            return <li key={item.id}><button className={styles.navItem} title={collapsed ? item.label : undefined} style={{ background: active ? "#252547" : "none", borderLeft: active ? "3px solid var(--amber)" : "3px solid transparent", paddingLeft: active ? 13 : 16, color: active ? "#fff" : "var(--gray-400)", justifyContent: collapsed ? "center" : "flex-start" }} onClick={() => setPage(item.id)}><span className={styles.navIcon}><Icon size={18} /></span>{!collapsed && <span className={styles.navLabel}>{item.label}</span>}</button></li>;
+            const badge = item.id === "merchants" ? pendingMerchants : item.id === "pending-admins" ? pendingAdmins : 0;
+            return <li key={item.id} style={{ position: "relative" }}><button className={styles.navItem} title={collapsed ? item.label : undefined} style={{ background: active ? "#252547" : "none", borderLeft: active ? "3px solid var(--amber)" : "3px solid transparent", paddingLeft: active ? 13 : 16, color: active ? "#fff" : "var(--gray-400)", justifyContent: collapsed ? "center" : "flex-start" }} onClick={() => setPage(item.id)}><span className={styles.navIcon}><Icon size={18} /></span>{!collapsed && <span className={styles.navLabel}>{item.label}</span>}{!collapsed && badge > 0 && <span className={styles.badge} style={{ background: "var(--amber)", marginLeft: "auto" }}>{badge > 99 ? "99+" : badge}</span>}</button>{collapsed && badge > 0 && <span style={{ position: "absolute", right: 10, top: 8, width: 8, height: 8, background: "var(--amber)", borderRadius: "50%", border: "2px solid var(--navy)" }} />}</li>;
           });
         })()}
       </ul>

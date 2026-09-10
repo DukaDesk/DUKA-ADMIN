@@ -20,6 +20,7 @@ const METRIC_CARDS = [
   { key: "totalMerchants", label: "Total Merchants", icon: Store, color: "var(--blue)", trend: "+12%", trendLabel: "vs last month" },
   { key: "activeMerchants", label: "Active Merchants", icon: BadgeCheck, color: "var(--green)", trend: "+8%", trendLabel: "vs last month" },
   { key: "pendingMerchants", label: "Pending Review", icon: Hourglass, color: "var(--amber)", trend: "-3%", trendLabel: "vs last month" },
+  { key: "totalUsers", label: "Total Staff", icon: ClipboardList, color: "var(--indigo)", trend: "+4%", trendLabel: "vs last month", formatter: formatNumber },
   { key: "monthlyRevenue", label: "Monthly Revenue", icon: Wallet, color: "var(--purple)", trend: "+23%", trendLabel: "vs last month", formatter: formatCurrency },
   { key: "totalSubscriptions", label: "Total Subscriptions", icon: ClipboardList, color: "var(--indigo)", trend: "+15%", trendLabel: "vs last month" },
   { key: "activeSubscriptions", label: "Active Subscriptions", icon: CircleDot, color: "var(--teal)", trend: "+10%", trendLabel: "vs last month" },
