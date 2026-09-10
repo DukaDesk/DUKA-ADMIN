@@ -39,17 +39,17 @@ export function canViewEmail(admin) {
 }
 
 export function canPerform(admin, permission) {
-  const normalized = normalizeRole(admin?.role || admin?.roles?.[0]);
-  // fallback: any authenticated user can at least read dashboard — prevents "No navigation" for legacy/missing role
-  if (!ROLE_PERMISSIONS[normalized] && permission === "dashboard:read" && admin?.email) return true;
+  const normalized = normalizeRole(admin?.role || admin?.roles?.[0] || admin?.username);
+  // fallback: any authenticated admin (token or email or name) can at least read dashboard — prevents "No navigation" for legacy sessions like getdukadesk
+  if (!ROLE_PERMISSIONS[normalized] && permission === "dashboard:read" && (admin?.email || admin?.token || admin?.name)) return true;
   const permissions = ROLE_PERMISSIONS[normalized] || [];
   return permissions.includes("*") || permissions.includes(permission);
 }
 
 export function canAccessPage(admin, page) {
   // dashboard is the safe fallback for any logged-in admin (prevents empty sidebar)
-  if (page === "dashboard" && admin?.email) {
-    const normalized = normalizeRole(admin?.role || admin?.roles?.[0]);
+  if (page === "dashboard" && (admin?.email || admin?.token || admin?.name)) {
+    const normalized = normalizeRole(admin?.role || admin?.roles?.[0] || admin?.username);
     if (!ROLE_PERMISSIONS[normalized]) return true;
   }
   return Boolean(PAGE_PERMISSIONS[page] && canPerform(admin, PAGE_PERMISSIONS[page]));
