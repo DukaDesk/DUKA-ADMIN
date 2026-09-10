@@ -200,6 +200,25 @@
   border-color: #E74C3C;
 }
 
+.menuToggle {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.menuToggle:hover {
+  background: rgba(255,255,255,0.14);
+}
+
 .closeBtn {
   display: none;
 }

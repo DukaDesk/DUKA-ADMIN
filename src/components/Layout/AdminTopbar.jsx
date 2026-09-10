@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { Menu } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../services/api";
 import styles from "./AdminTopbar.module.css";
@@ -29,7 +30,7 @@ function AdminTopbar({ page, onMenuClick }) {
 
   return (
     <header className={styles.topbar}>
-      <div className={styles.leftSection}><button className={styles.menuBtn} onClick={onMenuClick} aria-label="Open navigation">Menu</button><h1 className={styles.pageTitle}>{pageLabels[page] || "Admin Portal"}</h1></div>
+      <div className={styles.leftSection}><button className={styles.menuBtn} onClick={onMenuClick} aria-label="Open navigation"><Menu size={20} /></button><h1 className={styles.pageTitle}>{pageLabels[page] || "Admin Portal"}</h1></div>
       <div className={styles.rightSection}>
         <div className={styles.notifWrapper}>
           <button className={styles.notifBtn} onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications">Alerts{notifications.length ? <span className={styles.notifDot} /> : null}</button>

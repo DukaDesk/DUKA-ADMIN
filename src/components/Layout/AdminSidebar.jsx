@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck } from "lucide-react";
+import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { canAccessPage } from "../../services/permissions";
@@ -48,7 +48,8 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
     <nav className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`} style={{ width: collapsed ? 68 : 260 }} aria-label="Admin navigation">
       <div className={styles.logoArea}>
         <div className={styles.appBadge}>D</div>
-        {!collapsed && <div><div className={styles.appTitle}>DukaDesk</div><div className={styles.portalLabel}>ADMIN PORTAL</div></div>}
+        {!collapsed && <div style={{ flex: 1 }}><div className={styles.appTitle}>DukaDesk</div><div className={styles.portalLabel}>ADMIN PORTAL</div></div>}
+        <button className={styles.menuToggle} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand menu" : "Collapse menu"}><Menu size={18} /></button>
         <button className={styles.closeBtn} onClick={closeSidebar} aria-label="Close navigation"><X size={16} /></button>
       </div>
       <ul className={styles.navList}>
