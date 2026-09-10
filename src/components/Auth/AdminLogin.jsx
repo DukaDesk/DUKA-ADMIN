@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Users, Store, Smartphone, Banknote, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
+import { Lock, Eye, EyeOff, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-react";
 import Field from "../UI/Field";
 import PrimaryBtn from "../UI/PrimaryBtn";
 import ErrBanner from "../UI/ErrBanner";
@@ -125,36 +125,6 @@ const handleOtp = (e) => {
             Centralised control for user management, merchant oversight, app moderation, and
             platform analytics.
           </p>
-          <div className={styles.statsGrid}>
-            <div className={styles.statItem}>
-              <span className={styles.statIcon}><Users size={18} /></span>
-              <div className={styles.statInfo}>
-                <span className={styles.statLabel}>Active Users</span>
-                <span className={styles.statValue}>14,500+</span>
-              </div>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statIcon}><Store size={18} /></span>
-              <div className={styles.statInfo}>
-                <span className={styles.statLabel}>Merchants</span>
-                <span className={styles.statValue}>6,800+</span>
-              </div>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statIcon}><Smartphone size={18} /></span>
-              <div className={styles.statInfo}>
-                <span className={styles.statLabel}>Apps Listed</span>
-                <span className={styles.statValue}>2,340+</span>
-              </div>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statIcon}><Banknote size={18} /></span>
-              <div className={styles.statInfo}>
-                <span className={styles.statLabel}>Total Revenue</span>
-                <span className={styles.statValue}>₦8.2B+</span>
-              </div>
-            </div>
-          </div>
         </div>
         <div className={styles.securityFooter}>
           <span className={styles.securityIcon}><Lock size={14} /></span>
