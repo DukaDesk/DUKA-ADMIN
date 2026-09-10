@@ -1,3 +1,4 @@
+import { ArrowUp, ArrowDown } from "lucide-react";
 import styles from "./Table.module.css";
 
 export interface Column<T> {
@@ -95,7 +96,7 @@ export function Table<T>({
                   <span>{col.label}</span>
                   {col.sortable && onSort && sortConfig?.key === col.key && (
                     <span className={styles.sortIcon} aria-hidden="true">
-                      {sortConfig.direction === "asc" ? "↑" : "↓"}
+                      {sortConfig.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                     </span>
                   )}
                 </div>

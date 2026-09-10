@@ -63,9 +63,16 @@
 }
 
 .details summary::before {
-  content: "▶ ";
-  font-size: 10px;
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  margin-right: 6px;
   transition: transform 0.2s;
+  vertical-align: middle;
 }
 
 .details[open] summary::before {

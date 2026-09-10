@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { ArrowUp, ArrowDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
 import styles from "./EnhancedRemoteTablePage.module.css";
 
 function recordsFrom(response) {
@@ -201,7 +202,7 @@ export default function EnhancedRemoteTablePage({
                         <span>{config.label || labelFor(config.key)}</span>
                         {isSortable && sortConfig.key === config.key && (
                           <span className={styles.sortIcon} aria-hidden="true">
-                            {sortConfig.direction === "asc" ? "↑" : "↓"}
+                            {sortConfig.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                           </span>
                         )}
                       </div>
@@ -284,7 +285,7 @@ export default function EnhancedRemoteTablePage({
               aria-label="First page"
               aria-disabled={currentPage === 1}
             >
-              ««
+              <ChevronsLeft size={14} />
             </button>
             <button
               className={styles.pageBtn}
@@ -293,7 +294,7 @@ export default function EnhancedRemoteTablePage({
               aria-label="Previous page"
               aria-disabled={currentPage === 1}
             >
-              «
+              <ChevronLeft size={14} />
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum;
@@ -325,7 +326,7 @@ export default function EnhancedRemoteTablePage({
               aria-label="Next page"
               aria-disabled={currentPage === totalPages}
             >
-              »
+              <ChevronRight size={14} />
             </button>
             <button
               className={styles.pageBtn}
@@ -334,7 +335,7 @@ export default function EnhancedRemoteTablePage({
               aria-label="Last page"
               aria-disabled={currentPage === totalPages}
             >
-              »»
+              <ChevronsRight size={14} />
             </button>
           </div>
         </nav>
