@@ -62,3 +62,26 @@ select {
 table {
   border-collapse: collapse;
 }
+
+/* prevent edit cursor on decorative icons and cards — lucide svgs should not show I-beam */
+svg.lucide {
+  pointer-events: none;
+}
+[class*="Icon"],
+[class*="icon"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* dashboard cards and chart containers are decorative, not text */
+[class*="metricCard"],
+[class*="quickStat"],
+[class*="chartCard"] {
+  user-select: none;
+  cursor: default;
+}
+[class*="metricCard"] [class*="metricValue"],
+[class*="chartPlaceholder"] {
+  user-select: text;
+  cursor: text;
+}

@@ -24,6 +24,7 @@ const PLAN_OPTIONS = [
 
 export default function MerchantManagement({ showToast }) {
   const { admin } = useAuth();
+  const readOnly = isInvestor(admin);
   const [detail, setDetail] = useState(null);
   const [quota, setQuota] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -36,8 +37,6 @@ export default function MerchantManagement({ showToast }) {
   const load = useCallback(async (params) => {
     return businessDashboardApi.getMerchants(params);
   }, []);
-
-  const readOnly = isInvestor(admin);
   const columns = [
     { key: "name", label: "Merchant", width: 200, sortable: true },
     { key: "email", label: "Email", width: 200, sortable: true, render: (v) => canViewEmail(admin) ? v : maskEmail(v) },

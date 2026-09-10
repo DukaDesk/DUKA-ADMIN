@@ -77,11 +77,32 @@ const handleOtp = (e) => {
   };
 
   const handleOtpInput = (idx, val) => {
+    // distribute multi-digit paste that may fire via onChange on some IMEs
+    const digits = String(val).replace(/\D/g, "");
+    if (digits.length > 1) {
+      const next = [...otp];
+      for (let k = 0; k < digits.length && idx + k < 6; k++) next[idx + k] = digits[k];
+      setOtp(next);
+      const last = Math.min(idx + digits.length, 5);
+      otpRefs.current[last]?.focus();
+      return;
+    }
     if (!/^\d?$/.test(val)) return;
     const next = [...otp];
     next[idx] = val;
     setOtp(next);
     if (val && idx < 5) otpRefs.current[idx + 1]?.focus();
+  };
+
+  const handleOtpPaste = (idx, e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6 - idx);
+    if (!pasted) return;
+    const next = [...otp];
+    for (let k = 0; k < pasted.length && idx + k < 6; k++) next[idx + k] = pasted[k];
+    setOtp(next);
+    const last = Math.min(idx + pasted.length, 5);
+    otpRefs.current[last]?.focus();
   };
 
   const handleOtpKeyDown = (idx, e) => {
@@ -205,12 +226,16 @@ const handleOtp = (e) => {
                       ref={(el) => (otpRefs.current[i] = el)}
                       className={styles.otpInput}
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="one-time-code"
                       maxLength={1}
                       value={d}
                       style={{
                         borderColor: d ? "var(--amber)" : "var(--gray-200)",
                       }}
                       onChange={(e) => handleOtpInput(i, e.target.value)}
+                      onPaste={(e) => handleOtpPaste(i, e)}
                       onKeyDown={(e) => handleOtpKeyDown(i, e)}
                       onFocus={(e) => {
                         e.target.style.borderColor = "var(--amber)";

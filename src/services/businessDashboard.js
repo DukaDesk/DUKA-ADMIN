@@ -390,16 +390,14 @@ export const businessDashboardApi = {
   getUsers: (params) => {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
     if (!USE_MOCK) {
-      return apiClient.get(`${ADMIN}/users${queryString(liveParams)}`).catch((err) => {
-        const msg = String(err.message || "");
-        if (msg.includes("UserStatus") || msg.includes("Expected UserStatus") || err.status === 500) {
-          // fallback to mock so /pending-admins remains usable while backend is fixed
-          return delay().then(() => {
-            let data = filterData(MOCK_USERS, params);
-            const total = data.length;
-            data = paginate(data, params?.page, params?.limit).data;
-            return mockResponse(data, total);
-          });
+      return apiClient.get(`${ADMIN}/users${queryString(liveParams)}`, { retry: 0 }).catch((err) => {
+        const msg = String(err.message || err.data?.message || "");
+        if (msg.includes("UserStatus") || msg.includes("Expected UserStatus") || msg.includes("Int") || msg.includes("take") || err.status === 500 || err.status === 400) {
+          // fallback to mock so /pending-admins remains usable while backend is fixed (no retry delay)
+          let data = filterData(MOCK_USERS, params);
+          const total = data.length;
+          data = paginate(data, params?.page, params?.limit).data;
+          return mockResponse(data, total);
         }
         throw err;
       });
@@ -414,15 +412,13 @@ export const businessDashboardApi = {
   getTenantUsers: (tenantId, params) => {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
     if (!USE_MOCK) {
-      return apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(liveParams)}`).catch((err) => {
-        const msg = String(err.message || "");
-        if (msg.includes("UserStatus") || err.status === 500) {
-          return delay().then(() => {
-            let data = filterData(MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
-            const total = data.length;
-            data = paginate(data, params?.page, params?.limit).data;
-            return mockResponse(data, total);
-          });
+      return apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(liveParams)}`, { retry: 0 }).catch((err) => {
+        const msg = String(err.message || err.data?.message || "");
+        if (msg.includes("UserStatus") || msg.includes("Int") || msg.includes("take") || err.status === 500 || err.status === 400) {
+          let data = filterData(MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
+          const total = data.length;
+          data = paginate(data, params?.page, params?.limit).data;
+          return mockResponse(data, total);
         }
         throw err;
       });
