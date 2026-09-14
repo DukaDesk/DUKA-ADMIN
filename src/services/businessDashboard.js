@@ -212,7 +212,9 @@ export const businessDashboardApi = {
   getOverview: () => mockCall(() => apiClient.get(`${BFF_ADMIN}/overview`), MOCK_OVERVIEW),
   getBffAnalytics: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/analytics${queryString(params)}`), { revenueTrend: [2.1,2.3,2.8,3.2,3.6], userGrowth: [10,14,18,22,30] }, params),
   getBffRevenue: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/revenue${queryString(params)}`), { total: 12450000, breakdown: MOCK_OVERVIEW }, params),
-  getTenantAnalytics: (tenantId, params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/tenants/${tenantId}/analytics${queryString(params)}`), { tenantId, revenueTrend: [1,2,3] }, params),
+  getMerchantAnalytics: (merchantId, params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/merchants/${merchantId}/analytics${queryString(params)}`), { merchantId, revenueTrend: [1,2,3] }, params),
+  // alias for backwards compat (knowledge base v0.2 tenants→merchants rename)
+  getTenantAnalytics: (tenantId, params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/merchants/${tenantId}/analytics${queryString(params)}`), { tenantId, revenueTrend: [1,2,3] }, params),
   getMerchants: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/merchants${queryString(params)}`), MOCK_MERCHANTS, params),
   getAuditLog: (params) => mockCall(() => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`), MOCK_AUDIT, params),
   getPlatformStats: () => mockCall(() => apiClient.get(`${ADMIN}/stats`), MOCK_PLATFORM_STATS),
@@ -412,7 +414,8 @@ export const businessDashboardApi = {
   getTenantUsers: (tenantId, params) => {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
     if (!USE_MOCK) {
-      return apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(liveParams)}`, { retry: 0 }).catch((err) => {
+      // live swagger: GET /admin/users/merchant/{merchantId} (was tenant)
+      return apiClient.get(`${ADMIN}/users/merchant/${tenantId}${queryString(liveParams)}`, { retry: 0 }).catch((err) => {
         const msg = String(err.message || err.data?.message || "");
         if (msg.includes("UserStatus") || msg.includes("Int") || msg.includes("take") || err.status === 500 || err.status === 400) {
           let data = filterData(MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
@@ -423,7 +426,7 @@ export const businessDashboardApi = {
         throw err;
       });
     }
-    return mockCall(() => apiClient.get(`${ADMIN}/users/tenant/${tenantId}${queryString(liveParams)}`), MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
+    return mockCall(() => apiClient.get(`${ADMIN}/users/merchant/${tenantId}${queryString(liveParams)}`), MOCK_USERS.filter((u) => u.tenantId === tenantId), params);
   },
   inviteUser: (id, payload) => {
     if (!USE_MOCK) return apiClient.post(`${ADMIN}/users/${id}/invite`, payload);
