@@ -54,9 +54,9 @@ export default function Settings({ showToast }) {
       const [settingsRes, flagsRes, usersRes, annRes, plansRes] = await Promise.all([
         businessDashboardApi.getSettings(),
         businessDashboardApi.getFeatureFlags(),
-        businessDashboardApi.getUsers({ limit: 50 }).catch(() => ({ data: [] })),
-        businessDashboardApi.getAnnouncements({ limit: 20 }).catch(() => ({ data: [] })),
-        businessDashboardApi.getPlans().catch(() => ({ data: [] })),
+        businessDashboardApi.getUsers({ limit: 50 }),
+        businessDashboardApi.getAnnouncements({ page: 1, limit: 20 }),
+        businessDashboardApi.getPlans(),
       ]);
       setAllSettings(settingsRes?.settings || settingsRes?.data || settingsRes || {});
       setFeatureFlags(Array.isArray(flagsRes) ? flagsRes : flagsRes?.flags || flagsRes?.data || flagsRes || []);
@@ -254,7 +254,7 @@ export default function Settings({ showToast }) {
                   <div className={styles.teamAvatar} style={{ background: "#7C3AED" }}>{(member.name || member.email || "?").split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase()}</div>
                   <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || member.email}</div><div className={styles.teamEmail}>{canViewEmail(admin) ? member.email : maskEmail(member.email)}</div></div>
                   <span className={styles.teamRole} style={{ background: "#7C3AED22", color: "#7C3AED" }}>{member.role || "—"}</span>
-                  <button onClick={async () => { try { await businessDashboardApi.removeUser(member.id, member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Remove</button>
+                  <button onClick={async () => { try { await businessDashboardApi.removeUser(member.id, member.merchantId || member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Remove</button>
                 </div>
               ))}
             </div>
@@ -268,7 +268,7 @@ export default function Settings({ showToast }) {
                   onClick={async () => {
                     if (!inviteEmail) return showToast("Email required", "error");
                     try {
-                      // Spec: POST /admin/users/{id}/invite?role=&tenantId= — invite requires user id; if not found, fallback to creating via admin/users
+                      // Spec: POST /admin/users/{id}/invite?role=&tenantId= (tenant = mobile app membership) — invite requires user id; if not found, fallback to creating via admin/users
                       // Try to find existing user by email else create placeholder
                       const found = users.find((u) => u.email === inviteEmail);
                       if (found) {

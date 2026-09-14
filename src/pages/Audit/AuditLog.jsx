@@ -3,10 +3,12 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import { businessDashboardApi } from "../../services/businessDashboard";
 
 const ACTION_OPTIONS = [
-  { value: "tenant.approve", label: "Tenant Approved" },
-  { value: "tenant.suspend", label: "Tenant Suspended" },
-  { value: "tenant.create", label: "Tenant Created" },
-  { value: "tenant.update", label: "Tenant Updated" },
+  { value: "merchant.approve", label: "Merchant Approved (Site Builder)" },
+  { value: "merchant.suspend", label: "Merchant Suspended (Site Builder)" },
+  { value: "merchant.create", label: "Merchant Created (Site Builder)" },
+  { value: "merchant.update", label: "Merchant Updated (Site Builder)" },
+  { value: "tenant.approve", label: "Tenant Approved (Mobile App)" },
+  { value: "tenant.suspend", label: "Tenant Suspended (Mobile App)" },
   { value: "user.invite", label: "User Invited" },
   { value: "user.role_assign", label: "Role Assigned" },
   { value: "plan.create", label: "Plan Created" },

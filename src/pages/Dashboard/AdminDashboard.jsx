@@ -17,15 +17,15 @@ function formatCurrency(value, currency = "NGN") {
 }
 
 const METRIC_CARDS = [
-  { key: "totalMerchants", label: "Total Merchants", icon: Store, color: "var(--blue)", trend: "+12%", trendLabel: "vs last month" },
-  { key: "activeMerchants", label: "Active Merchants", icon: BadgeCheck, color: "var(--green)", trend: "+8%", trendLabel: "vs last month" },
-  { key: "pendingMerchants", label: "Pending Review", icon: Hourglass, color: "var(--amber)", trend: "-3%", trendLabel: "vs last month" },
-  { key: "totalUsers", label: "Total Staff", icon: ClipboardList, color: "var(--indigo)", trend: "+4%", trendLabel: "vs last month", formatter: formatNumber },
-  { key: "monthlyRevenue", label: "Monthly Revenue", icon: Wallet, color: "var(--purple)", trend: "+23%", trendLabel: "vs last month", formatter: formatCurrency },
-  { key: "totalSubscriptions", label: "Total Subscriptions", icon: ClipboardList, color: "var(--indigo)", trend: "+15%", trendLabel: "vs last month" },
-  { key: "activeSubscriptions", label: "Active Subscriptions", icon: CircleDot, color: "var(--teal)", trend: "+10%", trendLabel: "vs last month" },
-  { key: "totalMarketplaceListings", label: "Marketplace Listings", icon: ShoppingBag, color: "var(--orange)", trend: "+5%", trendLabel: "vs last month" },
-  { key: "publishedListings", label: "Published Listings", icon: Globe, color: "var(--cyan)", trend: "+7%", trendLabel: "vs last month" },
+  { key: "totalMerchants", label: "Total Merchants", icon: Store, color: "var(--blue)" },
+  { key: "activeMerchants", label: "Active Merchants", icon: BadgeCheck, color: "var(--green)" },
+  { key: "pendingMerchants", label: "Pending Review", icon: Hourglass, color: "var(--amber)" },
+  { key: "totalUsers", label: "Total Staff", icon: ClipboardList, color: "var(--indigo)", formatter: formatNumber },
+  { key: "monthlyRevenue", label: "Monthly Revenue", icon: Wallet, color: "var(--purple)", formatter: formatCurrency },
+  { key: "totalSubscriptions", label: "Total Subscriptions", icon: ClipboardList, color: "var(--indigo)" },
+  { key: "activeSubscriptions", label: "Active Subscriptions", icon: CircleDot, color: "var(--teal)" },
+  { key: "totalMarketplaceListings", label: "Marketplace Listings", icon: ShoppingBag, color: "var(--orange)" },
+  { key: "publishedListings", label: "Published Listings", icon: Globe, color: "var(--cyan)" },
 ];
 
 function SkeletonCard() {
@@ -154,9 +154,6 @@ export default function AdminDashboard({ showToast }) {
     return () => { active = false; };
   }, []);
 
-  const mockRevenueData = [2.1, 2.3, 2.5, 2.8, 2.6, 3.0, 3.2, 3.1, 3.3, 3.5, 3.4, 3.6];
-  const mockMerchantData = [35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46];
-
   if (loading) {
     return (
       <section className={styles.dashboard}>
@@ -219,14 +216,14 @@ export default function AdminDashboard({ showToast }) {
             <h3 id="revenue-chart-title" className={styles.chartTitle}>Revenue Trend (12 months)</h3>
             <p className={styles.chartDesc}>Monthly revenue in NGN {analytics ? "· live via bff/admin/analytics" : ""}</p>
           </header>
-          <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || mockRevenueData} />
+          <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || []} />
         </section>
         <section className={styles.chartCard} aria-labelledby="merchant-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="merchant-chart-title" className={styles.chartTitle}>Merchant Growth (12 months)</h3>
             <p className={styles.chartDesc}>Active merchants count {analytics ? "· live" : ""}</p>
           </header>
-          <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || mockMerchantData} />
+          <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || []} />
         </section>
       </div>
 
@@ -235,25 +232,25 @@ export default function AdminDashboard({ showToast }) {
         <div className={styles.quickStatsGrid}>
           <QuickStat
             label="API Uptime"
-            value={health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "99.97%"}
+            value={health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "—"}
             icon={Activity}
             color="var(--green)"
           />
           <QuickStat
             label="Error Rate (24h)"
-            value={statsData.errorRate ? statsData.errorRate + "%" : "0.12%"}
+            value={statsData.errorRate != null ? statsData.errorRate + "%" : "—"}
             icon={TrendingDown}
             color="var(--red)"
           />
           <QuickStat
             label="Avg Response Time"
-            value={statsData.avgResponseTime ? statsData.avgResponseTime + "ms" : "145ms"}
+            value={statsData.avgResponseTime != null ? statsData.avgResponseTime + "ms" : "—"}
             icon={Zap}
             color="var(--amber)"
           />
           <QuickStat
             label="Storage Used"
-            value={statsData.storageUsedGB ? statsData.storageUsedGB + " GB" : "245 GB"}
+            value={statsData.storageUsedGB != null ? statsData.storageUsedGB + " GB" : "—"}
             icon={HardDrive}
             color="var(--purple)"
           />

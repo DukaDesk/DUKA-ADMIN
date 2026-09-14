@@ -85,7 +85,7 @@ export default function PendingAdmins({ showToast }) {
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Pending Admins"
-        description="Separate admin approvals — investor read-only, finance sees email, super admin approves before account created. Staff pending only; merchant pending stays in Merchants."
+        description="Separate admin approvals — investor read-only, finance sees email, super admin approves before account created. Staff pending only; merchant (site-builder) pending stays in Merchants; tenant app (mobile) via BFF."
         load={load}
         rowKey="id"
         columns={columns}
@@ -108,7 +108,7 @@ export default function PendingAdmins({ showToast }) {
             <div style={{ padding: 10, background: "var(--gray-50)", borderRadius: 8, fontSize: 12 }}>
               Approval Timeline: Pending → Approved (actor, timestamp, comment via AuditLog)
             </div>
-            <div style={{ fontSize: 11, color: "var(--gray-500)" }}>Separation: admin approvals are platform identity (this queue); merchant approvals are tenant provisioning (Merchants → filter pending + badge).</div>
+            <div style={{ fontSize: 11, color: "var(--gray-500)" }}>Separation: admin approvals are platform identity (this queue); merchant approvals are site-builder provisioning (Merchants → filter pending + badge); tenant app (mobile) status via BFF tenant dashboard.</div>
           </div>
         )}
       </SlideOver>

@@ -123,8 +123,8 @@ export default function MerchantManagement({ showToast }) {
       ariaLabel: (row) => `View merchant ${row.name}`,
       onClick: async (row) => {
         try {
-          const res = await businessDashboardApi.getTenantDetail(row.id);
-          const data = res?.data || res?.tenant || res;
+          const res = await businessDashboardApi.getMerchantDetail(row.id);
+          const data = res?.data || res?.merchant || res?.tenant || res;
           let q = null;
           try { q = await businessDashboardApi.getQuota(row.id); } catch { /* ignore */ }
           setDetail(data);
@@ -148,7 +148,7 @@ export default function MerchantManagement({ showToast }) {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await businessDashboardApi.deleteTenant(deleteTarget.id);
+      await businessDashboardApi.deleteMerchant(deleteTarget.id);
       showToast?.(`${deleteTarget.name} deleted`, "success");
       setDeleteTarget(null);
       setTableKey((k) => k + 1);
@@ -161,8 +161,8 @@ export default function MerchantManagement({ showToast }) {
     <>
       <EnhancedRemoteTablePage
         key={tableKey}
-        title="Merchants"
-        description="Manage merchant accounts, approve, suspend or delete — customer care + overview of Builder/Mobile activity."
+        title="Merchants (Site Builder Portal)"
+        description="Manage site-creator accounts from the builder portal — approve, suspend or delete. Tenant app (mobile) status shown in View detail."
         load={load}
         rowKey="id"
         columns={columns}
@@ -179,14 +179,21 @@ export default function MerchantManagement({ showToast }) {
       <SlideOver open={!!detail} onClose={() => setDetail(null)} title={detail?.name || "Merchant detail"}>
         {detail && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Site Builder Portal</div>
             <div style={{ fontSize: 13, color: "var(--gray-600)" }}>{canViewEmail(admin) ? detail.email : maskEmail(detail.email)} · {detail.status} · {detail.plan}</div>
             {quota && <div style={{ fontSize: 12, padding: 10, background: "var(--gray-50)", borderRadius: 8 }}>Quota: {quota.used ?? "—"}/{quota.limit ?? "—"}</div>}
             <div style={{ fontSize: 12, color: "var(--gray-500)" }}>
-              Tenant ID: {detail.id} · Created {detail.createdAt ? new Date(detail.createdAt).toLocaleString() : "—"}
+              Merchant ID: {detail.id} · Created {detail.createdAt ? new Date(detail.createdAt).toLocaleString() : "—"}
               <br />
               <a href={`https://builder.dukadesk.com/${detail.id}`} target="_blank" rel="noreferrer" style={{ color: "var(--primary)", textDecoration: "underline" }}>
                 Open in Builder (separate website) →
               </a>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 8 }}>Tenant App (Mobile)</div>
+            <div style={{ fontSize: 12, color: "var(--gray-500)" }}>
+              Tenant ID: {detail.tenantId || detail.id} · Slug: {detail.slug || "—"}
+              <br />
+              Mobile manifest + published definition load live via BFF when available.
             </div>
           </div>
         )}

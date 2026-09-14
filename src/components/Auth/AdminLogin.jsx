@@ -3,7 +3,7 @@ import { Lock, Eye, EyeOff, ShieldCheck, ArrowRight, ArrowLeft } from "lucide-re
 import Field from "../UI/Field";
 import PrimaryBtn from "../UI/PrimaryBtn";
 import ErrBanner from "../UI/ErrBanner";
-import api, { USE_MOCK } from "../../services/api";
+import api from "../../services/api";
 import { unwrapAuth } from "../../utils/unwrapAuth";
 import styles from "./AdminLogin.module.css";
 
@@ -111,25 +111,6 @@ const handleOtp = (e) => {
     }
   };
 
-  const fillDemo = () => {
-    setEmail("superadmin@dukadesk.com");
-    setPassword("Admin@2024!");
-  };
-
-  const fillDemoOtp = () => {
-    const code = "123456";
-    code.split("").forEach((d, i) => {
-      setTimeout(() => {
-        setOtp((prev) => {
-          const next = [...prev];
-          next[i] = d;
-          return next;
-        });
-        otpRefs.current[i]?.focus();
-      }, i * 100);
-    });
-  };
-
   return (
     <div className={styles.container}>
       <div className={styles.leftPanel}>
@@ -193,19 +174,6 @@ const handleOtp = (e) => {
                 </div>
                 <PrimaryBtn loading={loading}>Continue <ArrowRight size={14} style={{ marginLeft: 6 }} /></PrimaryBtn>
               </form>
-              {USE_MOCK && (
-                <div className={styles.demoBox}>
-                  <div className={styles.demoInfo}>
-                    <span className={styles.demoLabel}>Demo Credentials</span>
-                    <span className={styles.demoText}>
-                      Click to auto-fill test admin account
-                    </span>
-                  </div>
-                  <button type="button" className={styles.fillDemoBtn} onClick={fillDemo}>
-                    Auto-fill
-                  </button>
-                </div>
-              )}
             </>
           ) : (
             <>
@@ -249,11 +217,6 @@ const handleOtp = (e) => {
                 <PrimaryBtn loading={loading}>Verify &amp; Sign In</PrimaryBtn>
               </form>
               <div className={styles.verifyActions}>
-                {USE_MOCK && (
-                  <button type="button" className={styles.fillDemoBtn} onClick={fillDemoOtp}>
-                    Auto-fill Demo Code
-                  </button>
-                )}
                 <button
                   type="button"
                   className={styles.backBtn}
