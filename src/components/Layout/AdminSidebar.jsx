@@ -45,7 +45,7 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
   };
 
   return (
-    <nav className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`} style={{ width: collapsed ? 68 : 260 }} aria-label="Admin navigation">
+    <nav className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${sidebarOpen ? styles.sidebarOpen : ""}`} style={{ width: collapsed ? 68 : 260 }} aria-label="Admin navigation">
       <div className={styles.logoArea}>
         <div className={styles.appBadge}>D</div>
         {!collapsed && <div style={{ flex: 1 }}><div className={styles.appTitle}>DukaDesk</div><div className={styles.portalLabel}>ADMIN PORTAL</div></div>}
@@ -78,14 +78,14 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
           });
         })()}
       </ul>
-      <div className={styles.profile} style={{ justifyContent: collapsed ? "center" : "flex-start" }}>
+      <div className={styles.profile}>
         <div className={styles.profileAvatar}>{admin?.name ? admin.name.split(" ").map((name) => name[0]).join("") : "SA"}</div>
         {!collapsed && <div className={styles.profileInfo}><span className={styles.profileName}>{admin?.name || "Administrator"}</span><span className={styles.profileRole}>{admin?.role || "admin"}</span></div>}
-        <button className={styles.collapseBtn} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
+        <button className={styles.collapseBtn} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} title={collapsed ? "Expand" : "Collapse"}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
         {collapsed ? (
           <button className={styles.logoutIconBtn} onClick={handleLogout} title="Log out" aria-label="Log out"><LogOut size={16} /></button>
         ) : (
-          <button className={styles.logoutBtn} onClick={handleLogout}>Log out</button>
+          <button className={styles.logoutBtn} onClick={handleLogout}><LogOut size={14} /> Log out</button>
         )}
       </div>
     </nav>
