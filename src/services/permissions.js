@@ -16,12 +16,16 @@ const ROLE_PERMISSIONS = {
     "tenant:manage", "tenant:read", "tenant:update", "tenant:suspend", "tenant:configure",
     "merchants:read", "merchants:manage",
     "marketplace:manage", "marketplace:read",
-    "system:monitor",
+    "system:monitor", "infra:read",
     "audit:read",
     "subscription:read", "subscription:manage", "subscriptions:read", "subscriptions:manage",
     "users:read", "users:manage", "user:read", "user:create", "user:update", "user:invite", "role:assign",
     "settings:manage",
     "users:email:read", "merchants:email:read",
+    "order:read", "order:update_status", "orders:read",
+    "product:read", "product:update", "product:delete", "catalog:manage",
+    "analytics:read", "reports:read",
+    "marketing:read", "campaign:read",
   ],
   support_agent: [
     "dashboard:read",
@@ -31,6 +35,7 @@ const ROLE_PERMISSIONS = {
     "audit:read",
     "users:read",
     "support:access",
+    "order:read", "product:read", "analytics:read",
   ],
   // Legacy aliases → KB strict (do not expand — map to nearest KB equivalent for backward compat)
   admin: [], // mapped dynamically to platform_operator
@@ -72,6 +77,12 @@ export const PAGE_PERMISSIONS = {
   settings: "settings:manage",
   "pending-admins": "users:manage", // user:invite / role:assign alias
   users: "users:read",
+  orders: "order:read",
+  products: "product:read",
+  customers: "users:read",
+  analytics: "analytics:read",
+  marketing: "marketing:read",
+  infrastructure: "system:monitor",
 };
 
 function normalizeRole(role) {

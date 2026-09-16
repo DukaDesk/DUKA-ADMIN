@@ -5,7 +5,21 @@ import { getKbRoleLabel } from "../../services/permissions";
 import api from "../../services/api";
 import styles from "./AdminTopbar.module.css";
 
-const pageLabels = { dashboard: "Platform Overview", merchants: "Merchant Management", "pending-admins": "Pending Admins", marketplace: "Marketplace", audit: "Audit Log", subscriptions: "Subscriptions", settings: "Platform Configuration" };
+const pageLabels = {
+  dashboard: "Platform Overview",
+  merchants: "Merchant Management",
+  "pending-admins": "Pending Admins",
+  orders: "Orders",
+  products: "Products",
+  customers: "Customers",
+  marketplace: "Marketplace",
+  analytics: "Analytics & Reports",
+  marketing: "Marketing",
+  audit: "Audit Log",
+  subscriptions: "Subscriptions",
+  infrastructure: "Infrastructure",
+  settings: "Platform Configuration",
+};
 
 function AdminTopbar({ page, onMenuClick }) {
   const { admin, logout } = useAuth();

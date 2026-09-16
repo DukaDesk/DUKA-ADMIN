@@ -8,9 +8,15 @@ const LABELS = {
   dashboard: "Platform Overview",
   merchants: "Merchant Management",
   "pending-admins": "Pending Admins",
+  orders: "Orders",
+  products: "Products",
+  customers: "Customers",
   marketplace: "Marketplace",
+  analytics: "Analytics & Reports",
+  marketing: "Marketing",
   audit: "Audit Log",
   subscriptions: "Subscriptions",
+  infrastructure: "Infrastructure",
   settings: "Platform Configuration",
 };
 

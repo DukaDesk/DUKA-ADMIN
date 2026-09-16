@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu } from "lucide-react";
+import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, ShoppingCart, Package, Users, BarChart3, Megaphone, Server } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { canAccessPage, getKbRoleLabel } from "../../services/permissions";
@@ -9,9 +9,15 @@ const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
   { id: "merchants", icon: Store, label: "Merchants" },
   { id: "pending-admins", icon: UserCheck, label: "Pending Admins" },
+  { id: "orders", icon: ShoppingCart, label: "Orders" },
+  { id: "products", icon: Package, label: "Products" },
+  { id: "customers", icon: Users, label: "Customers" },
   { id: "marketplace", icon: Puzzle, label: "Marketplace" },
+  { id: "analytics", icon: BarChart3, label: "Analytics" },
+  { id: "marketing", icon: Megaphone, label: "Marketing" },
   { id: "audit", icon: ClipboardList, label: "Audit Log" },
   { id: "subscriptions", icon: CreditCard, label: "Subscriptions" },
+  { id: "infrastructure", icon: Server, label: "Infrastructure" },
   { id: "settings", icon: Settings, label: "Settings" },
 ];
 
