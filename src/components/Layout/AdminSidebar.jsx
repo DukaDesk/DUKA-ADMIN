@@ -46,45 +46,102 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
     <nav className={`${styles.sidebar} ${collapsed ? styles.collapsed : ""} ${sidebarOpen ? styles.sidebarOpen : ""}`} style={{ width: collapsed ? 68 : 260 }} aria-label="Admin navigation">
       <div className={styles.logoArea}>
         <div className={styles.appBadge}>D</div>
-        {!collapsed && <div style={{ flex: 1 }}><div className={styles.appTitle}>DukaDesk</div><div className={styles.portalLabel}>ADMIN PORTAL</div></div>}
-        <button className={styles.menuToggle} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand menu" : "Collapse menu"}><Menu size={18} /></button>
-        <button className={styles.closeBtn} onClick={closeSidebar} aria-label="Close navigation"><X size={16} /></button>
+        {!collapsed && (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className={styles.appTitle}>DukaDesk</div>
+            <div className={styles.portalLabel}>ADMIN PORTAL</div>
+          </div>
+        )}
+        <button className={styles.menuToggle} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand menu" : "Collapse menu"}>
+          <Menu size={18} />
+        </button>
+        <button className={styles.closeBtn} onClick={closeSidebar} aria-label="Close navigation">
+          <X size={16} />
+        </button>
       </div>
+
       <ul className={styles.navList}>
         {(() => {
           let visible = navItems.filter((item) => canAccessPage(admin, item.id));
-          // safety net: any authenticated admin should at least see dashboard (prevents "No navigation" for legacy role payloads like getdukadesk/admin)
           if (visible.length === 0 && admin?.email) {
             visible = navItems.filter((item) => item.id === "dashboard");
           }
-          if (visible.length === 0) return (
-            <li style={{ padding: 16, fontSize: 12, color: "var(--gray-500)", lineHeight: 1.5 }}>
-              No navigation — check role
-              <br />
-              <span style={{ fontSize: 11, opacity: 0.8 }}>role: {String(admin?.role || admin?.roles?.[0] || "—")}</span>
-              <br />
-              <button onClick={() => { localStorage.clear(); window.location.reload(); }} style={{ marginTop: 8, fontSize: 11, color: "var(--amber)", background: "none", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>
-                Clear cache & reload
-              </button>
-            </li>
-          );
+          if (visible.length === 0)
+            return (
+              <li style={{ padding: 16, fontSize: 12, color: "var(--gray-500)", lineHeight: 1.5 }}>
+                No navigation — check role
+                <br />
+                <span style={{ fontSize: 11, opacity: 0.8 }}>role: {String(admin?.role || admin?.roles?.[0] || "—")}</span>
+                <br />
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    window.location.reload();
+                  }}
+                  style={{
+                    marginTop: 8,
+                    fontSize: 11,
+                    color: "var(--amber)",
+                    background: "none",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear cache & reload
+                </button>
+              </li>
+            );
           return visible.map((item) => {
             const active = page === item.id;
             const Icon = item.icon;
             const badge = item.id === "merchants" ? pendingMerchants : item.id === "pending-admins" ? pendingAdmins : 0;
-            return <li key={item.id} style={{ position: "relative" }}><button className={styles.navItem} title={collapsed ? item.label : undefined} style={{ background: active ? "#252547" : "none", borderLeft: active ? "3px solid var(--amber)" : "3px solid transparent", paddingLeft: active ? 13 : 16, color: active ? "#fff" : "var(--gray-400)", justifyContent: collapsed ? "center" : "flex-start" }} onClick={() => setPage(item.id)}><span className={styles.navIcon}><Icon size={18} /></span>{!collapsed && <span className={styles.navLabel}>{item.label}</span>}{!collapsed && badge > 0 && <span className={styles.badge} style={{ background: "var(--amber)", marginLeft: "auto" }}>{badge > 99 ? "99+" : badge}</span>}</button>{collapsed && badge > 0 && <span style={{ position: "absolute", right: 10, top: 8, width: 8, height: 8, background: "var(--amber)", borderRadius: "50%", border: "2px solid var(--navy)" }} />}</li>;
+            return (
+              <li key={item.id} className={styles.navListItem}>
+                <button
+                  className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
+                  title={collapsed ? item.label : undefined}
+                  onClick={() => setPage(item.id)}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <span className={styles.navIcon}>
+                    <Icon size={18} />
+                  </span>
+                  {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
+                  {!collapsed && badge > 0 && <span className={styles.badge}>{badge > 99 ? "99+" : badge}</span>}
+                  {collapsed && badge > 0 && <span className={styles.badgeDot} aria-hidden="true" />}
+                </button>
+              </li>
+            );
           });
         })()}
       </ul>
-      <div className={styles.profile}>
-        <div className={styles.profileAvatar}>{admin?.name ? admin.name.split(" ").map((name) => name[0]).join("") : "SA"}</div>
-        {!collapsed && <div className={styles.profileInfo}><span className={styles.profileName}>{admin?.name || "Administrator"}</span><span className={styles.profileRole}>{getKbRoleLabel(admin?.role) || "Platform Operator"}</span></div>}
-        <button className={styles.collapseBtn} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} title={collapsed ? "Expand" : "Collapse"}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
-        {collapsed ? (
-          <button className={styles.logoutIconBtn} onClick={handleLogout} title="Log out" aria-label="Log out"><LogOut size={16} /></button>
-        ) : (
-          <button className={styles.logoutBtn} onClick={handleLogout}><LogOut size={14} /> Log out</button>
-        )}
+
+      {/* User Profile Shortcut + Logout directly underneath — flex column, consistent gap */}
+      <div className={styles.profileSection}>
+        <div className={styles.profile}>
+          <div className={styles.profileAvatar}>{admin?.name ? admin.name.split(" ").map((name) => name[0]).join("") : "SA"}</div>
+          {!collapsed && (
+            <div className={styles.profileInfo}>
+              <span className={styles.profileName}>{admin?.name || "Administrator"}</span>
+              <span className={styles.profileRole}>{getKbRoleLabel(admin?.role) || "Platform Operator"}</span>
+            </div>
+          )}
+          <button
+            className={styles.collapseBtn}
+            onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            title={collapsed ? "Expand" : "Collapse"}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
+        {/* Logout sits directly underneath profile — full-width when expanded, icon-only centered when collapsed */}
+        <button className={collapsed ? styles.logoutIconBtn : styles.logoutBtn} onClick={handleLogout} aria-label="Log out">
+          <LogOut size={collapsed ? 16 : 14} />
+          {!collapsed && <span>Log out</span>}
+        </button>
       </div>
     </nav>
   );

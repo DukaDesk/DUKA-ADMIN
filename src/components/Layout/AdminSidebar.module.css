@@ -1,23 +1,31 @@
+/* Sidebar — Tailwind: fixed inset-y-0 left-0 flex flex-col bg-navy text-gray-400 */
 .sidebar {
   height: 100vh;
+  height: 100dvh;
   background: var(--navy);
   position: sticky;
   top: 0;
   display: flex;
   flex-direction: column;
-  padding: 20px 0;
+  padding: 20px 0 0;
   overflow: hidden;
+  overflow-x: hidden;
   transition: width 0.25s ease;
   flex-shrink: 0;
+  box-sizing: border-box;
+  border-right: 1px solid rgba(255,255,255,0.06);
 }
 
+/* Logo area — flex items-center gap-2.5 px-4 */
 .logoArea {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 16px;
   margin-bottom: 28px;
+  min-height: 36px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .appBadge {
@@ -37,9 +45,10 @@
 
 .appTitle {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #fff;
+  line-height: 1;
 }
 
 .portalLabel {
@@ -47,59 +56,91 @@
   font-weight: 700;
   color: var(--amber);
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-top: -2px;
+  letter-spacing: 1.8px;
+  line-height: 1;
+  margin-top: 2px;
 }
 
+/* Nav list — flex-1 flex flex-col gap-1 overflow-y-auto px-0 */
 .navList {
   list-style: none;
-  padding: 0;
+  padding: 0 8px;
   margin: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
 
+.navList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.navList::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 9999px;
+}
+
+.navListItem {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Nav item — flex items-center gap-3 px-4 py-2.5 rounded-md */
 .navItem {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border: none;
+  border-left: 3px solid transparent;
   background: none;
   width: 100%;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   color: var(--gray-400);
-  border-radius: 0;
-  transition: background 0.15s, color 0.15s;
+  border-radius: 0 6px 6px 0;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
   text-align: left;
   font-family: var(--font-sans);
   pointer-events: auto;
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
 }
 
 .navItem:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255,255,255,0.06);
   color: #fff;
 }
 
+.navItemActive {
+  background: #252547 !important;
+  border-left-color: var(--amber) !important;
+  color: #fff !important;
+}
+
 .navIcon {
-  font-size: 18px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  width: 24px;
-  text-align: center;
-  user-select: none;
-  -webkit-user-select: none;
   pointer-events: none;
 }
 
 .navLabel {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badge {
@@ -107,47 +148,45 @@
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  color: #fff;
+  background: var(--amber);
+  color: var(--navy);
   flex-shrink: 0;
+  margin-left: auto;
+  line-height: 1.2;
+  min-width: 20px;
+  text-align: center;
 }
 
-.profile {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+.badgeDot {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--amber);
+  border-radius: 50%;
+  border: 2px solid var(--navy);
+  pointer-events: none;
+}
+
+/* Profile Section — mt-auto border-t flex flex-col gap-3 p-4 */
+.profileSection {
+  margin-top: auto;
+  border-top: 1px solid rgba(255,255,255,0.08);
   padding: 16px;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  position: relative;
-}
-
-.collapsed .profile {
   flex-direction: column;
-  padding: 12px 8px;
-  gap: 8px;
+  gap: 12px;
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.12);
 }
 
-.collapsed .profileAvatar {
-  margin: 0;
-}
-
-.collapsed .collapseBtn,
-.collapsed .logoutIconBtn {
-  margin-left: 0;
-}
-
-.collapsed .logoArea {
-  justify-content: center;
-  padding: 0 8px;
-}
-
-.collapsed .navItem {
-  justify-content: center;
-  padding: 12px 0;
-  border-left-width: 3px;
-}
-
-.collapsed .menuToggle {
-  margin-left: 0;
+/* Profile shortcut — flex items-center gap-3 */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .profileAvatar {
@@ -157,39 +196,50 @@
   background: var(--amber);
   color: var(--navy);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .profileInfo {
   display: flex;
   flex-direction: column;
-  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .profileName {
   font-size: 13px;
   font-weight: 600;
   color: #fff;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profileRole {
   font-size: 11px;
   color: var(--gray-400);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Collapse toggle — ml-auto 32x32 */
 .collapseBtn {
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.08);
   color: var(--gray-400);
   cursor: pointer;
-  font-size: 16px;
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,68 +248,78 @@
   pointer-events: auto;
   position: relative;
   z-index: 2;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .collapseBtn:hover {
+  background: rgba(255,255,255,0.1);
   color: #fff;
+  border-color: rgba(255,255,255,0.14);
 }
 
+/* Logout — directly underneath profile, full-width grid, standard padding */
 .logoutBtn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: var(--gray-400);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--gray-300);
   cursor: pointer;
-  font-size: 12px;
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
-  margin-left: auto;
-  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-radius: 8px;
   font-family: var(--font-sans);
   white-space: nowrap;
   pointer-events: auto;
   position: relative;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  box-sizing: border-box;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .logoutBtn:hover {
-  color: #E74C3C;
-  border-color: #E74C3C;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .logoutIconBtn {
+  width: 40px;
+  height: 40px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255,255,255,0.12);
   color: var(--gray-400);
   cursor: pointer;
-  font-size: 14px;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  display: flex;
+  border-radius: 8px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-left: 4px;
   pointer-events: auto;
   position: relative;
   z-index: 2;
+  align-self: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .logoutIconBtn:hover {
-  color: #E74C3C;
-  border-color: #E74C3C;
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
+/* Header actions */
 .menuToggle {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.12);
   color: #fff;
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -269,6 +329,7 @@
   pointer-events: auto;
   position: relative;
   z-index: 2;
+  transition: background 0.15s;
 }
 
 .menuToggle:hover {
@@ -279,32 +340,103 @@
   display: none;
 }
 
+/* Collapsed (icon-only) — w-17 */
+.collapsed .profileSection {
+  align-items: center;
+  padding: 12px 8px;
+}
+
+.collapsed .profile {
+  justify-content: center;
+}
+
+.collapsed .logoArea {
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.collapsed .navList {
+  padding: 0 6px;
+}
+
+.collapsed .navItem {
+  justify-content: center;
+  padding: 12px 0;
+  gap: 0;
+  border-left-width: 3px;
+  border-radius: 6px;
+}
+
+.collapsed .menuToggle {
+  margin-left: 0;
+}
+
+/* Responsive — mobile drawer (Tailwind: max-md) */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
     left: -300px;
     top: 0;
     bottom: 0;
+    width: 280px !important;
+    max-width: 85vw;
     z-index: 400;
-    transition: left 0.3s ease;
+    transition: left 0.3s ease, transform 0.3s ease;
+    box-shadow: 8px 0 32px rgba(0,0,0,0.24);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .sidebarOpen {
     left: 0;
   }
 
+  /* Hide collapse toggle on mobile — use drawer instead */
+  .collapseBtn {
+    display: none;
+  }
+
   .closeBtn {
-    display: block;
-    background: none;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
     color: var(--gray-400);
-    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 0 4px;
+    padding: 0;
     margin-left: auto;
+    flex-shrink: 0;
   }
 
   .closeBtn:hover {
     color: #fff;
+    background: rgba(255,255,255,0.12);
+  }
+
+  .menuToggle {
+    display: none;
+  }
+
+  .profileSection {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Small screens — prevent horizontal overflow */
+@media (max-width: 480px) {
+  .sidebar {
+    width: 100% !important;
+    max-width: 100vw;
+  }
+}
+
+/* Ensure no overflow on super small */
+@media (max-width: 320px) {
+  .navItem {
+    padding: 10px 12px;
+    gap: 10px;
   }
 }

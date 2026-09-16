@@ -40,6 +40,26 @@
   font-size: 24px;
   cursor: pointer;
   color: var(--gray-500);
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  background: var(--gray-50);
+  color: var(--gray-700);
+}
+
+.closeBtn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 
 .body {
