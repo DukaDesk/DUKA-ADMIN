@@ -103,6 +103,13 @@ export const businessDashboardApi = {
   updateTenantSetting: (merchantId, key, value) => apiClient.put(`${ADMIN}/merchants/${merchantId}/settings/${key}`, value),
   approveMerchant: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/approve`),
   suspendMerchant: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/suspend`),
+  rejectMerchant: (merchantId, payload) => {
+    const body = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : payload ? { reason: String(payload) } : {};
+    if (body.reason && !body.comment) body.comment = body.reason;
+    if (body.comment && !body.reason) body.reason = body.comment;
+    if (body.reason && !body.rejectionReason) body.rejectionReason = body.reason;
+    return apiClient.post(`${ADMIN}/merchants/${merchantId}/reject`, body);
+  },
   // Quotas — live swagger uses {merchantId}
   getQuota: (merchantId) => apiClient.get(`${ADMIN}/quotas/${merchantId}`),
   updateQuota: (merchantId, payload) => apiClient.put(`${ADMIN}/quotas/${merchantId}`, payload),
