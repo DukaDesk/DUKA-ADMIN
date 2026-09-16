@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { getKbRoleLabel } from "../../services/permissions";
 import api from "../../services/api";
@@ -48,7 +48,10 @@ function AdminTopbar({ page, onMenuClick }) {
       <div className={styles.leftSection}><button className={styles.menuBtn} onClick={onMenuClick} aria-label="Open navigation"><Menu size={20} /></button><h1 className={styles.pageTitle}>{pageLabels[page] || "Admin Portal"}</h1></div>
       <div className={styles.rightSection}>
         <div className={styles.notifWrapper}>
-          <button className={styles.notifBtn} onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications">Alerts{notifications.length ? <span className={styles.notifDot} /> : null}</button>
+          <button className={styles.notifBtn} onClick={() => setNotifOpen(!notifOpen)} aria-label={`Notifications${notifications.length ? ` (${notifications.length} new)` : ""}`}>
+            <Bell size={18} aria-hidden="true" />
+            {notifications.length ? <span className={styles.notifDot} aria-hidden="true" /> : null}
+          </button>
           {notifOpen && <div className={styles.notifDropdown}><div className={styles.notifHeader}><span className={styles.notifHeaderTitle}>Notifications</span><span className={styles.notifHeaderCount}>{notifications.length} new</span></div><div className={styles.notifList}>{notifications.length ? notifications.map((notification, index) => <div key={notification.id || index} className={styles.notifItem}><div className={styles.notifItemContent}><div className={styles.notifItemText}>{notification.message || notification.title || "Notification"}</div><div className={styles.notifItemTime}>{notification.createdAt || notification.time || ""}</div></div></div>) : <div className={styles.notifItem}>No notifications.</div>}</div></div>}
         </div>
         <div className={styles.avatarWrap} ref={avatarRef}>
