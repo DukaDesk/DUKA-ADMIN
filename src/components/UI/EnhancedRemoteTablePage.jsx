@@ -7,10 +7,14 @@ function recordsFrom(response) {
   if (!response || typeof response !== "object") return [];
   // Guard: backend envelope success:false should not be treated as data — handled in fetchData
   if (response.success === false) return [];
-  for (const key of ["data", "items", "merchants", "listings", "subscriptions", "events", "flags", "plans"]) {
+  // Unwrap TransformInterceptor envelope {success:true, data: {...}} if present
+  const src = response.data && typeof response.data === "object" && !Array.isArray(response.data) && "success" in response ? response.data : response;
+  for (const key of ["data", "users", "tenants", "auditLogs", "logs", "items", "merchants", "listings", "subscriptions", "events", "flags", "plans", "roles"]) {
+    if (Array.isArray(src[key])) return src[key];
     if (Array.isArray(response[key])) return response[key];
   }
-  // Handle meta.data pattern for paginated
+  // Handle nested data object e.g., {success:true, data:{users, total}}
+  if (src.data && Array.isArray(src.data)) return src.data;
   if (response.data && Array.isArray(response.data)) return response.data;
   return [];
 }
@@ -84,8 +88,9 @@ export default function EnhancedRemoteTablePage({
       const data = recordsFrom(response);
       setRows(data);
       if (response && typeof response === "object") {
-        // Handle both {total} and {meta:{total}} shapes (BFF returns meta)
-        const total = response.total ?? response.count ?? response.meta?.total ?? data.length;
+        // Handle both {total} and {meta:{total}} and envelope {data:{total}} / {data:{meta:{total}}} shapes
+        const src = response.data && typeof response.data === "object" && !Array.isArray(response.data) && "success" in response ? response.data : response;
+        const total = response.total ?? response.count ?? response.meta?.total ?? src.total ?? src.count ?? src.meta?.total ?? src?.data?.total ?? data.length;
         setTotalCount(total);
       } else {
         setTotalCount(data.length);

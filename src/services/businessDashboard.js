@@ -13,6 +13,16 @@ function queryString(params = {}) {
   return entries.length ? `?${new URLSearchParams(entries)}` : "";
 }
 
+function normalizeMerchantStatus(status) {
+  if (status === undefined || status === null || status === "") return undefined;
+  const s = String(status).toLowerCase();
+  if (s === "active") return "published";
+  if (s === "pending") return "draft";
+  if (s === "suspended") return "suspended";
+  if (s === "published" || s === "draft") return s;
+  return s;
+}
+
 export const businessDashboardApi = {
   // Overview / BFF — live only, errors propagate to UI error states
   getOverview: () => apiClient.get(`${BFF_ADMIN}/overview`),
@@ -26,17 +36,29 @@ export const businessDashboardApi = {
   getTenantIntegrations: (tenantId) => apiClient.get(`/bff/tenant/${tenantId}/integrations`),
   getMobileManifest: (slug) => apiClient.get(`/bff/mobile/tenant/${slug}/manifest`),
   getPublishedDefinition: (merchantId, params) => apiClient.get(`/merchants/${merchantId}/definition${queryString(params)}`),
-  getMerchants: (params) => apiClient.get(`${BFF_ADMIN}/merchants${queryString(params)}`),
+  getMerchants: (params) => {
+    const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
+    return apiClient.get(`${BFF_ADMIN}/merchants${queryString(normalized)}`);
+  },
   // KB API-0002 strict tenant lifecycle — live backend mirrors merchants as tenants
-  getTenants: (params) => apiClient.get(`${ADMIN}/merchants${queryString(params)}`),
+  getTenants: (params) => {
+    const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
+    return apiClient.get(`${ADMIN}/merchants${queryString(normalized)}`);
+  },
   createTenant: (payload) => apiClient.post(`${ADMIN}/merchants`, payload),
   getTenant: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
   updateTenantById: (id, patch) => apiClient.put(`${ADMIN}/merchants/${id}`, patch),
   suspendTenant: (id) => apiClient.post(`${ADMIN}/merchants/${id}/suspend`),
-  getMyTenants: (params) => apiClient.get(`/tenants${queryString(params)}`).catch(() => apiClient.get(`${BFF_ADMIN}/merchants${queryString(params)}`)),
+  getMyTenants: (params) => {
+    const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
+    return apiClient.get(`/tenants${queryString(normalized)}`).catch(() => apiClient.get(`${BFF_ADMIN}/merchants${queryString(normalized)}`));
+  },
   getAuditLog: (params) => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`),
   getPlatformStats: () => apiClient.get(`${ADMIN}/stats`),
-  getPlatformMerchants: (params) => apiClient.get(`${ADMIN}/merchants${queryString(params)}`),
+  getPlatformMerchants: (params) => {
+    const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
+    return apiClient.get(`${ADMIN}/merchants${queryString(normalized)}`);
+  },
   getMerchantDetail: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
   // Merchant is a separate portal (Site Builder) — this enriches it with correlated Tenant App (mobile) data when available.
   // Good-practice correlation: fetch tenant summary/analytics/manifest via BFF when merchant has tenantId/slug.

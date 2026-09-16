@@ -4,9 +4,12 @@ function recordsFrom(response) {
   if (Array.isArray(response)) return response;
   if (!response || typeof response !== "object") return [];
   if (response.success === false) return [];
-  for (const key of ["data", "items", "merchants", "listings", "subscriptions", "events", "flags", "plans"]) {
+  const src = response.data && typeof response.data === "object" && !Array.isArray(response.data) && "success" in response ? response.data : response;
+  for (const key of ["data", "users", "tenants", "auditLogs", "logs", "items", "merchants", "listings", "subscriptions", "events", "flags", "plans", "roles"]) {
+    if (Array.isArray(src[key])) return src[key];
     if (Array.isArray(response[key])) return response[key];
   }
+  if (src.data && Array.isArray(src.data)) return src.data;
   if (response.data && Array.isArray(response.data)) return response.data;
   return [];
 }
