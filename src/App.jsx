@@ -6,6 +6,7 @@ import Toast from "./components/UI/Toast";
 import AdminLogin from "./components/Auth/AdminLogin";
 import AdminSidebar from "./components/Layout/AdminSidebar";
 import AdminTopbar from "./components/Layout/AdminTopbar";
+import Breadcrumbs from "./components/UI/Breadcrumbs";
 import { canAccessPage, getDefaultPage } from "./services/permissions";
 import ErrorBoundary from "./components/UI/ErrorBoundary";
 import styles from "./App.module.css";
@@ -20,6 +21,7 @@ const PendingAdmins = lazy(() => import("./pages/PendingAdmins/PendingAdmins"));
 const Register = lazy(() => import("./pages/Auth/Register"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
+const Forbidden = lazy(() => import("./pages/Forbidden/Forbidden"));
 
 const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register"];
 
@@ -45,9 +47,13 @@ export default function App() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [forbiddenMeta, setForbiddenMeta] = useState(null);
+
   const setPage = (name) => {
     if (!canAccessPage(admin, name)) {
-      showToast("You do not have permission to open that section", "error");
+      setForbiddenMeta({ page: name, permission: name });
+      setPageState("403");
+      navigate("/403", { replace: true });
       return;
     }
     setPageState(name);
@@ -59,7 +65,8 @@ export default function App() {
 
 useEffect(() => {
     const path = location.pathname.replace(/^\//, "") || "dashboard";
-    if (path === page) return;
+    if (path === page && page !== "403") return;
+    if (path === "403") { setPageState("403"); return; }
 
     let persisted = null;
     try {
@@ -86,6 +93,15 @@ useEffect(() => {
       setPageState(path);
       return;
     }
+
+    if (PAGE_ROUTES.includes(path) && !canAccessPage(hasAdmin, path)) {
+      setForbiddenMeta({ page: path });
+      setPageState("403");
+      navigate("/403", { replace: true });
+      return;
+    }
+
+    if (path === "403") { setPageState("403"); return; }
 
     const fallback = getDefaultPage(hasAdmin);
     if (fallback) {
@@ -132,6 +148,7 @@ return (
       <AdminSidebar page={page} setPage={setPage} admin={admin} showToast={showToast} sidebarOpen={sidebarOpen} closeSidebar={closeSidebar} />
       <div className={styles.mainArea}>
         <AdminTopbar page={page} showToast={showToast} setPage={setPage} onMenuClick={() => setSidebarOpen(true)} />
+        <Breadcrumbs page={page} setPage={setPage} />
         <main className={styles.content}>
           <ErrorBoundary>
             <Suspense fallback={<Loading />}>
@@ -142,6 +159,7 @@ return (
               {page === "subscriptions" && <SubscriptionManagement />}
               {page === "pending-admins" && <PendingAdmins showToast={showToast} />}
               {page === "settings" && <Settings showToast={showToast} />}
+              {page === "403" && <Forbidden setPage={setPage} requiredPermission={forbiddenMeta?.page} />}
               {page === "404" && <NotFound setPage={setPage} />}
             </Suspense>
           </ErrorBoundary>

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
-import { canAccessPage } from "../../services/permissions";
+import { canAccessPage, getKbRoleLabel } from "../../services/permissions";
 import styles from "./AdminSidebar.module.css";
 
 const navItems = [
@@ -21,8 +21,6 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
   const [pendingMerchants, setPendingMerchants] = useState(0);
   const [pendingAdmins, setPendingAdmins] = useState(0);
   // badges: pending merchants (filter) + pending admins (separate nav)
-  // poll counts when admin changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchBadges = async () => {
     try {
       if (canAccessPage(admin, "merchants")) {
@@ -80,7 +78,7 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
       </ul>
       <div className={styles.profile}>
         <div className={styles.profileAvatar}>{admin?.name ? admin.name.split(" ").map((name) => name[0]).join("") : "SA"}</div>
-        {!collapsed && <div className={styles.profileInfo}><span className={styles.profileName}>{admin?.name || "Administrator"}</span><span className={styles.profileRole}>{admin?.role || "admin"}</span></div>}
+        {!collapsed && <div className={styles.profileInfo}><span className={styles.profileName}>{admin?.name || "Administrator"}</span><span className={styles.profileRole}>{getKbRoleLabel(admin?.role) || "Platform Operator"}</span></div>}
         <button className={styles.collapseBtn} onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} title={collapsed ? "Expand" : "Collapse"}>{collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
         {collapsed ? (
           <button className={styles.logoutIconBtn} onClick={handleLogout} title="Log out" aria-label="Log out"><LogOut size={16} /></button>

@@ -1,0 +1,9 @@
+# CODEOWNERS — Admin Portal
+# Team H (Frontend) per implementation/repositories/business-dashboard.md Owner
+
+*       @dukadesk/team-h-frontend
+/src/services/permissions.js    @dukadesk/platform-security
+/src/context/AuthContext.jsx    @dukadesk/platform-security
+/src/services/businessDashboard.js  @dukadesk/platform-engineering
+/src/components/Layout/         @dukadesk/team-h-frontend
+*.md                            @dukadesk/docs-owners

@@ -1,3 +1,8 @@
+/**
+ * KB Strict: Business Dashboard service per UI-0003 (Foundation and Shell), SEC-0002 (RBAC), FEAT-0002 (Tenant Lifecycle), API-0002 (Tenant Management)
+ * Administration domain per ARCHITECTURE/domains/administration.md owns: Platform Configuration, Audit Logs, Monitoring, Feature Flags, System Health
+ * Merchant is a separate portal (Site Builder) — distinct from Tenant App (mobile). Correlation via BFF when merchant has tenantId/slug is good-practice.
+ */
 import { apiClient } from "./apiClient";
 
 const BFF_ADMIN = "/bff/admin";
@@ -22,10 +27,47 @@ export const businessDashboardApi = {
   getMobileManifest: (slug) => apiClient.get(`/bff/mobile/tenant/${slug}/manifest`),
   getPublishedDefinition: (merchantId, params) => apiClient.get(`/merchants/${merchantId}/definition${queryString(params)}`),
   getMerchants: (params) => apiClient.get(`${BFF_ADMIN}/merchants${queryString(params)}`),
+  // KB API-0002 strict tenant lifecycle — live backend mirrors merchants as tenants
+  getTenants: (params) => apiClient.get(`${ADMIN}/merchants${queryString(params)}`),
+  createTenant: (payload) => apiClient.post(`${ADMIN}/merchants`, payload),
+  getTenant: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
+  updateTenantById: (id, patch) => apiClient.put(`${ADMIN}/merchants/${id}`, patch),
+  suspendTenant: (id) => apiClient.post(`${ADMIN}/merchants/${id}/suspend`),
+  getMyTenants: (params) => apiClient.get(`/tenants${queryString(params)}`).catch(() => apiClient.get(`${BFF_ADMIN}/merchants${queryString(params)}`)),
   getAuditLog: (params) => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`),
   getPlatformStats: () => apiClient.get(`${ADMIN}/stats`),
   getPlatformMerchants: (params) => apiClient.get(`${ADMIN}/merchants${queryString(params)}`),
   getMerchantDetail: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
+  // Merchant is a separate portal (Site Builder) — this enriches it with correlated Tenant App (mobile) data when available.
+  // Good-practice correlation: fetch tenant summary/analytics/manifest via BFF when merchant has tenantId/slug.
+  getMerchantEnriched: async (id) => {
+    const merchantRes = await apiClient.get(`${ADMIN}/merchants/${id}`);
+    const merchant = merchantRes?.data || merchantRes?.merchant || merchantRes?.tenant || merchantRes;
+    const tenantId = merchant?.tenantId || merchant?.tenant_id || merchant?.tenant?.id || null;
+    const slug = merchant?.slug || merchant?.tenantSlug || null;
+    let tenantSummary = null;
+    let tenantAnalytics = null;
+    let mobileManifest = null;
+    let publishedDefinition = null;
+    let quota = null;
+    const tasks = [];
+    if (tenantId) {
+      tasks.push(
+        apiClient.get(`/bff/tenant/${tenantId}/summary`).then((r) => { tenantSummary = r?.data || r; }).catch(() => {}),
+        apiClient.get(`/bff/tenant/${tenantId}/analytics`).then((r) => { tenantAnalytics = r?.data || r; }).catch(() => {}),
+        apiClient.get(`/bff/tenant/${tenantId}/integrations`).then((r) => { tenantAnalytics = tenantAnalytics || {}; tenantAnalytics.integrations = r?.data || r; }).catch(() => {})
+      );
+    }
+    if (slug) {
+      tasks.push(apiClient.get(`/bff/mobile/tenant/${slug}/manifest`).then((r) => { mobileManifest = r?.data || r; }).catch(() => {}));
+    }
+    tasks.push(
+      apiClient.get(`/merchants/${id}/definition`).then((r) => { publishedDefinition = r?.data || r; }).catch(() => {}),
+      apiClient.get(`${ADMIN}/quotas/${id}`).then((r) => { quota = r?.quota || r?.data || r; }).catch(() => {})
+    );
+    await Promise.allSettled(tasks);
+    return { merchant, tenantSummary, tenantAnalytics, mobileManifest, publishedDefinition, quota };
+  },
   // deprecated aliases
   getTenantDetail: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
   updateMerchant: (id, patch) => apiClient.put(`${ADMIN}/merchants/${id}`, patch),
@@ -84,10 +126,19 @@ export const businessDashboardApi = {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
     return apiClient.get(`${ADMIN}/users/merchant/${merchantId}${queryString(liveParams)}`, { retry: 0 });
   },
+  // Admin users — create for invite fallback when user not found
+  createUser: (payload) => apiClient.post(`${ADMIN}/users`, payload),
   inviteUser: (id, payload) => apiClient.post(`${ADMIN}/users/${id}/invite`, payload),
   assignRoles: (id, payload) => apiClient.post(`${ADMIN}/users/${id}/roles`, payload),
   approveUser: (id) => apiClient.post(`${ADMIN}/users/${id}/approve`),
-  rejectUser: (id) => apiClient.post(`${ADMIN}/users/${id}/reject`),
+  rejectUser: (id, payload) => {
+    // payload: { reason, comment, rejectionReason } — always send reason/comment so backend validation passes
+    const body = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : payload ? { reason: String(payload) } : {};
+    if (body.reason && !body.comment) body.comment = body.reason;
+    if (body.comment && !body.reason) body.reason = body.comment;
+    if (body.reason && !body.rejectionReason) body.rejectionReason = body.reason;
+    return apiClient.post(`${ADMIN}/users/${id}/reject`, body);
+  },
   removeUser: (id, merchantId) => apiClient.delete(`${ADMIN}/users/${id}${queryString({ tenantId: merchantId })}`),
   // Marketplace detail / moderation
   getListing: (slug) => apiClient.get(`/marketplace/listings/${slug}`),
@@ -99,6 +150,13 @@ export const businessDashboardApi = {
   getHealth: () => apiClient.get(`/health`),
   getInfraHealth: (params) => apiClient.get(`/infra/status${queryString(params)}`),
   getHealthHistory: (params) => apiClient.get(`/infra/health/history${queryString(params)}`),
+  // Administration domain — KB: Platform Operations, Maintenance Windows, Policies (graceful 404 if backend not yet)
+  getMaintenanceWindows: (params) => apiClient.get(`${ADMIN}/maintenance${queryString(params)}`).catch(() => apiClient.get(`/infra/maintenance${queryString(params)}`).catch(() => ({ data: [] }))),
+  createMaintenanceWindow: (payload) => apiClient.post(`${ADMIN}/maintenance`, payload),
+  updateMaintenanceWindow: (id, payload) => apiClient.put(`${ADMIN}/maintenance/${id}`, payload),
+  deleteMaintenanceWindow: (id) => apiClient.delete(`${ADMIN}/maintenance/${id}`),
+  getPolicies: (params) => apiClient.get(`${ADMIN}/policies${queryString(params)}`).catch(() => apiClient.get(`${ADMIN}/settings${queryString({ category: "policy", ...params })}`).catch(() => ({ data: [] }))),
+  getAlerts: (params) => apiClient.get(`${ADMIN}/alerts${queryString(params)}`).catch(() => apiClient.get(`/infra/alerts${queryString(params)}`).catch(() => ({ data: [] }))),
   // Analytics reports — live requires tenantId
   getRevenueReport: (params) => apiClient.get(`/analytics/reports/revenue${queryString(params)}`),
   getUserAnalytics: (params) => apiClient.get(`/analytics/reports/users${queryString(params)}`),

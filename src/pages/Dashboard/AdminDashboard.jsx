@@ -80,43 +80,65 @@ function Sparkline({ data, color = "var(--amber)" }) {
   );
 }
 
-function RevenueChart({ data }) {
-  if (!data || data.length === 0) return <div className={styles.chartPlaceholder}>Revenue data will appear here when backend provides analytics endpoint</div>;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
+function RevenueChart({ data, tenantData }) {
+  const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
+  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>Revenue data will appear here when backend provides analytics endpoint</div>;
+  const primary = data && data.length ? data : hasTenant ? tenantData : [];
+  const max = Math.max(...(hasTenant ? [...primary, ...tenantData] : primary));
+  const min = Math.min(...(hasTenant ? [...primary, ...tenantData] : primary));
   const range = max - min || 1;
-  const points = data.map((value, i) => {
-    const x = (i / (data.length - 1)) * 100;
+  const toPoints = (arr) => arr.map((value, i) => {
+    const x = (i / (arr.length - 1)) * 100;
     const y = 100 - ((value - min) / range) * 80 + 10;
     return `${x}% ${y}%`;
   }).join(", ");
-  const areaPoints = [0 + "% 100%", ...points, 100 + "% 100%"].join(", ");
+  const points = primary.length ? toPoints(primary) : "";
+  const tenantPoints = hasTenant ? toPoints(tenantData) : "";
+  const areaPoints = primary.length ? [0 + "% 100%", ...points.split(", "), 100 + "% 100%"].join(", ") : "";
   return (
     <div className={styles.chart}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.chartSvg} role="img" aria-label="Revenue trend chart">
-        <polygon fill="var(--amber-alpha-10)" points={areaPoints} />
-        <polyline fill="none" stroke="var(--amber)" strokeWidth="2.5" points={points} />
+        {primary.length > 0 && <polygon fill="var(--amber-alpha-10)" points={areaPoints} />}
+        {primary.length > 0 && <polyline fill="none" stroke="var(--amber)" strokeWidth="2.5" points={points} />}
+        {hasTenant && <polyline fill="none" stroke="var(--teal)" strokeWidth="2" strokeDasharray="3 2" points={tenantPoints} />}
       </svg>
+      <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: "var(--gray-500)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--amber)", borderRadius: 2, display: "inline-block" }} /> Merchant (Site Builder)</span>
+        {hasTenant && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--teal)", borderRadius: 2, display: "inline-block", border: "1px dashed var(--teal)" }} /> Tenant (Mobile App)</span>}
+      </div>
     </div>
   );
 }
 
-function MerchantGrowthChart({ data }) {
-  if (!data || data.length === 0) return <div className={styles.chartPlaceholder}>Merchant growth data will appear here when backend provides analytics endpoint</div>;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
+function MerchantGrowthChart({ data, tenantData }) {
+  const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
+  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>Merchant growth data will appear here when backend provides analytics endpoint</div>;
+  const primary = data && data.length ? data : hasTenant ? tenantData : [];
+  const allVals = hasTenant ? [...primary, ...tenantData] : primary;
+  const max = Math.max(...allVals);
+  const min = Math.min(...allVals);
   const range = max - min || 1;
-  const bars = data.map((value, i) => {
+  const bars = primary.map((value, i) => {
     const height = ((value - min) / range) * 80 + 10;
-    const x = (i / (data.length - 1)) * 100;
-    const width = 100 / data.length * 0.7;
+    const x = (i / (primary.length - 1)) * 100;
+    const width = 100 / primary.length * 0.7;
     return <rect key={i} x={x + "%"} y={100 - height + "%"} width={width + "%"} height={height + "%"} fill="var(--blue)" rx="2" />;
   });
+  const tenantPoints = hasTenant ? tenantData.map((value, i) => {
+    const x = (i / (tenantData.length - 1)) * 100;
+    const y = 100 - ((value - min) / range) * 80 + 10;
+    return `${x}% ${y}%`;
+  }).join(", ") : "";
   return (
     <div className={styles.chart}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.chartSvg} role="img" aria-label="Merchant growth chart">
         {bars}
+        {hasTenant && <polyline fill="none" stroke="var(--teal)" strokeWidth="2" points={tenantPoints} />}
       </svg>
+      <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: "var(--gray-500)" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, background: "var(--blue)", borderRadius: 2, display: "inline-block" }} /> Merchant (Site Builder)</span>
+        {hasTenant && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--teal)", borderRadius: 2, display: "inline-block" }} /> Tenant (Mobile)</span>}
+      </div>
     </div>
   );
 }
@@ -126,6 +148,8 @@ export default function AdminDashboard({ showToast }) {
   const [platformStats, setPlatformStats] = useState(null);
   const [health, setHealth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [tenantRevenueTrend, setTenantRevenueTrend] = useState(null);
+  const [tenantGrowthTrend, setTenantGrowthTrend] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -139,10 +163,43 @@ export default function AdminDashboard({ showToast }) {
     ])
       .then(([overviewRes, statsRes, healthRes, analyticsRes]) => {
         if (active) {
-          setOverview(overviewRes?.overview || overviewRes?.stats || overviewRes?.data || overviewRes);
+          const ov = overviewRes?.overview || overviewRes?.stats || overviewRes?.data || overviewRes;
+          const an = analyticsRes?.data || analyticsRes;
+          setOverview(ov);
           setPlatformStats(statsRes?.stats || statsRes?.data || statsRes);
           setHealth(healthRes?.data || healthRes);
-          setAnalytics(analyticsRes?.data || analyticsRes);
+          setAnalytics(an);
+          // If tenant-correlated series already in analytics, use it directly (good-practice tenant coloring)
+          if (an?.tenantRevenueTrend || an?.tenantGrowth) {
+            setTenantRevenueTrend(an.tenantRevenueTrend || null);
+            setTenantGrowthTrend(an.tenantGrowth || an.tenantUserGrowth || null);
+          } else if (ov) {
+            // Enrich platform overview with tenant app data from first linked merchant — merchant is separate portal, tenant is mobile
+            businessDashboardApi.getMerchants({ page: 1, limit: 5 }).then((mRes) => {
+              const list = mRes?.data || mRes?.merchants || mRes?.items || [];
+              const linked = list.find((m) => m.tenantId || m.tenant_id || m.slug);
+              if (!linked || !active) return;
+              const tenantId = linked.tenantId || linked.tenant_id || linked.slug;
+              // Fetch tenant analytics for correlation; failures are silent (site-builder-only merchants)
+              businessDashboardApi.getTenantAnalytics(tenantId).then((tRes) => {
+                const t = tRes?.data || tRes;
+                const rev = t?.revenueTrend || t?.revenue || t?.monthlyRevenue;
+                const growth = t?.userGrowth || t?.growth || t?.tenantGrowth;
+                if (active) {
+                  if (Array.isArray(rev)) setTenantRevenueTrend(rev);
+                  else if (Array.isArray(t?.trend)) setTenantRevenueTrend(t.trend);
+                  if (Array.isArray(growth)) setTenantGrowthTrend(growth);
+                }
+              }).catch(() => {});
+              // Also try summary for tenant revenue fallback
+              businessDashboardApi.getTenantSummary(tenantId).then((sRes) => {
+                const s = sRes?.data || sRes;
+                if (active && !tenantRevenueTrend && s?.revenueTrend && Array.isArray(s.revenueTrend)) {
+                  setTenantRevenueTrend(s.revenueTrend);
+                }
+              }).catch(() => {});
+            }).catch(() => {});
+          }
         }
       })
       .catch((err) => {
@@ -214,16 +271,16 @@ export default function AdminDashboard({ showToast }) {
         <section className={styles.chartCard} aria-labelledby="revenue-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="revenue-chart-title" className={styles.chartTitle}>Revenue Trend (12 months)</h3>
-            <p className={styles.chartDesc}>Monthly revenue in NGN {analytics ? "· live via bff/admin/analytics" : ""}</p>
+            <p className={styles.chartDesc}>Monthly revenue in NGN {analytics ? "· live via bff/admin/analytics" : ""} {tenantRevenueTrend ? "· tenant correlated (teal dashed)" : ""}</p>
           </header>
-          <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || []} />
+          <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || []} tenantData={tenantRevenueTrend || analytics?.tenantRevenueTrend || overviewData.tenantRevenueTrend} />
         </section>
         <section className={styles.chartCard} aria-labelledby="merchant-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="merchant-chart-title" className={styles.chartTitle}>Merchant Growth (12 months)</h3>
-            <p className={styles.chartDesc}>Active merchants count {analytics ? "· live" : ""}</p>
+            <p className={styles.chartDesc}>Active merchants (Site Builder) {tenantGrowthTrend ? "· Tenant (Mobile) teal line" : analytics ? "· live" : ""}</p>
           </header>
-          <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || []} />
+          <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || []} tenantData={tenantGrowthTrend || analytics?.tenantGrowth} />
         </section>
       </div>
 

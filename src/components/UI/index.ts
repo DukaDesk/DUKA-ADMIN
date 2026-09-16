@@ -15,8 +15,9 @@ export type { TableProps, Column } from "./Table";
 
 export { ErrorBoundary } from "./ErrorBoundary";
 
-export { AccessibleToggle } from "./AccessibleToggle";
-
-export { RemoteTablePage } from "./RemoteTablePage";
-
-export { EnhancedRemoteTablePage } from "./EnhancedRemoteTablePage";
+// @ts-ignore — JSX components have implicit any, allowed per KB (skipLibCheck)
+export { default as AccessibleToggle } from "./AccessibleToggle";
+// @ts-ignore
+export { default as RemoteTablePage } from "./RemoteTablePage";
+// @ts-ignore
+export { default as EnhancedRemoteTablePage } from "./EnhancedRemoteTablePage";

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Menu } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getKbRoleLabel } from "../../services/permissions";
 import api from "../../services/api";
 import styles from "./AdminTopbar.module.css";
 
@@ -40,7 +41,7 @@ function AdminTopbar({ page, onMenuClick }) {
           <button className={styles.avatar} onClick={() => setAvatarOpen((v) => !v)} aria-label="User menu">{admin?.name ? admin.name.split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase() : "AD"}</button>
           {avatarOpen && (
             <div className={styles.avatarDropdown}>
-              <div className={styles.avatarDropdownInfo}><strong>{admin?.name || "Administrator"}</strong><span>{admin?.role || "admin"}</span><span style={{ fontSize: 11, color: "var(--gray-500)" }}>{admin?.email || ""}</span></div>
+              <div className={styles.avatarDropdownInfo}><strong>{admin?.name || "Administrator"}</strong><span>{getKbRoleLabel(admin?.role) || "Platform Operator"}</span><span style={{ fontSize: 11, color: "var(--gray-500)" }}>{admin?.email || ""}</span></div>
               <button className={styles.avatarLogout} onClick={() => { setAvatarOpen(false); logout(); }}>Log out</button>
             </div>
           )}

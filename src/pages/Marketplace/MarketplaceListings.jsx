@@ -27,9 +27,18 @@ export default function MarketplaceListings({ showToast }) {
   const { admin } = useAuth();
   const canModerate = canPerform(admin, "marketplace:manage");
   const [selectedRows, setSelectedRows] = useState(new Set());
+  // slug map for bulk actions: id -> slug (real data, no mock fallback)
+  const [slugMap, setSlugMap] = useState({});
 
   const load = useCallback(async (params) => {
-    return businessDashboardApi.getMarketplaceListings(params);
+    const res = await businessDashboardApi.getMarketplaceListings(params);
+    const list = res?.data || res?.listings || res?.items || (Array.isArray(res) ? res : []);
+    if (Array.isArray(list)) {
+      const map = {};
+      list.forEach((r) => { if (r.id && r.slug) map[r.id] = r.slug; });
+      setSlugMap(map);
+    }
+    return res;
   }, []);
 
   const columns = [
@@ -196,15 +205,10 @@ export default function MarketplaceListings({ showToast }) {
     {
       label: `Approve (${selectedRows.size})`,
       onClick: async () => {
-        for (const id of selectedRows) {
-          const row = document.querySelector(`[data-row-id="${id}"]`);
-        }
-        // bulk via sequential updates
         try {
-          for (const sid of [...selectedRows]) {
-            const listing = { slug: sid.replace?.("lst_", "plugin-") || sid };
-            // best-effort: find slug from id mapping — fallback to updateListing with id as slug alias
-            await businessDashboardApi.updateListing(sid, { status: "published" }).catch(() => businessDashboardApi.updateListing(listing.slug, { status: "published" }));
+          for (const id of [...selectedRows]) {
+            const slug = slugMap[id] || id;
+            await businessDashboardApi.updateListing(slug, { status: "published" });
           }
           showToast?.(`Bulk approved ${selectedRows.size}`, "success");
           setSelectedRows(new Set());
@@ -217,8 +221,9 @@ export default function MarketplaceListings({ showToast }) {
       label: `Reject (${selectedRows.size})`,
       onClick: async () => {
         try {
-          for (const sid of [...selectedRows]) {
-            await businessDashboardApi.updateListing(sid, { status: "rejected" }).catch(() => {});
+          for (const id of [...selectedRows]) {
+            const slug = slugMap[id] || id;
+            await businessDashboardApi.updateListing(slug, { status: "rejected" });
           }
           showToast?.(`Bulk rejected ${selectedRows.size}`, "success");
           setSelectedRows(new Set());
@@ -230,31 +235,42 @@ export default function MarketplaceListings({ showToast }) {
   ] : [];
 
   return (
-    <EnhancedRemoteTablePage
-      key={tableKey}
-      title="Marketplace Listings"
-      description="Moderate and manage all marketplace listings — approve, reject, feature, delete (customer care + Builder overview)."
-      load={load}
-      rowKey="id"
-      columns={columns}
-      searchable={true}
-      sortable={true}
-      pagination={true}
-      pageSize={10}
-      pageSizeOptions={[10, 25, 50, 100]}
-      filters={filters}
-      defaultSort={{ key: "createdAt", direction: "desc" }}
-      actions={rowActions}
-      emptyMessage="No marketplace listings found matching your criteria."
-      onRowClick={(row) => {
-        const newSelected = new Set(selectedRows);
-        if (newSelected.has(row.id)) {
-          newSelected.delete(row.id);
-        } else {
-          newSelected.add(row.id);
-        }
-        setSelectedRows(newSelected);
-      }}
-    />
+    <>
+      {bulkActions.length > 0 && (
+        <div style={{ marginBottom: 12, padding: "10px 14px", background: "var(--color-surface)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: 8, boxShadow: "var(--shadow-sm)" }} role="toolbar" aria-label="Bulk actions">
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-700)", marginRight: 8 }}>{selectedRows.size} selected</span>
+          {bulkActions.map((a) => (
+            <button key={a.label} onClick={a.onClick} style={{ padding: "6px 12px", borderRadius: "var(--radius-sm)", border: "none", background: a.variant === "Primary" ? "var(--color-primary-500)" : "var(--color-error-500)", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>{a.label}</button>
+          ))}
+          <button onClick={() => setSelectedRows(new Set())} style={{ marginLeft: "auto", padding: "6px 12px", background: "var(--gray-100)", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: 12 }}>Clear</button>
+        </div>
+      )}
+      <EnhancedRemoteTablePage
+        key={tableKey}
+        title="Marketplace Listings"
+        description="Moderate and manage all marketplace listings — approve, reject, feature, delete (customer care + Builder overview). Click rows to select for bulk approve/reject."
+        load={load}
+        rowKey="id"
+        columns={columns}
+        searchable={true}
+        sortable={true}
+        pagination={true}
+        pageSize={10}
+        pageSizeOptions={[10, 25, 50, 100]}
+        filters={filters}
+        defaultSort={{ key: "createdAt", direction: "desc" }}
+        actions={rowActions}
+        emptyMessage="No marketplace listings found matching your criteria."
+        onRowClick={(row) => {
+          const newSelected = new Set(selectedRows);
+          if (newSelected.has(row.id)) {
+            newSelected.delete(row.id);
+          } else {
+            newSelected.add(row.id);
+          }
+          setSelectedRows(newSelected);
+        }}
+      />
+    </>
   );
 }

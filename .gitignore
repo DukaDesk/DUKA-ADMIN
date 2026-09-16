@@ -4,3 +4,6 @@ dist
 .env.local
 *.log
 .azure
+playwright-report
+test-results
+coverage

@@ -6,19 +6,34 @@ const AuthContext = createContext(null);
 
 const STORAGE_KEY = "dukadesk_admin";
 
+/**
+ * KB Strict healing: maps any legacy or display role to KB canonical platform roles
+ * KB: SEC-0002 (Super Admin, Platform Operator, Support Agent)
+ * UI-0003: role-aware navigation requires correct role
+ */
+function toKbCanonical(roleRaw) {
+  const r = String(roleRaw || "").toLowerCase().trim().replace(/\s+/g, "_").replace(/-/g, "_");
+  if (r === "super_admin" || r === "superadmin" || r === "super-admin") return "super_admin";
+  if (r === "platform_operator" || r === "platformoperator" || r === "platform-operator" || r === "operator") return "platform_operator";
+  if (r === "support_agent" || r === "supportagent" || r === "support-agent") return "support_agent";
+  // legacy → KB
+  if (r === "admin" || r === "administrator" || r === "getdukadesk" || r === "getdukadesk_admin") return "platform_operator";
+  if (r === "finance" || r === "admin") return "platform_operator";
+  if (r === "investor" || r === "investors") return "support_agent";
+  if (r === "marketing" || r === "hr" || r === "moderator" || r === "analyst" || r === "support") return "support_agent";
+  return r;
+}
+
 function healStoredAdmin(obj) {
   if (!obj || typeof obj !== "object") return obj;
   let role = obj.role || (Array.isArray(obj.roles) && obj.roles[0]) || obj.username || null;
-  // handle case where username like getdukadesk was mistakenly stored as role, or role missing
-  if (role === "getdukadesk" || role === "getdukadesk_admin") role = "admin";
+  if (role === "getdukadesk" || role === "getdukadesk_admin") role = "platform_operator";
   if (!role) {
-    // legacy session without role — default to admin if any identifier exists (email, name, username, token) to prevent empty nav
-    if (obj.email || obj.name || obj.username || obj.token) role = obj.email && obj.email.includes("superadmin") ? "super_admin" : "admin";
+    if (obj.email || obj.name || obj.username || obj.token) role = obj.email && obj.email.includes("superadmin") ? "super_admin" : "platform_operator";
   }
   if (role) {
-    role = String(role).toLowerCase().trim().replace(/\s+/g, "_").replace(/-/g, "_").replace(/^superadmin$/, "super_admin").replace(/^administrator$/, "admin").replace(/^investors$/, "investor").replace(/^getdukadesk.*$/, "admin");
+    role = toKbCanonical(role);
     obj = { ...obj, role };
-    // clean roles array if present
     if (Array.isArray(obj.roles)) delete obj.roles;
     if (obj.username && obj.username === obj.role) delete obj.username;
   }
@@ -76,20 +91,15 @@ const login = useCallback((data) => {
     if (resolvedToken) localStorage.setItem("admin_token", resolvedToken);
     const base = admin && typeof admin === "object" ? admin : {};
     const nextAdmin = { ...base, token: resolvedToken || base.token || null };
-    // normalize role from various shapes: role, roles[0], username, ADMIN, etc.
     if (!nextAdmin.role && Array.isArray(nextAdmin.roles) && nextAdmin.roles[0]) nextAdmin.role = nextAdmin.roles[0];
     if (!nextAdmin.role && nextAdmin.username) {
       const u = String(nextAdmin.username).toLowerCase();
       if (u.includes("superadmin")) nextAdmin.role = "super_admin";
-      else if (u === "getdukadesk" || u === "admin") nextAdmin.role = "admin";
+      else if (u === "getdukadesk" || u === "admin") nextAdmin.role = "platform_operator";
     }
     if (!nextAdmin.role && nextAdmin.email?.includes("superadmin")) nextAdmin.role = "super_admin";
-    // fallback for legacy sessions where role was never persisted (e.g. getdukadesk/admin) — keep customer care functional
-    if (!nextAdmin.role) nextAdmin.role = "admin";
-    // normalize casing immediately so permissions match (admin vs ADMIN)
-    if (nextAdmin.role) nextAdmin.role = String(nextAdmin.role).toLowerCase().trim().replace(/\s+/g, "_").replace(/-/g, "_").replace(/^superadmin$/, "super_admin").replace(/^getdukadesk.*$/, "admin");
-    if (nextAdmin.role === "administrator") nextAdmin.role = "admin";
-    if (nextAdmin.role === "investors") nextAdmin.role = "investor";
+    if (!nextAdmin.role) nextAdmin.role = "platform_operator";
+    if (nextAdmin.role) nextAdmin.role = toKbCanonical(nextAdmin.role);
     if (Array.isArray(nextAdmin.roles)) delete nextAdmin.roles;
     // ensure at least fallback name/email from data if admin was empty wrapper
     if (!nextAdmin.email && data?.email) nextAdmin.email = data.email;

@@ -2,6 +2,8 @@ import { useCallback, useState } from "react";
 import { Check, X, Eye } from "lucide-react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
 import SlideOver from "../../components/UI/SlideOver";
+import { Modal } from "../../components/UI/Modal";
+import Field from "../../components/UI/Field";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform, isInvestor } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
@@ -14,6 +16,9 @@ export default function PendingAdmins({ showToast }) {
   const readOnly = isInvestor(admin);
   const [tableKey, setTableKey] = useState(0);
   const [detail, setDetail] = useState(null);
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectComment, setRejectComment] = useState("");
+  const [rejectError, setRejectError] = useState("");
   const refresh = () => setTableKey((k) => k + 1);
 
   const load = useCallback(async (params) => {
@@ -59,14 +64,9 @@ export default function PendingAdmins({ showToast }) {
       disabled: (row) => row.status !== "pending" || !canManage || readOnly,
       onClick: async (row) => {
         if (row.email === admin?.email) { showToast?.("Cannot reject your own request", "error"); return; }
-        const comment = prompt("Reason for rejection (required):") || "";
-        if (!comment.trim()) { showToast?.("Rejection requires a comment", "error"); return; }
-        try {
-          await businessDashboardApi.rejectUser(row.id);
-          recordAuditEvent({ admin, action: "user.reject", target: row.id, metadata: { comment } });
-          showToast?.(`${row.email} rejected`, "success");
-          refresh();
-        } catch (err) { showToast?.(err.message, "error"); }
+        setRejectTarget(row);
+        setRejectComment("");
+        setRejectError("");
       }
     },
     {
@@ -112,6 +112,35 @@ export default function PendingAdmins({ showToast }) {
           </div>
         )}
       </SlideOver>
+      <Modal isOpen={!!rejectTarget} onClose={() => setRejectTarget(null)} title="Reject admin request">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <p style={{ fontSize: 13, color: "var(--gray-600)", margin: 0 }}>
+            Reject <strong>{rejectTarget?.email}</strong>? This is auditable per Administration domain.
+          </p>
+          <Field label="Reason (required)" value={rejectComment} onChange={(e) => { setRejectComment(e.target.value); setRejectError(""); }} placeholder="Explain why this request is rejected" required />
+          {rejectError && <div role="alert" style={{ fontSize: 12, color: "var(--red)", background: "var(--red)12", padding: 8, borderRadius: 6 }}>{rejectError}</div>}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+            <button onClick={() => setRejectTarget(null)} style={{ padding: "8px 16px", background: "var(--gray-100)", border: "1px solid var(--gray-200)", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
+            <button
+              onClick={async () => {
+                if (!rejectComment.trim()) { setRejectError("Rejection requires a comment — per ERROR_HANDLING_STANDARD"); return; }
+                if (rejectComment.trim().length < 8) { setRejectError("Please provide at least 8 characters"); return; }
+                try {
+                  await businessDashboardApi.rejectUser(rejectTarget.id, { reason: rejectComment.trim(), comment: rejectComment.trim(), rejectionReason: rejectComment.trim() });
+                  recordAuditEvent({ admin, action: "user.reject", target: rejectTarget.id, metadata: { comment: rejectComment.trim() } });
+                  showToast?.(`${rejectTarget.email} rejected`, "success");
+                  setRejectTarget(null);
+                  setRejectComment("");
+                  refresh();
+                } catch (err) { setRejectError(err.message || "Failed to reject"); }
+              }}
+              style={{ padding: "8px 16px", background: "var(--red)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
+            >
+              Confirm Reject
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

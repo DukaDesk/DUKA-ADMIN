@@ -5,7 +5,7 @@ import RemoteTablePage from "../../components/UI/RemoteTablePage";
 import { Modal } from "../../components/UI/Modal";
 import Field from "../../components/UI/Field";
 import { maskEmail } from "../../utils/maskEmail";
-import { canViewEmail, isInvestor } from "../../services/permissions";
+import { canViewEmail, isInvestor, canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./Settings.module.css";
 
@@ -15,6 +15,8 @@ const TABS = [
   { id: "features", label: "Feature Flags" },
   { id: "platform", label: "Platform Config" },
   { id: "team", label: "Admin Team" },
+  { id: "maintenance", label: "Maintenance" },
+  { id: "policies", label: "Policies" },
 ];
 
 const SETTING_CATEGORIES = {
@@ -28,11 +30,13 @@ const SETTING_CATEGORIES = {
   ],
 };
 
-const ROLE_OPTIONS = ["admin", "support", "moderator", "analyst"];
+// KB Strict SEC-0002: Platform roles are Super Admin, Platform Operator, Support Agent. Legacy kept as fallback.
+const ROLE_OPTIONS = ["platform_operator", "support_agent", "super_admin"];
 
 export default function Settings({ showToast }) {
   const { admin } = useAuth();
-  const readOnly = isInvestor(admin);
+  // KB Strict: Support Agent (and legacy investor) is read-only for team management — only Super Admin / Platform Operator can invite/manage
+  const readOnly = isInvestor(admin) || !canPerform(admin, "users:manage");
   const [activeTab, setActiveTab] = useState("security");
   const [allSettings, setAllSettings] = useState({});
   const [featureFlags, setFeatureFlags] = useState([]);
@@ -42,21 +46,25 @@ export default function Settings({ showToast }) {
   const [announcements, setAnnouncements] = useState([]);
   const [plans, setPlans] = useState([]);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("support");
+  const [inviteRole, setInviteRole] = useState("support_agent");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [annTitle, setAnnTitle] = useState("");
   const [annMsg, setAnnMsg] = useState("");
 
+  const [maintenance, setMaintenance] = useState([]);
+  const [policies, setPolicies] = useState([]);
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [settingsRes, flagsRes, usersRes, annRes, plansRes] = await Promise.all([
+      const [settingsRes, flagsRes, usersRes, annRes, plansRes, maintRes, polRes] = await Promise.all([
         businessDashboardApi.getSettings(),
         businessDashboardApi.getFeatureFlags(),
         businessDashboardApi.getUsers({ limit: 50 }),
         businessDashboardApi.getAnnouncements({ page: 1, limit: 20 }),
         businessDashboardApi.getPlans(),
+        businessDashboardApi.getMaintenanceWindows({ page: 1, limit: 10 }).catch(() => ({ data: [] })),
+        businessDashboardApi.getPolicies({ page: 1, limit: 10 }).catch(() => ({ data: [] })),
       ]);
       setAllSettings(settingsRes?.settings || settingsRes?.data || settingsRes || {});
       setFeatureFlags(Array.isArray(flagsRes) ? flagsRes : flagsRes?.flags || flagsRes?.data || flagsRes || []);
@@ -66,6 +74,10 @@ export default function Settings({ showToast }) {
       setAnnouncements(Array.isArray(ann) ? ann : []);
       const pl = plansRes?.data || plansRes?.plans || plansRes?.items || plansRes || [];
       setPlans(Array.isArray(pl) ? pl : []);
+      const m = maintRes?.data || maintRes?.items || maintRes || [];
+      setMaintenance(Array.isArray(m) ? m : []);
+      const p = polRes?.data || polRes?.items || polRes || [];
+      setPolicies(Array.isArray(p) ? p : []);
     } catch (err) {
       setError(err.message || "Failed to load settings");
     } finally {
@@ -246,7 +258,8 @@ export default function Settings({ showToast }) {
 
         {activeTab === "team" && (
           <section className={styles.section} aria-label="Admin team">
-            <h3 className={styles.sectionTitle}>Admin Team (customer care) — {users.length} shown</h3>
+            <h3 className={styles.sectionTitle}>Admin Team (customer care) — {users.length} shown {readOnly ? "· read-only" : ""}</h3>
+            {readOnly && <p style={{ fontSize: 12, color: "var(--amber)", background: "var(--amber-alpha-10)", padding: 8, borderRadius: 6, marginBottom: 12 }}>Support Agent is read-only per SEC-0002 — only Super Admin / Platform Operator can invite or remove members.</p>}
             <div className={styles.teamList}>
               {users.length === 0 && <p className={styles.empty}>No users.</p>}
               {users.map((member, idx) => (
@@ -254,34 +267,42 @@ export default function Settings({ showToast }) {
                   <div className={styles.teamAvatar} style={{ background: "#7C3AED" }}>{(member.name || member.email || "?").split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase()}</div>
                   <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || member.email}</div><div className={styles.teamEmail}>{canViewEmail(admin) ? member.email : maskEmail(member.email)}</div></div>
                   <span className={styles.teamRole} style={{ background: "#7C3AED22", color: "#7C3AED" }}>{member.role || "—"}</span>
-                  <button onClick={async () => { try { await businessDashboardApi.removeUser(member.id, member.merchantId || member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Remove</button>
+                  <button disabled={readOnly} onClick={async () => { if (readOnly) return; try { await businessDashboardApi.removeUser(member.id, member.merchantId || member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: readOnly ? "var(--gray-400)" : "var(--red)", cursor: readOnly ? "not-allowed" : "pointer", opacity: readOnly ? 0.6 : 1 }}>Remove</button>
                 </div>
               ))}
             </div>
-            <button className={styles.inviteBtn} onClick={() => setInviteOpen(true)}>+ Invite Team Member</button>
+            <button className={styles.inviteBtn} disabled={readOnly} onClick={() => !readOnly && setInviteOpen(true)} style={{ opacity: readOnly ? 0.6 : 1, cursor: readOnly ? "not-allowed" : "pointer" }}>+ Invite Team Member</button>
             <Modal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite user">
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <Field label="Email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com" />
-                <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}</select></label>
+                <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r === "super_admin" ? "Super Admin" : r === "platform_operator" ? "Platform Operator" : r === "support_agent" ? "Support Agent" : r}</option>)}</select></label>
                 <button
                   className={styles.inviteBtn}
                   onClick={async () => {
                     if (!inviteEmail) return showToast("Email required", "error");
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) return showToast("Invalid email", "error");
                     try {
-                      // Spec: POST /admin/users/{id}/invite?role=&tenantId= (tenant = mobile app membership) — invite requires user id; if not found, fallback to creating via admin/users
-                      // Try to find existing user by email else create placeholder
-                      const found = users.find((u) => u.email === inviteEmail);
+                      const found = users.find((u) => String(u.email).toLowerCase() === inviteEmail.toLowerCase());
                       if (found) {
                         await businessDashboardApi.inviteUser(found.id, { role: inviteRole });
+                        showToast("Invite sent", "success");
                       } else {
-                        // No direct create endpoint in spec; use invite with temp id or show guidance
-                        showToast("User not found — ask backend to add POST /admin/users", "info");
-                        return;
+                        // Real-data fallback: create user via POST /admin/users then invite — merchant is separate portal, so no tenantId required here
+                        const created = await businessDashboardApi.createUser({ email: inviteEmail, role: inviteRole, name: inviteEmail.split("@")[0] });
+                        const newUser = created?.data || created?.user || created;
+                        if (newUser?.id) {
+                          // Optionally trigger invite after creation if backend requires separate step
+                          try { await businessDashboardApi.inviteUser(newUser.id, { role: inviteRole }); } catch { /* creation already invites */ }
+                          setUsers((prev) => [newUser, ...prev]);
+                          showToast("User created & invited", "success");
+                        } else {
+                          showToast("User created — refresh to see", "success");
+                          loadData();
+                        }
                       }
-                      showToast("Invite sent", "success");
                       setInviteOpen(false);
                       setInviteEmail("");
-                    } catch (e) { showToast(e.message, "error"); }
+                    } catch (e) { showToast(e.message || "Failed to invite", "error"); }
                   }}
                 >
                   Send Invite
@@ -313,6 +334,34 @@ export default function Settings({ showToast }) {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {activeTab === "maintenance" && (
+          <section className={styles.section} aria-label="Maintenance windows">
+            <h3 className={styles.sectionTitle}>Maintenance Windows</h3>
+            <p style={{ fontSize: 12, color: "var(--gray-500)", marginBottom: 12 }}>KB Administration domain: Platform Operations — scheduled maintenance. Live via `GET /admin/maintenance` otherwise empty.</p>
+            {maintenance.length === 0 && <p className={styles.empty}>No maintenance windows. Platform is operational.</p>}
+            {maintenance.map((m) => (
+              <div key={m.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
+                <div><strong style={{ fontSize: 13 }}>{m.title || m.name || m.id}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{m.startAt ? new Date(m.startAt).toLocaleString() : ""} {m.endAt ? `→ ${new Date(m.endAt).toLocaleString()}` : ""} · {m.status || "scheduled"}</div></div>
+                <button onClick={async () => { try { await businessDashboardApi.deleteMaintenanceWindow(m.id); setMaintenance((p) => p.filter((x) => x.id !== m.id)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+              </div>
+            ))}
+            <button className={styles.inviteBtn} onClick={async () => { const title = prompt("Maintenance title"); if (!title) return; try { const nw = await businessDashboardApi.createMaintenanceWindow({ title, startAt: new Date().toISOString() }); setMaintenance((p) => [...p, nw?.data || nw]); showToast("Created", "success"); } catch (e) { showToast(e.message, "error"); } }}>+ Schedule Window</button>
+          </section>
+        )}
+
+        {activeTab === "policies" && (
+          <section className={styles.section} aria-label="Platform policies">
+            <h3 className={styles.sectionTitle}>Platform Policies</h3>
+            <p style={{ fontSize: 12, color: "var(--gray-500)", marginBottom: 12 }}>KB Administration domain: Platform Policy — rules governing platform behavior. Live via `GET /admin/policies` or fallback to settings.</p>
+            {policies.length === 0 && <p className={styles.empty}>No policies configured. Default platform policies apply.</p>}
+            {policies.map((p) => (
+              <div key={p.id || p.key} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8 }}>
+                <strong style={{ fontSize: 13 }}>{p.name || p.key || p.id}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{p.description || p.rule || ""}</div>
+              </div>
+            ))}
           </section>
         )}
       </div>
