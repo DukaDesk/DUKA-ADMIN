@@ -5,9 +5,13 @@ import styles from "./EnhancedRemoteTablePage.module.css";
 function recordsFrom(response) {
   if (Array.isArray(response)) return response;
   if (!response || typeof response !== "object") return [];
+  // Guard: backend envelope success:false should not be treated as data — handled in fetchData
+  if (response.success === false) return [];
   for (const key of ["data", "items", "merchants", "listings", "subscriptions", "events", "flags", "plans"]) {
     if (Array.isArray(response[key])) return response[key];
   }
+  // Handle meta.data pattern for paginated
+  if (response.data && Array.isArray(response.data)) return response.data;
   return [];
 }
 
@@ -65,19 +69,46 @@ export default function EnhancedRemoteTablePage({
         ...filterValues,
       };
       const response = await load(params);
+      // Handle envelope success:false even on 200 (backend TransformInterceptor)
+      if (response && typeof response === "object" && response.success === false) {
+        const raw = response.errors?.join(", ") || response.message || "Request failed";
+        // Treat 404 / not available as empty, not banner (e.g., maintenance)
+        const isNotAvailable = String(raw).includes("Cannot GET") || String(raw).includes("not available") || response.status === 404;
+        if (isNotAvailable) {
+          setRows([]);
+          setTotalCount(0);
+          return;
+        }
+        throw new Error(raw);
+      }
       const data = recordsFrom(response);
       setRows(data);
       if (response && typeof response === "object") {
-        setTotalCount(response.total || response.count || data.length);
+        // Handle both {total} and {meta:{total}} shapes (BFF returns meta)
+        const total = response.total ?? response.count ?? response.meta?.total ?? data.length;
+        setTotalCount(total);
       } else {
         setTotalCount(data.length);
       }
     } catch (err) {
-      setError(err.message || "Unable to load this resource.");
+      const status = err?.status;
+      const raw = err?.message || "Unable to load this resource.";
+      const rid = err?.requestId ? ` (Ref: ${String(err.requestId).slice(0, 8)})` : "";
+      // 404 for empty tables should not show banner (consistent with businessDashboard swallowing)
+      const is404 = status === 404 || String(raw).includes("Cannot GET") || String(raw).includes("not available");
+      if (is404 && title && /maintenance|polic|alert/i.test(title)) {
+        setRows([]);
+        setTotalCount(0);
+        return;
+      }
+      // Log correlation for support, but show friendly
+      if (err?.requestId) console.warn(`[EnhancedRemoteTablePage:${title}]`, status, err.requestId, raw);
+      const friendly = String(raw).includes("prisma") || String(raw).includes("Unknown field") ? `Service temporarily unavailable.${rid}` : raw + rid;
+      setError(friendly);
     } finally {
       setLoading(false);
     }
-  }, [load, currentPage, selectedPageSize, searchTerm, sortConfig, filterValues, pagination]);
+  }, [load, currentPage, selectedPageSize, searchTerm, sortConfig, filterValues, pagination, title]);
 
   useEffect(() => {
     fetchData();

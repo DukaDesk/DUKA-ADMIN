@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 function recordsFrom(response) {
   if (Array.isArray(response)) return response;
   if (!response || typeof response !== "object") return [];
+  if (response.success === false) return [];
   for (const key of ["data", "items", "merchants", "listings", "subscriptions", "events", "flags", "plans"]) {
     if (Array.isArray(response[key])) return response[key];
   }
+  if (response.data && Array.isArray(response.data)) return response.data;
   return [];
 }
 
@@ -30,16 +32,32 @@ export default function RemoteTablePage({ title, description, load, rowKey = "id
     setError("");
     load()
       .then((response) => {
+        if (response && typeof response === "object" && response.success === false) {
+          const raw = response.errors?.join(", ") || response.message || "Request failed";
+          const isNotAvailable = String(raw).includes("Cannot GET");
+          if (isNotAvailable) {
+            if (active) setRows([]);
+            return;
+          }
+          throw new Error(raw);
+        }
         if (active) setRows(recordsFrom(response));
       })
       .catch((requestError) => {
-        if (active) setError(requestError.message || "Unable to load this resource.");
+        if (active) {
+          const status = requestError?.status;
+          const raw = requestError?.message || "Unable to load this resource.";
+          const rid = requestError?.requestId ? ` (Ref: ${String(requestError.requestId).slice(0, 8)})` : "";
+          const friendly = String(raw).includes("prisma") ? `Service temporarily unavailable.${rid}` : raw + rid;
+          if (requestError?.requestId) console.warn(`[RemoteTablePage:${title}]`, status, requestError.requestId, raw);
+          setError(friendly);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [load]);
+  }, [load, title]);
 
   const columns = rows.length ? Object.keys(rows[0]).slice(0, 7) : [];
 

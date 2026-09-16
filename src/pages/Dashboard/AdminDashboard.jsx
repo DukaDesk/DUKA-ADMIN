@@ -155,61 +155,67 @@ export default function AdminDashboard({ showToast }) {
 
   useEffect(() => {
     let active = true;
-    Promise.all([
+    Promise.allSettled([
       businessDashboardApi.getOverview(),
       businessDashboardApi.getPlatformStats(),
       businessDashboardApi.getHealth().catch(() => null),
       businessDashboardApi.getBffAnalytics().catch(() => null),
-    ])
-      .then(([overviewRes, statsRes, healthRes, analyticsRes]) => {
-        if (active) {
-          const ov = overviewRes?.overview || overviewRes?.stats || overviewRes?.data || overviewRes;
-          const an = analyticsRes?.data || analyticsRes;
-          setOverview(ov);
-          setPlatformStats(statsRes?.stats || statsRes?.data || statsRes);
-          setHealth(healthRes?.data || healthRes);
-          setAnalytics(an);
-          // If tenant-correlated series already in analytics, use it directly (good-practice tenant coloring)
-          if (an?.tenantRevenueTrend || an?.tenantGrowth) {
-            setTenantRevenueTrend(an.tenantRevenueTrend || null);
-            setTenantGrowthTrend(an.tenantGrowth || an.tenantUserGrowth || null);
-          } else if (ov) {
-            // Enrich platform overview with tenant app data from first linked merchant — merchant is separate portal, tenant is mobile
-            businessDashboardApi.getMerchants({ page: 1, limit: 5 }).then((mRes) => {
-              const list = mRes?.data || mRes?.merchants || mRes?.items || [];
-              const linked = list.find((m) => m.tenantId || m.tenant_id || m.slug);
-              if (!linked || !active) return;
-              const tenantId = linked.tenantId || linked.tenant_id || linked.slug;
-              // Fetch tenant analytics for correlation; failures are silent (site-builder-only merchants)
-              businessDashboardApi.getTenantAnalytics(tenantId).then((tRes) => {
-                const t = tRes?.data || tRes;
-                const rev = t?.revenueTrend || t?.revenue || t?.monthlyRevenue;
-                const growth = t?.userGrowth || t?.growth || t?.tenantGrowth;
-                if (active) {
-                  if (Array.isArray(rev)) setTenantRevenueTrend(rev);
-                  else if (Array.isArray(t?.trend)) setTenantRevenueTrend(t.trend);
-                  if (Array.isArray(growth)) setTenantGrowthTrend(growth);
-                }
-              }).catch(() => {});
-              // Also try summary for tenant revenue fallback
-              businessDashboardApi.getTenantSummary(tenantId).then((sRes) => {
-                const s = sRes?.data || sRes;
-                if (active && !tenantRevenueTrend && s?.revenueTrend && Array.isArray(s.revenueTrend)) {
-                  setTenantRevenueTrend(s.revenueTrend);
-                }
-              }).catch(() => {});
+    ]).then((results) => {
+      if (!active) return;
+      const [ovRes, statsRes, healthRes, analyticsRes] = results;
+      if (ovRes.status === "fulfilled") {
+        const ov = ovRes.value?.overview || ovRes.value?.stats || ovRes.value?.data || ovRes.value;
+        setOverview(ov);
+        const an = analyticsRes.status === "fulfilled" ? analyticsRes.value?.data || analyticsRes.value : null;
+        if (an?.tenantRevenueTrend || an?.tenantGrowth) {
+          setTenantRevenueTrend(an.tenantRevenueTrend || null);
+          setTenantGrowthTrend(an.tenantGrowth || an.tenantUserGrowth || null);
+        } else if (ov) {
+          businessDashboardApi.getMerchants({ page: 1, limit: 5 }).then((mRes) => {
+            const list = mRes?.data || mRes?.merchants || mRes?.items || [];
+            const linked = list.find((m) => m.tenantId || m.tenant_id || m.slug);
+            if (!linked || !active) return;
+            const tenantId = linked.tenantId || linked.tenant_id || linked.slug;
+            businessDashboardApi.getTenantAnalytics(tenantId).then((tRes) => {
+              const t = tRes?.data || tRes;
+              const rev = t?.revenueTrend || t?.revenue || t?.monthlyRevenue;
+              const growth = t?.userGrowth || t?.growth || t?.tenantGrowth;
+              if (active) {
+                if (Array.isArray(rev)) setTenantRevenueTrend(rev);
+                else if (Array.isArray(t?.trend)) setTenantRevenueTrend(t.trend);
+                if (Array.isArray(growth)) setTenantGrowthTrend(growth);
+              }
             }).catch(() => {});
-          }
+            businessDashboardApi.getTenantSummary(tenantId).then((sRes) => {
+              const s = sRes?.data || sRes;
+              if (active && !tenantRevenueTrend && s?.revenueTrend && Array.isArray(s.revenueTrend)) {
+                setTenantRevenueTrend(s.revenueTrend);
+              }
+            }).catch(() => {});
+          }).catch(() => {});
         }
-      })
-      .catch((err) => {
-        if (active) setError(err.message || "Unable to load the platform overview.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+      } else if (ovRes.reason) {
+        const rid = ovRes.reason?.requestId ? ` (Ref: ${String(ovRes.reason.requestId).slice(0, 8)})` : "";
+        console.warn("[AdminDashboard] overview failed", ovRes.reason.requestId, ovRes.reason.message);
+        setError(ovRes.reason.message + rid);
+      }
+      if (statsRes.status === "fulfilled") {
+        setPlatformStats(statsRes.value?.stats || statsRes.value?.data || statsRes.value);
+      } else if (statsRes.reason) {
+        console.warn("[AdminDashboard] stats failed", statsRes.reason.requestId, statsRes.reason.message);
+        if (!error) showToast?.(`Stats temporarily unavailable. (Ref: ${String(statsRes.reason.requestId||"").slice(0,8)})`, "error");
+      }
+      if (healthRes.status === "fulfilled") setHealth(healthRes.value?.data || healthRes.value);
+      if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value?.data || analyticsRes.value);
+      // Log any failures for support; health/analytics are optional so no error banner
+      results.forEach((r, i) => {
+        if (r.status === "rejected" && r.reason?.requestId) console.warn("[AdminDashboard] part failed", i, r.reason.requestId);
       });
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
     return () => { active = false; };
-  }, []);
+  }, [showToast]);
 
   if (loading) {
     return (
@@ -231,7 +237,8 @@ export default function AdminDashboard({ showToast }) {
     );
   }
 
-  if (error) {
+  const hasCriticalError = Boolean(error && !overview && !platformStats);
+  if (hasCriticalError) {
     return (
       <section className={styles.dashboard}>
         <div className={styles.error} role="alert">
@@ -256,6 +263,11 @@ export default function AdminDashboard({ showToast }) {
           <span className={styles.refreshTime}>Last updated: {new Date().toLocaleTimeString()}</span>
         </div>
       </header>
+      {error && (overview || platformStats) && (
+        <div className={styles.error} role="alert" style={{ marginBottom: 16 }}>
+          {error} <span style={{ opacity: 0.8 }}>— showing cached/partial data.</span>
+        </div>
+      )}
 
       <div className={styles.metricsGrid} role="region" aria-label="Key metrics">
         {METRIC_CARDS.map((metric) => (

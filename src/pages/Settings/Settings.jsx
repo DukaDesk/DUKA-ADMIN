@@ -57,23 +57,45 @@ export default function Settings({ showToast }) {
     setLoading(true);
     setError("");
     try {
-      const [settingsRes, flagsRes, usersRes, annRes, plansRes, maintRes, polRes] = await Promise.all([
+      const results = await Promise.allSettled([
         businessDashboardApi.getSettings(),
         businessDashboardApi.getFeatureFlags(),
         businessDashboardApi.getUsers({ limit: 50 }),
         businessDashboardApi.getAnnouncements({ page: 1, limit: 20 }),
         businessDashboardApi.getPlans(),
-        businessDashboardApi.getMaintenanceWindows({ page: 1, limit: 10 }).catch(() => ({ data: [] })),
-        businessDashboardApi.getPolicies({ page: 1, limit: 10 }).catch(() => ({ data: [] })),
+        businessDashboardApi.getMaintenanceWindows({ page: 1, limit: 10 }),
+        businessDashboardApi.getPolicies({ page: 1, limit: 10 }),
       ]);
-      setAllSettings(settingsRes?.settings || settingsRes?.data || settingsRes || {});
-      setFeatureFlags(Array.isArray(flagsRes) ? flagsRes : flagsRes?.flags || flagsRes?.data || flagsRes || []);
-      const u = usersRes?.data || usersRes?.users || usersRes?.items || usersRes || [];
-      setUsers(Array.isArray(u) ? u : []);
-      const ann = annRes?.data || annRes?.announcements || annRes?.items || annRes || [];
-      setAnnouncements(Array.isArray(ann) ? ann : []);
-      const pl = plansRes?.data || plansRes?.plans || plansRes?.items || plansRes || [];
-      setPlans(Array.isArray(pl) ? pl : []);
+      const [settingsRes, flagsRes, usersRes, annRes, plansRes, maintRes, polRes] = results.map((r) => (r.status === "fulfilled" ? r.value : null));
+      const failures = results.map((r, i) => (r.status === "rejected" ? { idx: i, err: r.reason } : null)).filter(Boolean);
+      if (failures.length) {
+        failures.forEach(({ err }) => {
+          if (err?.requestId) console.warn("[Settings] load failed", err.requestId, err.message);
+        });
+        const critical = failures.find(({ idx }) => idx <= 1); // settings or flags
+        const usersFailed = failures.find(({ idx }) => idx === 2);
+        if (critical) setError(critical.err?.message || "Failed to load settings");
+        if (usersFailed) {
+          const rid = usersFailed.err?.requestId ? ` (Ref: ${String(usersFailed.err.requestId).slice(0, 8)})` : "";
+          showToast?.(`User list temporarily unavailable.${rid}`, "error");
+        }
+      }
+      if (settingsRes) setAllSettings(settingsRes?.settings || settingsRes?.data || settingsRes || {});
+      if (flagsRes) setFeatureFlags(Array.isArray(flagsRes) ? flagsRes : flagsRes?.flags || flagsRes?.data || flagsRes || []);
+      if (usersRes) {
+        const u = usersRes?.data || usersRes?.users || usersRes?.items || usersRes || [];
+        setUsers(Array.isArray(u) ? u : []);
+      } else if (failures.find(({ idx }) => idx === 2)) {
+        setUsers([]);
+      }
+      if (annRes) {
+        const ann = annRes?.data || annRes?.announcements || annRes?.items || annRes || [];
+        setAnnouncements(Array.isArray(ann) ? ann : []);
+      }
+      if (plansRes) {
+        const pl = plansRes?.data || plansRes?.plans || plansRes?.items || plansRes || [];
+        setPlans(Array.isArray(pl) ? pl : []);
+      }
       const m = maintRes?.data || maintRes?.items || maintRes || [];
       setMaintenance(Array.isArray(m) ? m : []);
       const p = polRes?.data || polRes?.items || polRes || [];
@@ -83,7 +105,7 @@ export default function Settings({ showToast }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     loadData();

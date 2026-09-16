@@ -150,13 +150,35 @@ export const businessDashboardApi = {
   getHealth: () => apiClient.get(`/health`),
   getInfraHealth: (params) => apiClient.get(`/infra/status${queryString(params)}`),
   getHealthHistory: (params) => apiClient.get(`/infra/health/history${queryString(params)}`),
-  // Administration domain — KB: Platform Operations, Maintenance Windows, Policies (graceful 404 if backend not yet)
-  getMaintenanceWindows: (params) => apiClient.get(`${ADMIN}/maintenance${queryString(params)}`).catch(() => apiClient.get(`/infra/maintenance${queryString(params)}`).catch(() => ({ data: [] }))),
+  // Administration domain — KB: Platform Operations, Maintenance Windows, Policies (graceful 404 -> empty, not banner; 500 logged)
+  getMaintenanceWindows: (params) => apiClient.get(`${ADMIN}/maintenance${queryString(params)}`).catch((e) => {
+    if (e?.status === 404 || String(e?.message).includes("not available")) return { data: [] };
+    console.warn("[businessDashboard] maintenance fallback", e?.requestId, e?.message);
+    return apiClient.get(`/infra/maintenance${queryString(params)}`).catch((e2) => {
+      if (e2?.status === 404 || String(e2?.message).includes("not available")) return { data: [] };
+      console.warn("[businessDashboard] infra/maintenance fallback failed", e2?.requestId);
+      return { data: [], meta: { emptyReason: "unavailable", requestId: e2?.requestId } };
+    });
+  }),
   createMaintenanceWindow: (payload) => apiClient.post(`${ADMIN}/maintenance`, payload),
   updateMaintenanceWindow: (id, payload) => apiClient.put(`${ADMIN}/maintenance/${id}`, payload),
   deleteMaintenanceWindow: (id) => apiClient.delete(`${ADMIN}/maintenance/${id}`),
-  getPolicies: (params) => apiClient.get(`${ADMIN}/policies${queryString(params)}`).catch(() => apiClient.get(`${ADMIN}/settings${queryString({ category: "policy", ...params })}`).catch(() => ({ data: [] }))),
-  getAlerts: (params) => apiClient.get(`${ADMIN}/alerts${queryString(params)}`).catch(() => apiClient.get(`/infra/alerts${queryString(params)}`).catch(() => ({ data: [] }))),
+  getPolicies: (params) => apiClient.get(`${ADMIN}/policies${queryString(params)}`).catch((e) => {
+    if (e?.status === 404 || String(e?.message).includes("not available")) return { data: [] };
+    return apiClient.get(`${ADMIN}/settings${queryString({ category: "policy", ...params })}`).catch((e2) => {
+      if (e2?.status === 404) return { data: [] };
+      console.warn("[businessDashboard] policies fallback failed", e2?.requestId);
+      return { data: [], meta: { emptyReason: "unavailable", requestId: e2?.requestId } };
+    });
+  }),
+  getAlerts: (params) => apiClient.get(`${ADMIN}/alerts${queryString(params)}`).catch((e) => {
+    if (e?.status === 404) return { data: [] };
+    return apiClient.get(`/infra/alerts${queryString(params)}`).catch((e2) => {
+      if (e2?.status === 404) return { data: [] };
+      console.warn("[businessDashboard] alerts fallback failed", e2?.requestId);
+      return { data: [] };
+    });
+  }),
   // Analytics reports — live requires tenantId
   getRevenueReport: (params) => apiClient.get(`/analytics/reports/revenue${queryString(params)}`),
   getUserAnalytics: (params) => apiClient.get(`/analytics/reports/users${queryString(params)}`),
