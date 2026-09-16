@@ -148,6 +148,7 @@ export default function AdminDashboard({ showToast }) {
   const [platformStats, setPlatformStats] = useState(null);
   const [health, setHealth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [marketplaceStats, setMarketplaceStats] = useState(null);
   const [tenantRevenueTrend, setTenantRevenueTrend] = useState(null);
   const [tenantGrowthTrend, setTenantGrowthTrend] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -160,9 +161,10 @@ export default function AdminDashboard({ showToast }) {
       businessDashboardApi.getPlatformStats(),
       businessDashboardApi.getHealth().catch(() => null),
       businessDashboardApi.getBffAnalytics().catch(() => null),
+      businessDashboardApi.getMarketplaceStats().catch(() => null),
     ]).then((results) => {
       if (!active) return;
-      const [ovRes, statsRes, healthRes, analyticsRes] = results;
+      const [ovRes, statsRes, healthRes, analyticsRes, marketplaceRes] = results;
       if (ovRes.status === "fulfilled") {
         const ov = ovRes.value?.overview || ovRes.value?.stats || ovRes.value?.data || ovRes.value;
         setOverview(ov);
@@ -207,7 +209,8 @@ export default function AdminDashboard({ showToast }) {
       }
       if (healthRes.status === "fulfilled") setHealth(healthRes.value?.data || healthRes.value);
       if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value?.data || analyticsRes.value);
-      // Log any failures for support; health/analytics are optional so no error banner
+      if (marketplaceRes.status === "fulfilled") setMarketplaceStats(marketplaceRes.value?.data || marketplaceRes.value);
+      // Log any failures for support; health/analytics/marketplace are optional so no error banner
       results.forEach((r, i) => {
         if (r.status === "rejected" && r.reason?.requestId) console.warn("[AdminDashboard] part failed", i, r.reason.requestId);
       });
@@ -251,6 +254,32 @@ export default function AdminDashboard({ showToast }) {
 
   const overviewData = overview || {};
   const statsData = platformStats || {};
+  const marketData = marketplaceStats || {};
+
+  // Backend uses tenant/tenants naming (KB merchant = tenant). Map to UI metric keys.
+  const getMetricValue = (key) => {
+    const aliases = {
+      totalMerchants: ["totalTenants", "totalMerchants", "tenants", "totalTenantsCount"],
+      activeMerchants: ["publishedTenants", "activeTenants", "activeMerchants", "published"],
+      pendingMerchants: ["draftTenants", "pendingMerchants", "pending", "draft"],
+      totalUsers: ["totalUsers", "users", "totalStaff"],
+      monthlyRevenue: ["totalRevenue", "revenue", "monthlyRevenue", "gmv"],
+      totalSubscriptions: ["totalSubscriptions", "subscriptions", "totalSubs"],
+      activeSubscriptions: ["activeSubscriptions", "activeSubs"],
+      totalMarketplaceListings: ["total", "totalListings", "totalMarketplaceListings", "listings", "totalProducts"],
+      publishedListings: ["published", "publishedListings", "isPublished", "publishedTenants"],
+    };
+    const keys = aliases[key] || [key];
+    for (const k of keys) {
+      const v = overviewData[k] ?? statsData[k] ?? marketData[k] ?? overviewData?.data?.[k] ?? statsData?.data?.[k];
+      if (v !== undefined && v !== null) return v;
+    }
+    // Fallback: check nested data objects from envelope
+    if (overviewData.data && typeof overviewData.data === "object") {
+      for (const k of keys) if (overviewData.data[k] !== undefined) return overviewData.data[k];
+    }
+    return 0;
+  };
 
   return (
     <section className={styles.dashboard}>
@@ -274,7 +303,7 @@ export default function AdminDashboard({ showToast }) {
           <MetricCard
             key={metric.key}
             metric={metric}
-            value={overviewData[metric.key] ?? statsData[metric.key] ?? 0}
+            value={getMetricValue(metric.key)}
           />
         ))}
       </div>
