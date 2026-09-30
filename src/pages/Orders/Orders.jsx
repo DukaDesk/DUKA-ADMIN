@@ -58,7 +58,7 @@ export default function Orders({ showToast }) {
     <EnhancedRemoteTablePage
       key={tableKey}
       title="Orders"
-      description="Monitor all tenant orders — view and update status via POST /app/commerce/orders/:id/status. Live via BFF when available."
+      description="Monitor all tenant orders — view and update status."
       load={load}
       rowKey="id"
       columns={columns}

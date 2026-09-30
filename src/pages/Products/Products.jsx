@@ -51,7 +51,7 @@ export default function Products({ showToast }) {
       if (Number.isNaN(delta)) { showToast?.("Invalid number", "error"); return; }
       try { await businessDashboardApi.adjustStock(r.id, { delta, quantity: delta }); showToast?.("Stock updated", "success"); refresh(); } catch (e) { showToast?.(e.message, "error"); }
     }},
-    { key: "edit", label: "Edit", icon: Edit, variant: "Secondary", disabled: () => !canManage, onClick: (r) => showToast?.(`Edit ${r.name || r.id} — use Builder for rich editing`, "info") },
+    { key: "edit", label: "Edit", icon: Edit, variant: "Secondary", disabled: () => !canManage, onClick: (r) => showToast?.(`Edit ${r.name || r.id} is not available`, "info") },
     { key: "delete", label: "Delete", icon: Trash2, variant: "Danger", disabled: () => !canManage, onClick: async (r) => {
       if (!confirm(`Delete ${r.name || r.id}?`)) return;
       try { await businessDashboardApi.deleteProduct(r.id); showToast?.("Product deleted", "success"); refresh(); } catch (e) { showToast?.(e.message, "error"); }
@@ -63,7 +63,7 @@ export default function Products({ showToast }) {
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Products"
-        description="Catalog management — list, adjust stock, edit or delete. Live via GET /app/commerce/products. Use Builder for rich layout."
+        description="Catalog management — list, adjust stock, edit or delete."
         load={load}
         rowKey="id"
         columns={columns}
@@ -82,7 +82,7 @@ export default function Products({ showToast }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13 }}>
             <div><strong>{detail.name || detail.title}</strong> · {detail.category || "—"}</div>
             <div>Price: {new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN" }).format(Number(detail.price || 0))} · Stock: {detail.stock ?? detail.quantity ?? "—"}</div>
-            <pre style={{ background: "var(--gray-50)", padding: 12, borderRadius: 8, fontSize: 11, maxHeight: 300, overflow: "auto" }}>{JSON.stringify(detail, null, 2)}</pre>
+            <div>Status: {detail.status || (detail.isActive === false ? "Inactive" : "Active")}</div>
           </div>
         )}
       </SlideOver>

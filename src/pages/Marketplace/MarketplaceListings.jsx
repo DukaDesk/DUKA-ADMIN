@@ -248,7 +248,7 @@ export default function MarketplaceListings({ showToast }) {
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Marketplace Listings"
-        description="Moderate and manage all marketplace listings — approve, reject, feature, delete (customer care + Builder overview). Click rows to select for bulk approve/reject."
+        description="Moderate and manage all marketplace listings — approve, reject, feature, delete."
         load={load}
         rowKey="id"
         columns={columns}

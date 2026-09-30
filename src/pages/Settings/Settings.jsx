@@ -213,7 +213,7 @@ export default function Settings({ showToast }) {
               ))}
             </div>
             <button className={styles.inviteBtn} onClick={async () => { const key = prompt("Flag key"); if (!key) return; try { const nf = await businessDashboardApi.createFeatureFlag({ key, enabled: false, description: "" }); setFeatureFlags((p) => [...p, nf?.data || nf]); showToast("Created", "success"); } catch (e) { showToast(e.message, "error"); } }}>+ Create Flag</button>
-            <div style={{ marginTop: 16 }}><RemoteTablePage title="" description="Raw flags table (legacy)" load={businessDashboardApi.getFeatureFlags} /></div>
+            <div style={{ marginTop: 16 }}><RemoteTablePage title="" description="All feature flags" load={businessDashboardApi.getFeatureFlags} /></div>
           </section>
         )}
 
@@ -362,7 +362,6 @@ export default function Settings({ showToast }) {
         {activeTab === "maintenance" && (
           <section className={styles.section} aria-label="Maintenance windows">
             <h3 className={styles.sectionTitle}>Maintenance Windows</h3>
-            <p style={{ fontSize: 12, color: "var(--gray-500)", marginBottom: 12 }}>KB Administration domain: Platform Operations — scheduled maintenance. Live via `GET /admin/maintenance` otherwise empty.</p>
             {maintenance.length === 0 && <p className={styles.empty}>No maintenance windows. Platform is operational.</p>}
             {maintenance.map((m) => (
               <div key={m.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
@@ -377,8 +376,7 @@ export default function Settings({ showToast }) {
         {activeTab === "policies" && (
           <section className={styles.section} aria-label="Platform policies">
             <h3 className={styles.sectionTitle}>Platform Policies</h3>
-            <p style={{ fontSize: 12, color: "var(--gray-500)", marginBottom: 12 }}>KB Administration domain: Platform Policy — rules governing platform behavior. Live via `GET /admin/policies` or fallback to settings.</p>
-            {policies.length === 0 && <p className={styles.empty}>No policies configured. Default platform policies apply.</p>}
+            {policies.length === 0 && <p className={styles.empty}>No policies configured.</p>}
             {policies.map((p) => (
               <div key={p.id || p.key} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8 }}>
                 <strong style={{ fontSize: 13 }}>{p.name || p.key || p.id}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{p.description || p.rule || ""}</div>

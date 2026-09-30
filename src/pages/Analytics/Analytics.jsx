@@ -59,7 +59,7 @@ export default function Analytics({ showToast }) {
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
-        <div><h2 className={styles.title}>Analytics & Reports</h2><p className={styles.subtitle}>Revenue, user and booking analytics live via GET /analytics/reports/* + saved reports via POST /app/analytics/reports.</p></div>
+        <div><h2 className={styles.title}>Analytics & Reports</h2><p className={styles.subtitle}>Revenue, user and booking analytics.</p></div>
         <button className={styles.createBtn} onClick={handleCreate}>+ New Report</button>
       </header>
       {error && <div className={styles.error} role="alert">{error}</div>}
@@ -73,15 +73,15 @@ export default function Analytics({ showToast }) {
       <div className={styles.cardsGrid}>
         <article className={styles.card}>
           <h3 className={styles.cardTitle}>Revenue Report</h3>
-          <pre className={styles.json}>{revenue ? JSON.stringify(revenue, null, 2) : "No data — awaiting /analytics/reports/revenue"}</pre>
+          <pre className={styles.json}>{revenue ? JSON.stringify(revenue, null, 2) : "No data yet"}</pre>
         </article>
         <article className={styles.card}>
           <h3 className={styles.cardTitle}>User Analytics</h3>
-          <pre className={styles.json}>{users ? JSON.stringify(users, null, 2) : "No data — awaiting /analytics/reports/users"}</pre>
+          <pre className={styles.json}>{users ? JSON.stringify(users, null, 2) : "No data yet"}</pre>
         </article>
         <article className={styles.card}>
           <h3 className={styles.cardTitle}>Booking Analytics</h3>
-          <pre className={styles.json}>{bookings ? JSON.stringify(bookings, null, 2) : "No data — awaiting /analytics/reports/bookings"}</pre>
+          <pre className={styles.json}>{bookings ? JSON.stringify(bookings, null, 2) : "No data yet"}</pre>
         </article>
       </div>
 

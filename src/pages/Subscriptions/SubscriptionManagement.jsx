@@ -175,7 +175,7 @@ export default function SubscriptionManagement({ showToast }) {
     <EnhancedRemoteTablePage
       key={tableKey}
       title="Subscriptions"
-      description="Monitor and manage all merchant subscriptions — change plan, pause or cancel via PUT /admin/subscriptions/:id."
+      description="Monitor and manage all merchant subscriptions — change plan, pause or cancel."
       load={load}
       rowKey="id"
       columns={columns}

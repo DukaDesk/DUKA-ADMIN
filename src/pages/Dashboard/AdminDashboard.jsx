@@ -82,7 +82,7 @@ function Sparkline({ data, color = "var(--amber)" }) {
 
 function RevenueChart({ data, tenantData }) {
   const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
-  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>Revenue data will appear here when backend provides analytics endpoint</div>;
+  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>No revenue data yet</div>;
   const primary = data && data.length ? data : hasTenant ? tenantData : [];
   const max = Math.max(...(hasTenant ? [...primary, ...tenantData] : primary));
   const min = Math.min(...(hasTenant ? [...primary, ...tenantData] : primary));
@@ -112,7 +112,7 @@ function RevenueChart({ data, tenantData }) {
 
 function MerchantGrowthChart({ data, tenantData }) {
   const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
-  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>Merchant growth data will appear here when backend provides analytics endpoint</div>;
+  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>No merchant data yet</div>;
   const primary = data && data.length ? data : hasTenant ? tenantData : [];
   const allVals = hasTenant ? [...primary, ...tenantData] : primary;
   const max = Math.max(...allVals);
@@ -226,7 +226,6 @@ export default function AdminDashboard({ showToast }) {
         <header className={styles.header}>
           <div className={styles.headerLeft}>
             <h2 className={styles.title}>Platform Overview</h2>
-            <p className={styles.subtitle}>Live administrative data from the Business Dashboard API.</p>
           </div>
         </header>
         <div className={styles.metricsGrid} role="status" aria-live="polite">
@@ -286,7 +285,6 @@ export default function AdminDashboard({ showToast }) {
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <h2 className={styles.title}>Platform Overview</h2>
-          <p className={styles.subtitle}>Live administrative data from the Business Dashboard API.</p>
         </div>
         <div className={styles.headerRight}>
           <span className={styles.refreshTime}>Last updated: {new Date().toLocaleTimeString()}</span>
@@ -312,14 +310,14 @@ export default function AdminDashboard({ showToast }) {
         <section className={styles.chartCard} aria-labelledby="revenue-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="revenue-chart-title" className={styles.chartTitle}>Revenue Trend (12 months)</h3>
-            <p className={styles.chartDesc}>Monthly revenue in NGN {analytics ? "· live via bff/admin/analytics" : ""} {tenantRevenueTrend ? "· tenant correlated (teal dashed)" : ""}</p>
+            <p className={styles.chartDesc}>Monthly revenue in NGN</p>
           </header>
           <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || []} tenantData={tenantRevenueTrend || analytics?.tenantRevenueTrend || overviewData.tenantRevenueTrend} />
         </section>
         <section className={styles.chartCard} aria-labelledby="merchant-chart-title">
           <header className={styles.chartHeader}>
             <h3 id="merchant-chart-title" className={styles.chartTitle}>Merchant Growth (12 months)</h3>
-            <p className={styles.chartDesc}>Active merchants (Site Builder) {tenantGrowthTrend ? "· Tenant (Mobile) teal line" : analytics ? "· live" : ""}</p>
+            <p className={styles.chartDesc}>Active merchants count</p>
           </header>
           <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || []} tenantData={tenantGrowthTrend || analytics?.tenantGrowth} />
         </section>

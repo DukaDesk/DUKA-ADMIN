@@ -49,7 +49,7 @@ export default function Marketing({ showToast }) {
       <EnhancedRemoteTablePage
         key={`camp-${tableKey}`}
         title="Campaigns"
-        description="Push/email/SMS campaigns live via POST /app/notifications/campaigns. Create in Settings → Notifications."
+        description="Push, email and SMS campaigns."
         load={loadCampaigns}
         rowKey="id"
         columns={campaignColumns}
@@ -58,12 +58,12 @@ export default function Marketing({ showToast }) {
         pagination
         pageSize={10}
         actions={campaignActions}
-        emptyMessage="No campaigns. Create one via POST /app/notifications/campaigns."
+        emptyMessage="No campaigns yet."
       />
       <EnhancedRemoteTablePage
         key={`int-${tableKey}`}
         title="Integrations"
-        description="Available connectors live via GET /app/integrations/available and tenant status via /bff/tenant/:id/integrations."
+        description="Available connectors and their status."
         load={loadIntegrations}
         rowKey="provider"
         columns={integrationColumns}
@@ -72,7 +72,7 @@ export default function Marketing({ showToast }) {
         pagination
         pageSize={10}
         actions={[
-          { key: "test", label: "Test", icon: Plug, variant: "Secondary", onClick: async (r) => showToast?.(`Test ${r.provider} — via POST /app/integrations/:provider/test`, "info") },
+          { key: "test", label: "Test", icon: Plug, variant: "Secondary", onClick: async (r) => showToast?.(`Testing ${r.provider}…`, "info") },
         ]}
         emptyMessage="No integrations configured."
       />

@@ -91,7 +91,7 @@ export default function Customers({ showToast }) {
     { key: "view", label: "View", icon: Eye, variant: "Ghost", onClick: async (r) => {
       try { const res = await businessDashboardApi.getUser(r.id); setDetail(res?.data || res); } catch (e) { showToast?.(e.message, "error"); }
     }},
-    { key: "email", label: "Email", icon: Mail, variant: "Secondary", onClick: (r) => showToast?.(`Email to ${r.email} — via notifications`, "info") },
+    { key: "email", label: "Email", icon: Mail, variant: "Secondary", onClick: (r) => showToast?.(`Email to ${r.email}`, "info") },
     { key: "ban", label: "Deactivate", icon: Ban, variant: "Danger", disabled: () => !canManage, onClick: async (r) => {
       if (!confirm(`Deactivate ${r.email}? 30-day soft delete.`)) return;
       try { await businessDashboardApi.removeUser(r.id, ""); showToast?.("Customer deactivated", "success"); } catch (e) { showToast?.(e.message, "error"); }
@@ -101,26 +101,24 @@ export default function Customers({ showToast }) {
   return (
     <>
       <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "10px 14px", background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 10 }}>
-        <label htmlFor="merchant-filter" style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Tenant App (Mobile) — Merchant:</label>
+        <label htmlFor="merchant-filter" style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)" }}>Merchant:</label>
         <select
           id="merchant-filter"
           value={selectedMerchant}
           onChange={(e) => handleMerchantChange(e.target.value)}
           style={{ padding: "8px 12px", border: "1px solid var(--gray-200)", borderRadius: 8, fontSize: 13, minWidth: 200, background: "#fff" }}
-          aria-label="Filter by merchant tenant"
+          aria-label="Filter by merchant"
         >
-          <option value="">All Customers (platform + all tenants)</option>
+          <option value="">All Customers</option>
           {merchants.map((m) => (
-            <option key={m.id} value={m.id}>{m.name} {m.status ? `· ${m.status}` : ""}</option>
+            <option key={m.id} value={m.id}>{m.name}</option>
           ))}
         </select>
-        {selectedMerchant && <span style={{ fontSize: 11, color: "var(--teal)", background: "var(--teal)12", padding: "4px 8px", borderRadius: 6, fontWeight: 600 }}>Tenant-scoped: {merchants.find((m) => m.id === selectedMerchant)?.name}</span>}
-        {!selectedMerchant && merchants.length > 0 && <span style={{ fontSize: 11, color: "var(--gray-500)" }}>Showing app/tenant users across {merchants.length} merchant(s) — select a merchant to drill down</span>}
       </div>
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Customers"
-        description={`End-user customer directory — live via ${selectedMerchant ? `GET /admin/users/merchant/${selectedMerchant || ":id"}` : "GET /admin/users?role=customer"} + fallback to tenant users. Filter, view, or deactivate (30-day soft delete).`}
+        description="End-user customer directory."
         load={load}
         rowKey="id"
         columns={columns}
@@ -132,7 +130,7 @@ export default function Customers({ showToast }) {
         filters={[]}
         defaultSort={{ key: "createdAt", direction: "desc" }}
         actions={actions}
-        emptyMessage={selectedMerchant ? "No tenant users for this merchant. This tenant has no app users yet." : "No customers found. Try selecting a merchant to see tenant app users."}
+        emptyMessage="No customers found."
       />
       <SlideOver open={!!detail} onClose={() => setDetail(null)} title={detail?.email || "Customer detail"}>
         {detail && (
@@ -141,20 +139,16 @@ export default function Customers({ showToast }) {
             <div>Status: {detail.status} · Phone: {detail.phoneNumber || "—"}</div>
             <div>Joined: {detail.createdAt ? new Date(detail.createdAt).toLocaleString() : "—"}</div>
             {detail.tenants && Array.isArray(detail.tenants) && detail.tenants.length > 0 && (
-              <div style={{ padding: 10, background: "var(--teal)08", border: "1px solid var(--teal)", borderRadius: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--teal)", marginBottom: 6 }}>Tenant App Memberships ({detail.tenants.length})</div>
+              <div style={{ padding: 10, background: "var(--gray-50)", border: "1px solid var(--gray-200)", borderRadius: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Stores ({detail.tenants.length})</div>
                 {detail.tenants.map((tm) => (
-                  <div key={tm.tenantId || tm.tenant?.id} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: "1px solid var(--gray-100)" }}>
+                  <div key={tm.tenantId || tm.tenant?.id} style={{ fontSize: 12, display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
                     <span>{tm.tenant?.name || tm.tenantId}</span>
-                    <span style={{ fontSize: 11, padding: "2px 6px", borderRadius: 4, background: tm.status === "active" ? "var(--green)22" : "var(--amber)22", color: tm.status === "active" ? "var(--green)" : "var(--amber)" }}>{tm.role || "—"} · {tm.status || "—"}</span>
+                    <span style={{ fontSize: 11, textTransform: "capitalize" }}>{tm.status || "—"}</span>
                   </div>
                 ))}
               </div>
             )}
-            {detail.roles && Array.isArray(detail.roles) && detail.roles.length > 0 && (
-              <div style={{ fontSize: 11, color: "var(--gray-500)" }}>Platform Roles: {detail.roles.map((ur) => ur.role?.name || ur.roleId).join(", ")}</div>
-            )}
-            <pre style={{ background: "var(--gray-50)", padding: 12, borderRadius: 8, fontSize: 11, maxHeight: 300, overflow: "auto" }}>{JSON.stringify(detail, null, 2)}</pre>
           </div>
         )}
       </SlideOver>

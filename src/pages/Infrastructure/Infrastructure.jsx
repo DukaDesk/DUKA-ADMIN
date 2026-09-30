@@ -42,20 +42,20 @@ export default function Infrastructure({ showToast }) {
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <header><h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "var(--navy)", margin: 0 }}>Infrastructure</h2><p style={{ color: "var(--gray-500)", fontSize: 13, margin: "4px 0 0" }}>Live via GET /infra/overview, /infra/status, /infra/environments. Managed in DUKA-BACKEND `infrastructure` module.</p></header>
+      <header><h2 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "var(--navy)", margin: 0 }}>Infrastructure</h2></header>
       {error && <div role="alert" style={{ background: "#FEF2F2", color: "var(--red)", padding: 12, borderRadius: 8, fontSize: 13 }}>{error}</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-        <Card title="Overview" icon={Cloud}><pre style={{ margin: 0, background: "var(--gray-50)", padding: 12, borderRadius: 8, fontSize: 11, maxHeight: 260, overflow: "auto" }}>{overview ? JSON.stringify(overview, null, 2) : "No overview — awaiting /infra/overview"}</pre></Card>
-        <Card title="Health" icon={Activity}><pre style={{ margin: 0, background: "var(--gray-50)", padding: 12, borderRadius: 8, fontSize: 11, maxHeight: 260, overflow: "auto" }}>{health ? JSON.stringify(health, null, 2) : "No health — awaiting /infra/status"}</pre></Card>
+        <Card title="Overview" icon={Cloud}><pre style={{ margin: 0, background: "var(--gray-50)", padding: 12, borderRadius: 8, fontSize: 11, maxHeight: 260, overflow: "auto" }}>{overview ? JSON.stringify(overview, null, 2) : "No overview yet"}</pre></Card>
+        <Card title="Health" icon={Activity}><pre style={{ margin: 0, background: "var(--gray-50)", padding: 12, borderRadius: 8, fontSize: 11, maxHeight: 260, overflow: "auto" }}>{health ? JSON.stringify(health, null, 2) : "No health data yet"}</pre></Card>
         <Card title="Environments" icon={Server}>
-          {envs.length === 0 ? <p style={{ color: "var(--gray-500)", fontSize: 13 }}>No environments. Create via POST /infra/environments.</p> : envs.map((e) => (
+          {envs.length === 0 ? <p style={{ color: "var(--gray-500)", fontSize: 13 }}>No environments yet.</p> : envs.map((e) => (
             <div key={e.id || e.slug} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div><strong style={{ fontSize: 13 }}>{e.name || e.slug}</strong> <span style={{ fontSize: 11, color: "var(--gray-500)" }}>{e.status || e.slug}</span></div>
               <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: "var(--radius-full)", background: e.isActive ? "var(--green)22" : "var(--gray-100)", color: e.isActive ? "var(--green)" : "var(--gray-500)" }}>{e.isActive ? "active" : "inactive"}</span>
             </div>
           ))}
         </Card>
-        <Card title="Security" icon={Shield}><p style={{ fontSize: 13, color: "var(--gray-500)", margin: 0 }}>Policies live in Settings → Policies (`GET /admin/policies` → `Platform Policy`). Security events via `GET /app/security/events` (not exposed here).</p></Card>
+        <Card title="Security" icon={Shield}><p style={{ fontSize: 13, color: "var(--gray-500)", margin: 0 }}>Policies are managed in Settings → Policies.</p></Card>
       </div>
     </section>
   );
