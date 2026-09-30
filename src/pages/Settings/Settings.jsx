@@ -48,6 +48,18 @@ export default function Settings({ showToast }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("support_agent");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [invites, setInvites] = useState([]);
+
+  const loadInvites = useCallback(async () => {
+    try {
+      const res = await businessDashboardApi.listInvites({ status: "pending" });
+      const list = res?.data || res?.invites || res?.items || res || [];
+      setInvites(Array.isArray(list) ? list : []);
+    } catch {
+      setInvites([]);
+    }
+  }, []);
   const [annTitle, setAnnTitle] = useState("");
   const [annMsg, setAnnMsg] = useState("");
 
@@ -109,7 +121,8 @@ export default function Settings({ showToast }) {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    loadInvites();
+  }, [loadData, loadInvites]);
 
   const handleSettingChange = async (key, newValue) => {
     const previousValue = allSettings[key];
@@ -293,42 +306,61 @@ export default function Settings({ showToast }) {
                 </div>
               ))}
             </div>
-            <button className={styles.inviteBtn} disabled={readOnly} onClick={() => !readOnly && setInviteOpen(true)} style={{ opacity: readOnly ? 0.6 : 1, cursor: readOnly ? "not-allowed" : "pointer" }}>+ Invite Team Member</button>
-            <Modal isOpen={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite user">
+            <button className={styles.inviteBtn} disabled={readOnly} onClick={() => { if (!readOnly) { setInviteOpen(true); setGeneratedLink(""); } }} style={{ opacity: readOnly ? 0.6 : 1, cursor: readOnly ? "not-allowed" : "pointer" }}>+ Generate Invite Link</button>
+            {invites.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <h4 style={{ fontSize: 13, marginBottom: 8 }}>Pending Invites ({invites.length})</h4>
+                {invites.map((inv) => (
+                  <div key={inv.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div><strong style={{ fontSize: 13 }}>{inv.email}</strong> <span style={{ fontSize: 11, color: "var(--gray-500)" }}>{inv.role} · expires {inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : "—"}</span></div>
+                    <button disabled={readOnly} onClick={async () => { try { await businessDashboardApi.revokeInvite(inv.id); setInvites((p) => p.filter((x) => x.id !== inv.id)); showToast("Invite revoked", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>Revoke</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Modal isOpen={inviteOpen} onClose={() => { setInviteOpen(false); setGeneratedLink(""); setInviteEmail(""); }} title="Generate invite link">
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <Field label="Email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com" />
-                <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r === "super_admin" ? "Super Admin" : r === "platform_operator" ? "Platform Operator" : r === "support_agent" ? "Support Agent" : r}</option>)}</select></label>
-                <button
-                  className={styles.inviteBtn}
-                  onClick={async () => {
-                    if (!inviteEmail) return showToast("Email required", "error");
-                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) return showToast("Invalid email", "error");
-                    try {
-                      const found = users.find((u) => String(u.email).toLowerCase() === inviteEmail.toLowerCase());
-                      if (found) {
-                        await businessDashboardApi.inviteUser(found.id, { role: inviteRole });
-                        showToast("Invite sent", "success");
-                      } else {
-                        // Real-data fallback: create user via POST /admin/users then invite — merchant is separate portal, so no tenantId required here
-                        const created = await businessDashboardApi.createUser({ email: inviteEmail, role: inviteRole, name: inviteEmail.split("@")[0] });
-                        const newUser = created?.data || created?.user || created;
-                        if (newUser?.id) {
-                          // Optionally trigger invite after creation if backend requires separate step
-                          try { await businessDashboardApi.inviteUser(newUser.id, { role: inviteRole }); } catch { /* creation already invites */ }
-                          setUsers((prev) => [newUser, ...prev]);
-                          showToast("User created & invited", "success");
-                        } else {
-                          showToast("User created — refresh to see", "success");
-                          loadData();
-                        }
-                      }
-                      setInviteOpen(false);
-                      setInviteEmail("");
-                    } catch (e) { showToast(e.message || "Failed to invite", "error"); }
-                  }}
-                >
-                  Send Invite
-                </button>
+                {!generatedLink ? (
+                  <>
+                    <Field label="Email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com" />
+                    <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r === "super_admin" ? "Super Admin" : r === "platform_operator" ? "Platform Operator" : r === "support_agent" ? "Support Agent" : r}</option>)}</select></label>
+                    <p style={{ fontSize: 11, color: "var(--gray-500)", margin: 0 }}>Single-use link, bound to this email and role, expires in 7 days. Share it directly with the new admin.</p>
+                    <button
+                      className={styles.inviteBtn}
+                      onClick={async () => {
+                        if (!inviteEmail) return showToast("Email required", "error");
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) return showToast("Invalid email", "error");
+                        try {
+                          const res = await businessDashboardApi.createInvite({ email: inviteEmail.trim(), role: inviteRole });
+                          const data = res?.data || res;
+                          const link = `${window.location.origin}/register?token=${data.token}`;
+                          setGeneratedLink(link);
+                          showToast("Invite link generated", "success");
+                          loadInvites();
+                        } catch (e) { showToast(e.message || "Failed to generate invite", "error"); }
+                      }}
+                    >
+                      Generate Link
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 12, color: "var(--gray-600)", margin: 0 }}>Share this link with <strong>{inviteEmail}</strong>:</p>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input readOnly value={generatedLink} onFocus={(e) => e.target.select()} style={{ flex: 1, padding: 8, border: "1px solid var(--gray-200)", borderRadius: 6, fontSize: 12 }} aria-label="Invite link" />
+                      <button
+                        className={styles.inviteBtn}
+                        onClick={async () => {
+                          try { await navigator.clipboard.writeText(generatedLink); showToast("Link copied", "success"); }
+                          catch { showToast("Copy failed — select the link manually", "error"); }
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <button className={styles.inviteBtn} onClick={() => { setInviteOpen(false); setGeneratedLink(""); setInviteEmail(""); }}>Done</button>
+                  </>
+                )}
               </div>
             </Modal>
             <div style={{ marginTop: 24 }}>

@@ -155,6 +155,11 @@ export const businessDashboardApi = {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
     return apiClient.get(`${ADMIN}/users/merchant/${merchantId}${queryString(liveParams)}`, { retry: 0 });
   },
+  // Admin invites — invite-only signup (single-use token bound to email + role)
+  createInvite: (payload) => apiClient.post(`${ADMIN}/invites`, payload),
+  listInvites: (params) => apiClient.get(`${ADMIN}/invites${queryString(params || {})}`),
+  revokeInvite: (id) => apiClient.delete(`${ADMIN}/invites/${id}`),
+  validateInvite: (token) => apiClient.get(`/auth/invites/validate${queryString({ token })}`, { retry: 0 }),
   // Admin users — create for invite fallback when user not found
   createUser: (payload) => apiClient.post(`${ADMIN}/users`, payload),
   inviteUser: (id, payload) => apiClient.post(`${ADMIN}/users/${id}/invite`, payload),

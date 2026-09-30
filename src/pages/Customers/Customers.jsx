@@ -61,7 +61,7 @@ export default function Customers({ showToast }) {
             // Annotate with merchant context for display
             return { ...tenantRes, users: tList.map((u) => ({ ...u, _merchantName: merchants[0].name })) };
           }
-        } catch {}
+          } catch { /* tenant fallback failed — use platform result */ }
       }
       return res;
     } catch (e) {
