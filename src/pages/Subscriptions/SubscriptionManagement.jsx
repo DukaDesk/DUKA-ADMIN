@@ -27,6 +27,28 @@ const INTERVAL_OPTIONS = [
   { value: "yearly", label: "Yearly" },
 ];
 
+function normalizeSubscriptionResponse(response) {
+  let payload = response;
+  while (payload?.success === true && payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)) {
+    payload = payload.data;
+  }
+  const records = Array.isArray(payload) ? payload : payload?.data || payload?.subscriptions;
+  const rows = Array.isArray(records) ? records : [];
+  return {
+    ...(payload && !Array.isArray(payload) ? payload : {}),
+    data: rows.map((row) => ({
+      ...row,
+      merchantName: row.merchantName || row.tenant?.name || row.tenantName || "—",
+      planName: row.planName || row.plan?.name || (typeof row.plan === "string" ? row.plan : "—"),
+      plan: row.plan?.slug || row.planSlug || (typeof row.plan === "string" ? row.plan : ""),
+      amount: row.amount ?? row.plan?.price ?? 0,
+      amountIsMajorUnits: row.amountIsMajorUnits ?? (row.plan?.price != null),
+      currency: row.currency || row.plan?.currency || "NGN",
+      currentPeriodEnd: row.currentPeriodEnd || row.endDate || null,
+    })),
+  };
+}
+
 export default function SubscriptionManagement({ showToast }) {
   const { admin } = useAuth();
   const canManage = canPerform(admin, "subscriptions:manage") || canPerform(admin, "plan:manage");
@@ -34,7 +56,8 @@ export default function SubscriptionManagement({ showToast }) {
   const refresh = () => setTableKey((k) => k + 1);
 
   const load = useCallback(async (params) => {
-    return businessDashboardApi.getSubscriptions(params);
+    const response = await businessDashboardApi.getSubscriptions(params);
+    return normalizeSubscriptionResponse(response);
   }, []);
 
   const columns = [
@@ -92,7 +115,8 @@ export default function SubscriptionManagement({ showToast }) {
     },
     { key: "amount", label: "Amount", width: 100, sortable: true,
       render: (value, row) => {
-        const amount = Number(value || row.amount || 0) / 100;
+        const rawAmount = Number(value ?? row.amount ?? 0);
+        const amount = row.amountIsMajorUnits ? rawAmount : rawAmount / 100;
         const currency = row.currency || "NGN";
         return new Intl.NumberFormat("en-NG", { style: "currency", currency, minimumFractionDigits: 0 }).format(amount);
       }
