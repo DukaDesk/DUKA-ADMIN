@@ -13,37 +13,49 @@ function themeTokens(theme) {
 
 function PreviewComponent({ comp, tokens }) {
   const p = comp?.props || comp?.config || {};
-  const img = p.image || p.imageUrl || p.src || p.banner || p.cover;
-  if (img) {
-    return (
-      <img
-        src={img}
-        alt={p.alt || p.title || comp.type}
-        style={{ width: "100%", borderRadius: tokens.radius, display: "block", marginBottom: 8, background: "#F3F4F6" }}
-        loading="lazy"
-      />
-    );
-  }
-  const title = p.title || p.heading || p.name;
+  const title = p.title || p.heading || p.name || p.businessName;
   const text = p.text || p.subtitle || p.description || p.label || p.caption;
-  const price = p.price;
-  if (!title && !text && price == null) {
-    return (
-      <div style={{ background: "#F3F4F6", borderRadius: tokens.radius, padding: 10, marginBottom: 8, fontSize: 10, color: "#9CA3AF" }}>
-        {comp.type || "block"}
-      </div>
-    );
-  }
+  const image = p.image || p.imageUrl || p.src || p.banner || p.cover || p.backgroundImage || p.backgroundImageUrl || p.thumbnail || p.photo;
+  const price = p.price ?? p.amount;
+  const type = String(comp?.type || "").toLowerCase();
+  const actionLabel = p.cta?.label || p.buttonLabel || (typeof p.action === "string" ? p.action : null);
+  const items = [p.items, p.products, p.categories, p.results, p.data].find(Array.isArray) || [];
+  const showButton = ["button", "hero", "herobanner"].includes(type) || Boolean(actionLabel || p.action);
+  const imageStyle = { width: "100%", height: 112, objectFit: "cover", borderRadius: tokens.radius, display: "block", background: "#F3F4F6" };
+
   return (
-    <div style={{ background: "#fff", border: "1px solid #F3F4F6", borderRadius: tokens.radius, padding: 10, marginBottom: 8 }}>
-      {title && <div style={{ fontSize: 12, fontWeight: 700, color: tokens.text, marginBottom: text ? 2 : 0 }}>{String(title)}</div>}
-      {text && <div style={{ fontSize: 11, color: "#6B7280" }}>{String(text)}</div>}
-      {price != null && <div style={{ fontSize: 12, fontWeight: 700, color: tokens.primary, marginTop: 4 }}>{String(price)}</div>}
-      {comp.type === "button" || p.action ? (
-        <div style={{ marginTop: 8, background: tokens.primary, color: "#fff", borderRadius: tokens.radius, padding: "8px 0", textAlign: "center", fontSize: 11, fontWeight: 700 }}>
-          {String(p.label || p.title || "Open")}
+    <div style={{ overflow: "hidden", background: "#fff", border: "1px solid #F3F4F6", borderRadius: tokens.radius, marginBottom: 8 }}>
+      {image && <img src={image} alt={p.alt || title || comp.type} style={imageStyle} loading="lazy" />}
+      {(title || text || price != null || showButton) && (
+        <div style={{ padding: 10 }}>
+          {title && <div style={{ fontSize: type.includes("hero") ? 15 : 12, fontWeight: 700, color: tokens.text, marginBottom: text ? 3 : 0 }}>{String(title)}</div>}
+          {text && <div style={{ fontSize: 11, lineHeight: 1.45, color: "#6B7280" }}>{String(text)}</div>}
+          {price != null && <div style={{ fontSize: 12, fontWeight: 700, color: tokens.primary, marginTop: 4 }}>{typeof price === "number" ? new Intl.NumberFormat("en-NG", { style: "currency", currency: p.currency || "NGN", maximumFractionDigits: 0 }).format(price) : String(price)}</div>}
+          {showButton && <div style={{ marginTop: 8, background: tokens.primary, color: "#fff", borderRadius: tokens.radius, padding: "8px 10px", textAlign: "center", fontSize: 11, fontWeight: 700 }}>{String(actionLabel || p.cta?.title || "Open")}</div>}
         </div>
-      ) : null}
+      )}
+      {items.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: items.length > 1 ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: 7, padding: 8, paddingTop: title || text || price != null ? 0 : 8 }}>
+          {items.slice(0, 6).map((item, index) => {
+            const entry = typeof item === "string" ? { name: item } : item || {};
+            const itemImage = entry.image || entry.imageUrl || entry.thumbnail || entry.photo || entry.src;
+            const itemName = entry.name || entry.title || entry.label || `Item ${index + 1}`;
+            return (
+              <div key={entry.id || entry.slug || index} style={{ minWidth: 0, border: "1px solid #F3F4F6", borderRadius: tokens.radius, overflow: "hidden" }}>
+                {itemImage && <img src={itemImage} alt={itemName} style={{ ...imageStyle, height: 70, borderRadius: 0 }} loading="lazy" />}
+                <div style={{ padding: 7 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: tokens.text }}>{String(itemName)}</div>
+                  {entry.description && <div style={{ fontSize: 9, color: "#6B7280", marginTop: 2 }}>{String(entry.description)}</div>}
+                  {entry.price != null && <div style={{ fontSize: 10, fontWeight: 700, color: tokens.primary, marginTop: 3 }}>{typeof entry.price === "number" ? new Intl.NumberFormat("en-NG", { style: "currency", currency: entry.currency || p.currency || "NGN", maximumFractionDigits: 0 }).format(entry.price) : String(entry.price)}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {!image && !title && !text && price == null && items.length === 0 && (
+        <div style={{ padding: 10, fontSize: 10, color: "#9CA3AF" }}>{String(comp.type || "Content block").replace(/([a-z])([A-Z])/g, "$1 $2")}</div>
+      )}
     </div>
   );
 }
