@@ -1,0 +1,155 @@
+import { useState } from "react";
+
+function themeTokens(theme) {
+  const t = theme || {};
+  return {
+    primary: t.primaryColor || t.primary || "var(--amber)",
+    background: t.backgroundColor || t.background || "#FFFFFF",
+    text: t.textColor || t.text || "#1A1A2E",
+    font: t.fontFamily || t.font || "Inter, sans-serif",
+    radius: t.borderRadius || "8px",
+  };
+}
+
+function PreviewComponent({ comp, tokens }) {
+  const p = comp?.props || comp?.config || {};
+  const img = p.image || p.imageUrl || p.src || p.banner || p.cover;
+  if (img) {
+    return (
+      <img
+        src={img}
+        alt={p.alt || p.title || comp.type}
+        style={{ width: "100%", borderRadius: tokens.radius, display: "block", marginBottom: 8, background: "#F3F4F6" }}
+        loading="lazy"
+      />
+    );
+  }
+  const title = p.title || p.heading || p.name;
+  const text = p.text || p.subtitle || p.description || p.label || p.caption;
+  const price = p.price;
+  if (!title && !text && price == null) {
+    return (
+      <div style={{ background: "#F3F4F6", borderRadius: tokens.radius, padding: 10, marginBottom: 8, fontSize: 10, color: "#9CA3AF" }}>
+        {comp.type || "block"}
+      </div>
+    );
+  }
+  return (
+    <div style={{ background: "#fff", border: "1px solid #F3F4F6", borderRadius: tokens.radius, padding: 10, marginBottom: 8 }}>
+      {title && <div style={{ fontSize: 12, fontWeight: 700, color: tokens.text, marginBottom: text ? 2 : 0 }}>{String(title)}</div>}
+      {text && <div style={{ fontSize: 11, color: "#6B7280" }}>{String(text)}</div>}
+      {price != null && <div style={{ fontSize: 12, fontWeight: 700, color: tokens.primary, marginTop: 4 }}>{String(price)}</div>}
+      {comp.type === "button" || p.action ? (
+        <div style={{ marginTop: 8, background: tokens.primary, color: "#fff", borderRadius: tokens.radius, padding: "8px 0", textAlign: "center", fontSize: 11, fontWeight: 700 }}>
+          {String(p.label || p.title || "Open")}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PreviewSection({ section, tokens }) {
+  const components = section.components || section.children || [];
+  return (
+    <div style={{ marginBottom: 10 }}>
+      {section.config?.title && <div style={{ fontSize: 11, fontWeight: 700, color: tokens.text, marginBottom: 6 }}>{String(section.config.title)}</div>}
+      {components.map((c, i) => (
+        <PreviewComponent key={c.id || i} comp={c} tokens={tokens} />
+      ))}
+    </div>
+  );
+}
+
+export default function PhonePreview({ preview }) {
+  const pages = preview?.pages || [];
+  const homeIdx = Math.max(0, pages.findIndex((p) => p.isHome));
+  const [screenIdx, setScreenIdx] = useState(homeIdx);
+  const tokens = themeTokens(preview?.theme);
+  const navItems = Array.isArray(preview?.navigation) ? preview.navigation : preview?.navigation?.items || [];
+  const page = pages[Math.min(screenIdx, pages.length - 1)];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+      {pages.length > 1 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" }} role="tablist" aria-label="App screens">
+          {pages.map((p, i) => (
+            <button
+              key={p.slug || p.name || i}
+              role="tab"
+              aria-selected={i === screenIdx}
+              onClick={() => setScreenIdx(i)}
+              style={{
+                padding: "4px 10px",
+                fontSize: 11,
+                fontWeight: 600,
+                borderRadius: 9999,
+                border: i === screenIdx ? "1px solid var(--amber)" : "1px solid var(--gray-200)",
+                background: i === screenIdx ? "var(--amber-alpha-10)" : "#fff",
+                color: i === screenIdx ? "var(--amber)" : "var(--gray-500)",
+                cursor: "pointer",
+              }}
+            >
+              {p.name || p.slug || `Screen ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      )}
+      <div
+        role="img"
+        aria-label={`Phone preview of ${preview?.tenant?.name || "merchant app"}${page ? ` — ${page.name}` : ""}`}
+        style={{
+          width: 300,
+          height: 620,
+          background: "#111827",
+          borderRadius: 40,
+          padding: 10,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            background: tokens.background,
+            borderRadius: 30,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            fontFamily: tokens.font,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
+            <div style={{ width: 90, height: 18, background: "#111827", borderRadius: 9999 }} />
+          </div>
+          <div style={{ padding: "6px 12px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: tokens.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {preview?.tenant?.name || "App"}
+            </span>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
+            {!page && <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 40 }}>No screens designed yet.</div>}
+            {page?.sections?.map((s, i) => (
+              <PreviewSection key={s.id || i} section={s} tokens={tokens} />
+            ))}
+          </div>
+          {navItems.length > 0 && (
+            <div style={{ display: "flex", borderTop: "1px solid #F3F4F6", background: "#fff" }}>
+              {navItems.slice(0, 5).map((item, i) => {
+                const label = typeof item === "string" ? item : item.label || item.title || item.name || `Tab ${i + 1}`;
+                return (
+                  <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 9, color: i === 0 ? tokens.primary : "#9CA3AF", padding: "8px 0", fontWeight: i === 0 ? 700 : 400 }}>
+                    {String(label).slice(0, 10)}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--gray-500)" }}>
+        {pages.length} screen{pages.length === 1 ? "" : "s"} · draft preview, not yet live
+      </div>
+    </div>
+  );
+}

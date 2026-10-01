@@ -103,6 +103,20 @@ export const businessDashboardApi = {
   updateTenantSetting: (merchantId, key, value) => apiClient.put(`${ADMIN}/merchants/${merchantId}/settings/${key}`, value),
   approveMerchant: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/approve`),
   suspendMerchant: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/suspend`),
+  // Two-stage approval: stage-1 verification + stage-2 app review
+  verifyMerchant: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/verify`),
+  rejectCredentials: (merchantId, payload) => {
+    const body = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : payload ? { reason: String(payload) } : {};
+    return apiClient.post(`${ADMIN}/merchants/${merchantId}/verify-reject`, body);
+  },
+  getCompliance: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/compliance`),
+  getMerchantReview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/review`),
+  getMerchantPreview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/preview`),
+  approveApp: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/apps/approve`),
+  rejectApp: (merchantId, payload) => {
+    const body = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : payload ? { reason: String(payload) } : {};
+    return apiClient.post(`${ADMIN}/merchants/${merchantId}/apps/reject`, body);
+  },
   rejectMerchant: (merchantId, payload) => {
     const body = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : payload ? { reason: String(payload) } : {};
     if (body.reason && !body.comment) body.comment = body.reason;
