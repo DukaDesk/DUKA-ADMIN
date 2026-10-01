@@ -21,11 +21,7 @@ export function toneBackground(color, alphaHex = "22", percentage = "13%") {
     return `#${r}${r}${g}${g}${b}${b}${alphaHex}`;
   }
 
-  // CSS variables, rgb(), hsl(), or named colors -> blend dynamically
-  if (trimmed.startsWith("var(") || trimmed.startsWith("rgb") || trimmed.startsWith("hsl")) {
-    return `color-mix(in srgb, ${trimmed} ${percentage}, transparent)`;
-  }
-
+  // CSS variables (var(--...)), rgb(), hsl(), or named colors -> blend dynamically
   return `color-mix(in srgb, ${trimmed} ${percentage}, transparent)`;
 }
 

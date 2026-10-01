@@ -1,0 +1,25 @@
+.reviewGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.approvalStages {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .reviewGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .approvalStages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

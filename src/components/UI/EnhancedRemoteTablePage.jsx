@@ -253,7 +253,18 @@ export default function EnhancedRemoteTablePage({
                 <tr
                   key={row[rowKey] || index}
                   className={styles.tr}
-                  onClick={() => onRowClick?.(row)}
+                  onClick={(event) => {
+                    if (event.target.closest("button, a, input, select, textarea")) return;
+                    onRowClick?.(row);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (onRowClick && (event.key === "Enter" || event.key === " ")) {
+                      event.preventDefault();
+                      onRowClick(row);
+                    }
+                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
                   style={{ cursor: onRowClick ? "pointer" : "default" }}
                 >
                   {visibleColumns.map((col) => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, ShoppingBag, Globe, Activity, TrendingDown, Zap, HardDrive } from "lucide-react";
+import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, ShoppingBag, Globe, Shield, BarChart3, Puzzle, Settings } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import styles from "./AdminDashboard.module.css";
 
@@ -42,26 +42,67 @@ function SkeletonCard() {
 function MetricCard({ metric, value, loading }) {
   if (loading) return <SkeletonCard />;
   const Icon = metric.icon;
+  const trendText = [metric.trend, metric.trendLabel].filter(Boolean).join(" ");
+  const trendNegative = typeof metric.trend === "string" && metric.trend.startsWith("-");
   return (
     <article className={styles.metricCard}>
-      <div className={styles.metricHeader}>
-        <span className={styles.metricIcon} style={{ background: metric.color + "22", color: metric.color }}>
-          <Icon size={18} />
+      <div className={styles.metricTopRow}>
+        <div className={styles.metricLabel}>{metric.label}</div>
+        <span className={styles.metricIconMuted} aria-hidden="true">
+          <Icon size={20} />
         </span>
-        {metric.trend && (
-          <span className={styles.metricTrend} style={{ color: metric.trend.startsWith("-") ? "var(--red)" : "var(--green)" }}>
-            {metric.trend}
-          </span>
-        )}
       </div>
-      <div className={styles.metricLabel}>{metric.label}</div>
       <div className={styles.metricValue}>
         {metric.formatter ? metric.formatter(value) : formatNumber(value)}
       </div>
-      {metric.trendLabel && <div className={styles.metricTrendLabel}>{metric.trendLabel}</div>}
+      {trendText && (
+        <div className={`${styles.metricTrendLine} ${trendNegative ? styles.metricTrendNegative : styles.metricTrendPositive}`}>
+          {trendText}
+        </div>
+      )}
     </article>
   );
 }
+
+function timeAgo(timestamp) {
+  if (!timestamp) return "unknown time";
+  const then = new Date(timestamp).getTime();
+  if (Number.isNaN(then)) return "unknown time";
+  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (seconds < 60) return `${seconds} seconds ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function eventBadges(action) {
+  const a = String(action || "").toLowerCase();
+  const category = /secur|login|auth|password|token|breach/.test(a)
+    ? { label: "Security", color: "#E74C3C" }
+    : /user|merchant|tenant|admin|member|customer/.test(a)
+      ? { label: "User", color: "#F4A026" }
+      : { label: "System", color: "#3B82F6" };
+  const priority = /suspend|reject|delete|ban|cancel|fail|breach|revoke/.test(a)
+    ? { label: "High", background: "#E74C3C", color: "#fff" }
+    : /login|view|read|fetch|logout/.test(a)
+      ? { label: "Low", background: "#2ECC71", color: "#1A1A2E" }
+      : { label: "Medium", background: "#F4A026", color: "#fff" };
+  return { category, priority };
+}
+
+function humanizeAction(action) {
+  return String(action || "system event").replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim().replace(/^./, (c) => c.toUpperCase());
+}
+
+const QUICK_ACTIONS = [
+  { icon: Store, title: "Merchant Management", subtitle: "Manage all merchants", button: "Manage", filled: true, route: "merchants" },
+  { icon: BarChart3, title: "Platform Analytics", subtitle: "View detailed metrics", button: "View", filled: false, route: "analytics" },
+  { icon: Puzzle, title: "App Moderation", subtitle: "Review pending apps", button: "Review", filled: false, route: "marketplace" },
+  { icon: Settings, title: "System Settings", subtitle: "Configure platform", button: "Configure", filled: false, route: "settings" },
+];
 
 function Sparkline({ data, color = "var(--amber)" }) {
   if (!data || data.length < 2) return null;
@@ -143,12 +184,13 @@ function MerchantGrowthChart({ data, tenantData }) {
   );
 }
 
-export default function AdminDashboard({ showToast }) {
+export default function AdminDashboard({ showToast, setPage }) {
   const [overview, setOverview] = useState(null);
   const [platformStats, setPlatformStats] = useState(null);
   const [health, setHealth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [marketplaceStats, setMarketplaceStats] = useState(null);
+  const [recentEvents, setRecentEvents] = useState([]);
   const [tenantRevenueTrend, setTenantRevenueTrend] = useState(null);
   const [tenantGrowthTrend, setTenantGrowthTrend] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -162,9 +204,10 @@ export default function AdminDashboard({ showToast }) {
       businessDashboardApi.getHealth().catch(() => null),
       businessDashboardApi.getBffAnalytics().catch(() => null),
       businessDashboardApi.getMarketplaceStats().catch(() => null),
+      businessDashboardApi.getAuditLog({ page: 1, limit: 5 }).catch(() => null),
     ]).then((results) => {
       if (!active) return;
-      const [ovRes, statsRes, healthRes, analyticsRes, marketplaceRes] = results;
+      const [ovRes, statsRes, healthRes, analyticsRes, marketplaceRes, eventsRes] = results;
       if (ovRes.status === "fulfilled") {
         const ov = ovRes.value?.overview || ovRes.value?.stats || ovRes.value?.data || ovRes.value;
         setOverview(ov);
@@ -210,6 +253,11 @@ export default function AdminDashboard({ showToast }) {
       if (healthRes.status === "fulfilled") setHealth(healthRes.value?.data || healthRes.value);
       if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value?.data || analyticsRes.value);
       if (marketplaceRes.status === "fulfilled") setMarketplaceStats(marketplaceRes.value?.data || marketplaceRes.value);
+      if (eventsRes.status === "fulfilled" && eventsRes.value) {
+        const raw = eventsRes.value;
+        const list = Array.isArray(raw) ? raw : raw?.data || raw?.logs || raw?.items || raw?.events || [];
+        if (Array.isArray(list)) setRecentEvents(list.slice(0, 5));
+      }
       // Log any failures for support; health/analytics/marketplace are optional so no error banner
       results.forEach((r, i) => {
         if (r.status === "rejected" && r.reason?.requestId) console.warn("[AdminDashboard] part failed", i, r.reason.requestId);
@@ -280,11 +328,26 @@ export default function AdminDashboard({ showToast }) {
     return 0;
   };
 
+  const systemMetricRows = [
+    { label: "API Uptime", value: health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "—" },
+    { label: "Error Rate (24h)", value: statsData.errorRate != null ? statsData.errorRate + "%" : "—" },
+    { label: "Avg Response Time", value: statsData.avgResponseTime != null ? statsData.avgResponseTime + "ms" : "—" },
+    { label: "Storage Used", value: statsData.storageUsedGB != null ? statsData.storageUsedGB + " GB" : "—" },
+  ];
+
   return (
     <section className={styles.dashboard}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h2 className={styles.title}>Platform Overview</h2>
+          <div className={styles.pageTitleRow}>
+            <span className={styles.shieldIcon} aria-hidden="true">
+              <Shield size={24} />
+            </span>
+            <div>
+              <h2 className={styles.title}>Platform Overview</h2>
+              <p className={styles.subtitle}>Complete visibility and control over DukaDesk</p>
+            </div>
+          </div>
         </div>
         <div className={styles.headerRight}>
           <span className={styles.refreshTime}>Last updated: {new Date().toLocaleTimeString()}</span>
@@ -323,47 +386,91 @@ export default function AdminDashboard({ showToast }) {
         </section>
       </div>
 
-      <section className={styles.quickStats} aria-labelledby="quick-stats-title">
-        <h3 id="quick-stats-title" className={styles.sectionTitle}>Platform Health {health ? `· ${health.status}` : ""}</h3>
-        <div className={styles.quickStatsGrid}>
-          <QuickStat
-            label="API Uptime"
-            value={health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "—"}
-            icon={Activity}
-            color="var(--green)"
-          />
-          <QuickStat
-            label="Error Rate (24h)"
-            value={statsData.errorRate != null ? statsData.errorRate + "%" : "—"}
-            icon={TrendingDown}
-            color="var(--red)"
-          />
-          <QuickStat
-            label="Avg Response Time"
-            value={statsData.avgResponseTime != null ? statsData.avgResponseTime + "ms" : "—"}
-            icon={Zap}
-            color="var(--amber)"
-          />
-          <QuickStat
-            label="Storage Used"
-            value={statsData.storageUsedGB != null ? statsData.storageUsedGB + " GB" : "—"}
-            icon={HardDrive}
-            color="var(--purple)"
-          />
-        </div>
+      <div className={styles.panelsGrid}>
+        <section className={styles.panelCard} aria-labelledby="system-metrics-title">
+          <h3 id="system-metrics-title" className={styles.sectionTitle}>System Metrics</h3>
+          <div role="list">
+            {systemMetricRows.map((row) => (
+              <div key={row.label} className={styles.systemMetricRow} role="listitem">
+                <span className={styles.systemMetricLabel}>{row.label}</span>
+                <span className={styles.systemMetricValue}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.panelCard} aria-labelledby="quick-actions-title">
+          <h3 id="quick-actions-title" className={styles.sectionTitle}>Quick Actions</h3>
+          <div>
+            {QUICK_ACTIONS.map((action) => {
+              const ActionIcon = action.icon;
+              return (
+                <div key={action.title} className={styles.quickActionRow}>
+                  <span className={styles.quickActionIcon} aria-hidden="true">
+                    <ActionIcon size={18} />
+                  </span>
+                  <span className={styles.quickActionText}>
+                    <span className={styles.quickActionTitle}>{action.title}</span>
+                    <span className={styles.quickActionSubtitle}>{action.subtitle}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className={action.filled ? styles.quickActionBtnFilled : styles.quickActionBtnGhost}
+                    onClick={() => { if (typeof setPage === "function") setPage(action.route); }}
+                  >
+                    {action.button}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      <section className={styles.panelCard} aria-labelledby="recent-events-title">
+        <h3 id="recent-events-title" className={styles.sectionTitle}>Recent System Events</h3>
+        {recentEvents.length === 0 ? (
+          <p className={styles.eventsEmpty}>No recent events.</p>
+        ) : (
+          <div>
+            {recentEvents.map((event, index) => {
+              const { category, priority } = eventBadges(event.action);
+              const actor = event.adminEmail || event.actor || event.user || "System";
+              const when = event.createdAt || event.timestamp || event.time;
+              return (
+                <div key={event.id || index} className={styles.eventRow}>
+                  <div className={styles.eventMain}>
+                    <div className={styles.eventTopLine}>
+                      <span className={styles.eventId}>#EVT{String(index + 1).padStart(3, "0")}</span>
+                      <span
+                        className={styles.eventCategoryBadge}
+                        style={{ background: `${category.color}26`, color: category.color }}
+                      >
+                        {category.label}
+                      </span>
+                      <span
+                        className={styles.eventPriorityBadge}
+                        style={{ background: priority.background, color: priority.color }}
+                      >
+                        {priority.label}
+                      </span>
+                    </div>
+                    <div className={styles.eventTitle}>{humanizeAction(event.action)}</div>
+                    <div className={styles.eventAttr}>{actor} · {timeAgo(when)}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.eventDetailsLink}
+                    onClick={() => { if (typeof setPage === "function") setPage("audit"); }}
+                  >
+                    View Details
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </section>
-  );
-}
-
-function QuickStat({ label, value, icon: Icon, color }) {
-  return (
-    <article className={styles.quickStat}>
-      <div className={styles.quickStatIcon} style={{ background: color + "22", color }}>
-        <Icon size={18} />
-      </div>
-      <div className={styles.quickStatValue}>{value}</div>
-      <div className={styles.quickStatLabel}>{label}</div>
-    </article>
   );
 }

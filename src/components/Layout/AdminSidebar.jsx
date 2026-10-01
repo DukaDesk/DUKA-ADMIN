@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, ShoppingCart, Package, Users, BarChart3, Megaphone, Server } from "lucide-react";
+import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, ShoppingCart, Package, Users, BarChart3, Megaphone, Server, Bell, Ticket } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { canAccessPage, getKbRoleLabel } from "../../services/permissions";
@@ -20,6 +20,24 @@ const navItems = [
   { id: "infrastructure", icon: Server, label: "Infrastructure" },
   { id: "settings", icon: Settings, label: "Settings" },
 ];
+
+// Visual-only grouping of the existing navItems above. Every route string,
+// label, icon, state and prop is unchanged — items are only organised under
+// non-clickable section headers. Special rows:
+// - Notifications opens the existing AdminTopbar dropdown via a window event.
+// - Tickets routes to the existing audit page as a placeholder (no reports route exists).
+const navSections = [
+  { label: "PLATFORM", ids: ["dashboard", "analytics", "infrastructure", "audit"] },
+  { label: "MANAGEMENT", ids: ["merchants", "orders", "products", "customers", "subscriptions", "marketing"] },
+  { label: "MODERATION", ids: ["pending-admins", "marketplace"] },
+  { label: "ACCOUNT", ids: ["__notifications", "settings"] },
+  { label: "SUPPORT", ids: ["__tickets"] },
+];
+
+const specialItems = {
+  __notifications: { id: "__notifications", icon: Bell, label: "Notifications", action: "notifications" },
+  __tickets: { id: "__tickets", icon: Ticket, label: "Tickets", route: "audit" },
+};
 
 function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSidebar }) {
   const { logout } = useAuth();
@@ -68,11 +86,42 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
 
       <ul className={styles.navList}>
         {(() => {
-          let visible = navItems.filter((item) => canAccessPage(admin, item.id));
-          if (visible.length === 0 && admin?.email) {
-            visible = navItems.filter((item) => item.id === "dashboard");
+          const byId = Object.fromEntries(navItems.map((item) => [item.id, item]));
+          const handleSpecial = (item) => {
+            if (item.action === "notifications") {
+              window.dispatchEvent(new CustomEvent("admin:open-notifications"));
+              if (typeof closeSidebar === "function") closeSidebar();
+              return;
+            }
+            if (item.route) setPage(item.route);
+          };
+          const renderItem = (item) => {
+            const active = page === item.id;
+            const Icon = item.icon;
+            const badge = item.id === "merchants" ? pendingMerchants : item.id === "pending-admins" ? pendingAdmins : 0;
+            return (
+              <li key={item.id} className={styles.navListItem}>
+                <button
+                  className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
+                  title={collapsed ? item.label : undefined}
+                  onClick={() => (item.action || item.route ? handleSpecial(item) : setPage(item.id))}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <span className={styles.navIcon}>
+                    <Icon size={18} />
+                  </span>
+                  {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
+                  {!collapsed && badge > 0 && <span className={styles.badge}>{badge > 99 ? "99+" : badge}</span>}
+                  {collapsed && badge > 0 && <span className={styles.badgeDot} aria-hidden="true" />}
+                </button>
+              </li>
+            );
+          };
+          const visibleRouteIds = new Set(navItems.filter((item) => canAccessPage(admin, item.id)).map((item) => item.id));
+          if (visibleRouteIds.size === 0 && admin?.email) {
+            visibleRouteIds.add("dashboard");
           }
-          if (visible.length === 0)
+          if (visibleRouteIds.size === 0)
             return (
               <li style={{ padding: 16, fontSize: 12, color: "var(--gray-500)", lineHeight: 1.5 }}>
                 No navigation — check role
@@ -99,25 +148,26 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
                 </button>
               </li>
             );
-          return visible.map((item) => {
-            const active = page === item.id;
-            const Icon = item.icon;
-            const badge = item.id === "merchants" ? pendingMerchants : item.id === "pending-admins" ? pendingAdmins : 0;
+          return navSections.map((section) => {
+            const sectionItems = section.ids
+              .map((id) => (byId[id] ? { ...byId[id] } : specialItems[id] ? { ...specialItems[id] } : null))
+              .filter(Boolean)
+              .filter((item) => {
+                if (item.action === "notifications") return Boolean(admin?.email || admin?.token || admin?.name);
+                if (item.route) return canAccessPage(admin, item.route);
+                return visibleRouteIds.has(item.id);
+              });
+            if (sectionItems.length === 0) return null;
             return (
-              <li key={item.id} className={styles.navListItem}>
-                <button
-                  className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
-                  title={collapsed ? item.label : undefined}
-                  onClick={() => setPage(item.id)}
-                  aria-current={active ? "page" : undefined}
-                >
-                  <span className={styles.navIcon}>
-                    <Icon size={18} />
-                  </span>
-                  {!collapsed && <span className={styles.navLabel}>{item.label}</span>}
-                  {!collapsed && badge > 0 && <span className={styles.badge}>{badge > 99 ? "99+" : badge}</span>}
-                  {collapsed && badge > 0 && <span className={styles.badgeDot} aria-hidden="true" />}
-                </button>
+              <li key={section.label} className={styles.navSection}>
+                {!collapsed && (
+                  <div className={styles.sectionLabel} aria-hidden="true">
+                    {section.label}
+                  </div>
+                )}
+                <ul className={styles.navGroup}>
+                  {sectionItems.map((item) => renderItem(item))}
+                </ul>
               </li>
             );
           });

@@ -3,6 +3,7 @@ import { X, Check, ShieldCheck, Store } from "lucide-react";
 import { Modal } from "../../components/UI/Modal";
 import Field from "../../components/UI/Field";
 import PhonePreview from "./PhonePreview";
+import styles from "./MerchantReview.module.css";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canViewEmail } from "../../services/permissions";
 import { maskEmail } from "../../utils/maskEmail";
@@ -11,6 +12,11 @@ import { toneBackground } from "../../utils/badgeTones";
 
 function initials(name) {
   return String(name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function responseData(response, key) {
+  const data = response?.data?.data || response?.data || response;
+  return key ? data?.[key] || data : data;
 }
 
 function StatusPill({ value, tones }) {
@@ -23,8 +29,24 @@ function StatusPill({ value, tones }) {
   );
 }
 
-const VERIFICATION_TONES = { pending: "var(--amber)", verified: "var(--green)", rejected: "var(--red)" };
+const VERIFICATION_TONES = { pending: "var(--amber)", unknown: "var(--gray-400)", verified: "var(--green)", rejected: "var(--red)" };
 const APP_TONES = { none: "var(--gray-400)", in_review: "var(--amber)", approved: "var(--green)", rejected: "var(--red)" };
+
+function ApprovalStage({ number, title, description, status, tones, locked = false }) {
+  const color = locked ? "var(--gray-300)" : tones[status] || "var(--gray-400)";
+  return (
+    <section aria-label={`Stage ${number}: ${title}`} style={{ border: `1px solid ${toneBackground(color)}`, borderLeft: `4px solid ${color}`, borderRadius: 10, padding: "14px 16px", background: locked ? "var(--gray-50)" : "#fff", opacity: locked ? 0.75 : 1 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Stage {number}</div>
+          <h3 style={{ margin: "2px 0 0", fontSize: 14, color: "var(--navy)" }}>{title}</h3>
+        </div>
+        <StatusPill value={locked ? "locked" : status.replace("_", " ")} tones={{ ...tones, locked: "var(--gray-400)" }} />
+      </div>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--gray-600)", lineHeight: 1.5 }}>{description}</p>
+    </section>
+  );
+}
 
 export default function MerchantReview({ merchantId, admin, canManage, showToast, onClose, onChanged }) {
   const [review, setReview] = useState(null);
@@ -40,13 +62,16 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+    setReview(null);
+    setPreview(null);
+    setPreviewFailed(false);
     try {
       const res = await businessDashboardApi.getMerchantReview(merchantId);
-      const data = res?.data || res;
+      const data = responseData(res, "review");
       setReview(data);
       try {
         const pRes = await businessDashboardApi.getMerchantPreview(merchantId);
-        setPreview(pRes?.data || pRes);
+        setPreview(responseData(pRes, "preview"));
         setPreviewFailed(false);
       } catch {
         setPreview(null);
@@ -69,18 +94,23 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
 
   const tenant = review?.tenant || {};
   const ownerEntry = Array.isArray(tenant.users) ? tenant.users[0] : null;
-  const owner = ownerEntry?.user || {};
+  const owner = ownerEntry?.user || tenant.owner || tenant.user || {};
+  const merchantPhoto = owner.profilePicture || owner.profileImage || owner.avatarUrl || owner.avatar || owner.image || tenant.profilePicture || tenant.profileImage;
   const compliance = Array.isArray(review?.compliance) ? review.compliance : [];
   const subscription = review?.tenant?.subscription || tenant.subscription || null;
   const plan = subscription?.plan || null;
   const quota = review?.quota || null;
   const releases = Array.isArray(review?.releases) ? review.releases : [];
   const draftPages = Array.isArray(review?.draftPages) ? review.draftPages : [];
+  const app = review?.app || tenant.app || preview?.app || {};
 
-  const verification = String(tenant.verificationStatus || "pending").toLowerCase();
-  const appStatus = String(tenant.appStatus || "none").toLowerCase();
-  const canVerify = verification !== "verified";
-  const canApproveApp = verification === "verified" && appStatus === "in_review";
+  const verification = String(tenant.verificationStatus || review?.verificationStatus || tenant.complianceStatus || "unknown").toLowerCase();
+  const appStatus = String(tenant.appStatus || review?.appStatus || "none").toLowerCase();
+  const previewPages = preview?.pages || preview?.screens || preview?.draftPages || [];
+  const hasPreview = Array.isArray(previewPages) && previewPages.length > 0;
+  const hasComplianceSubmission = compliance.length > 0 || Boolean(tenant.complianceSubmittedAt || tenant.credentialsSubmittedAt || tenant.verificationSubmittedAt || tenant.complianceStatus === "submitted");
+  const canVerify = verification !== "verified" && hasComplianceSubmission;
+  const canApproveApp = verification === "verified" && appStatus === "in_review" && hasPreview;
 
   const runAction = async (kind, fn, auditAction, successMsg) => {
     setBusy(kind);
@@ -122,11 +152,11 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
           <StatusPill value={verification} tones={VERIFICATION_TONES} />
           <StatusPill value={appStatus.replace("_", " ")} tones={APP_TONES} />
         </div>
-        {tenant.logo ? (
-          <img src={tenant.logo} alt={`${tenant.name || "Merchant"} logo`} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--gray-200)", flexShrink: 0 }} />
+        {merchantPhoto ? (
+          <img src={merchantPhoto} alt={`${[owner.firstName, owner.lastName].filter(Boolean).join(" ") || tenant.name || "Merchant"} profile`} style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--gray-200)", flexShrink: 0 }} />
         ) : (
           <div aria-hidden="true" style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--amber)", color: "var(--navy)", fontWeight: 800, fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            {initials(tenant.name)}
+            {initials([owner.firstName, owner.lastName].filter(Boolean).join(" ") || tenant.name)}
           </div>
         )}
         <button type="button" onClick={onClose} aria-label="Close review" style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid var(--gray-200)", background: "#fff", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--gray-500)", flexShrink: 0 }}>
@@ -138,7 +168,24 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
         {loading && <p aria-live="polite" style={{ fontSize: 13, color: "var(--gray-500)" }}>Loading review…</p>}
         {error && !loading && <div role="alert" style={{ background: "#FEF2F2", color: "var(--red)", padding: 12, borderRadius: 8, fontSize: 13 }}>{error}</div>}
         {!loading && !error && review && (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 340px", gap: 24, alignItems: "start", maxWidth: 1200, margin: "0 auto" }}>
+          <div className={styles.reviewGrid}>
+            <div className={styles.approvalStages}>
+              <ApprovalStage
+                number={1}
+                title="Merchant verification"
+                description={verification === "verified" ? "Credentials and compliance have been approved. The merchant can submit an app for review." : verification === "rejected" ? "Credentials were rejected. Review the compliance notes and documents before taking further action." : hasComplianceSubmission ? "Compliance details have been submitted. Review the credentials and documents, then verify or reject them." : "Waiting for the merchant to submit compliance credentials for verification."}
+                status={verification}
+                tones={VERIFICATION_TONES}
+              />
+              <ApprovalStage
+                number={2}
+                title="App approval"
+                description={verification !== "verified" ? "Available after merchant verification." : appStatus === "in_review" && hasPreview ? "The app is ready for review. Check the mobile preview before approving or declining." : appStatus === "in_review" ? "The merchant submitted an app, but its preview is not available yet." : appStatus === "approved" ? "The app has been approved and is live." : appStatus === "rejected" ? "The app was declined. Review the submission again after the merchant updates it." : "Waiting for the verified merchant to create and submit an app."}
+                status={appStatus === "none" ? "pending" : appStatus}
+                tones={{ ...APP_TONES, pending: "var(--gray-400)" }}
+                locked={verification !== "verified"}
+              />
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
               <section aria-label="Credentials" style={{ background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 12, padding: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -161,7 +208,7 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
                           <StatusPill value={c.status} tones={{ pending: "var(--amber)", approved: "var(--green)", rejected: "var(--red)" }} />
                         </div>
                         <div style={{ fontSize: 12, color: "var(--gray-600)", marginTop: 4 }}>
-                          {[c.regNo && `Reg: ${c.regNo}`, c.taxId && `Tax: ${c.taxId}`].filter(Boolean).join(" · ") || "No registration numbers"}
+                          {[c.regNo && `Reg: ${c.regNo}`, c.taxId && `Tax: ${c.taxId}`, c.nin && `NIN: ${c.nin}`, c.bvn && `BVN: ${c.bvn}`].filter(Boolean).join(" · ") || "No registration numbers"}
                         </div>
                         {Array.isArray(c.documents) && c.documents.length > 0 && (
                           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
@@ -195,6 +242,7 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
                   <div style={{ display: "grid", gap: 6, fontSize: 13 }}>
                     <div><strong style={{ color: "var(--gray-600)" }}>Plan:</strong> {plan?.name || "—"}{plan?.price != null ? ` · ${new Intl.NumberFormat("en-NG", { style: "currency", currency: plan.currency || "NGN", maximumFractionDigits: 0 }).format(Number(plan.price))}` : ""}</div>
                     <div><strong style={{ color: "var(--gray-600)" }}>Status:</strong> {subscription.status || "—"}</div>
+                    {(subscription.currentPeriodEnd || subscription.renewalDate || subscription.nextBillingDate || subscription.expiresAt) && <div><strong style={{ color: "var(--gray-600)" }}>Renews:</strong> {new Date(subscription.currentPeriodEnd || subscription.renewalDate || subscription.nextBillingDate || subscription.expiresAt).toLocaleDateString()}</div>}
                   </div>
                 ) : (
                   <p style={{ fontSize: 13, color: "var(--gray-500)", margin: 0 }}>No subscription yet.</p>
@@ -207,7 +255,12 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
                   <Store size={16} aria-hidden="true" /> App Details
                 </h3>
                 <div style={{ display: "grid", gap: 6, fontSize: 13 }}>
-                  <div><strong style={{ color: "var(--gray-600)" }}>Screens:</strong> {draftPages.length}</div>
+                  <div><strong style={{ color: "var(--gray-600)" }}>App name:</strong> {app.name || preview?.tenant?.name || tenant.appName || "—"}</div>
+                  <div><strong style={{ color: "var(--gray-600)" }}>Category:</strong> {app.category || tenant.category || "—"}</div>
+                  <div><strong style={{ color: "var(--gray-600)" }}>Store URL:</strong> {app.slug || tenant.slug ? `/${app.slug || tenant.slug}` : "—"}</div>
+                  <div><strong style={{ color: "var(--gray-600)" }}>Screens:</strong> {previewPages.length || draftPages.length}</div>
+                  {app.template && <div><strong style={{ color: "var(--gray-600)" }}>Template:</strong> {app.template}</div>}
+                  {(app.submittedAt || tenant.appSubmittedAt) && <div><strong style={{ color: "var(--gray-600)" }}>Submitted:</strong> {new Date(app.submittedAt || tenant.appSubmittedAt).toLocaleString()}</div>}
                   <div><strong style={{ color: "var(--gray-600)" }}>Releases:</strong> {releases.length > 0 ? releases.map((r) => `v${r.version} (${r.status})`).join(", ") : "None yet"}</div>
                   <div><strong style={{ color: "var(--gray-600)" }}>Review state:</strong> {appStatus.replace("_", " ")}</div>
                 </div>
@@ -234,12 +287,12 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
           disabled={!canManage || !canApproveApp || busy}
           onClick={() => runAction("approve", () => businessDashboardApi.approveApp(merchantId), "merchant.app_approve", `${tenant.name || "Merchant"} app approved — now live`)}
           style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "var(--green)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: canManage && canApproveApp && !busy ? "pointer" : "not-allowed", opacity: canManage && canApproveApp && !busy ? 1 : 0.6 }}
-          title={canApproveApp ? "Approve app and publish live" : verification !== "verified" ? "Verify the merchant first" : "Waiting for the merchant to submit the app"}
+          title={canApproveApp ? "Approve app and publish live" : verification !== "verified" ? "Verify the merchant first" : appStatus !== "in_review" ? "Waiting for the merchant to submit the app" : "A submitted app preview is required before approval"}
         >
           <Check size={16} aria-hidden="true" /> {busy === "approve" ? "Approving…" : "Approve App"}
         </button>
         <span style={{ fontSize: 12, color: "var(--gray-500)" }}>
-          {!canManage ? "Read-only access." : verification !== "verified" ? "Stage 1: verify the merchant first." : appStatus === "in_review" ? "Stage 2: review the preview, then approve." : appStatus === "approved" ? "App is live." : "Waiting for the merchant to submit the app."}
+          {!canManage ? "Read-only access." : verification !== "verified" ? "Stage 1: verify the merchant first." : appStatus === "in_review" && hasPreview ? "Stage 2: review the preview, then approve." : appStatus === "in_review" ? "App preview unavailable; approval is disabled." : appStatus === "approved" ? "App is live." : "Waiting for the merchant to submit the app."}
         </span>
         <span style={{ flex: 1 }} />
         {canManage && appStatus === "in_review" && (

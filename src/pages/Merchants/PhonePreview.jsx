@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function themeTokens(theme) {
   const t = theme || {};
@@ -49,7 +49,7 @@ function PreviewComponent({ comp, tokens }) {
 }
 
 function PreviewSection({ section, tokens }) {
-  const components = section.components || section.children || [];
+  const components = section.components || section.children || section.items || [];
   return (
     <div style={{ marginBottom: 10 }}>
       {section.config?.title && <div style={{ fontSize: 11, fontWeight: 700, color: tokens.text, marginBottom: 6 }}>{String(section.config.title)}</div>}
@@ -61,12 +61,16 @@ function PreviewSection({ section, tokens }) {
 }
 
 export default function PhonePreview({ preview }) {
-  const pages = preview?.pages || [];
+  const pages = preview?.pages || preview?.screens || preview?.draftPages || preview?.app?.pages || [];
   const homeIdx = Math.max(0, pages.findIndex((p) => p.isHome));
   const [screenIdx, setScreenIdx] = useState(homeIdx);
-  const tokens = themeTokens(preview?.theme);
-  const navItems = Array.isArray(preview?.navigation) ? preview.navigation : preview?.navigation?.items || [];
-  const page = pages[Math.min(screenIdx, pages.length - 1)];
+  useEffect(() => setScreenIdx(homeIdx), [preview, homeIdx]);
+  const tokens = themeTokens(preview?.theme || preview?.app?.theme);
+  const navigation = preview?.navigation || preview?.app?.navigation;
+  const navItems = Array.isArray(navigation) ? navigation : navigation?.items || [];
+  const page = pages.length ? pages[Math.min(screenIdx, pages.length - 1)] : null;
+  const sections = page?.sections || page?.content?.sections || page?.blocks || [];
+  const appName = preview?.tenant?.name || preview?.app?.name || preview?.name || "App preview";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -96,7 +100,7 @@ export default function PhonePreview({ preview }) {
       )}
       <div
         role="img"
-        aria-label={`Phone preview of ${preview?.tenant?.name || "merchant app"}${page ? ` — ${page.name}` : ""}`}
+        aria-label={`Phone preview of ${appName}${page ? ` — ${page.name || page.title || "Screen"}` : ""}`}
         style={{
           width: 300,
           height: 620,
@@ -124,12 +128,12 @@ export default function PhonePreview({ preview }) {
           </div>
           <div style={{ padding: "6px 12px", borderBottom: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 800, color: tokens.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {preview?.tenant?.name || "App"}
+              {appName}
             </span>
           </div>
           <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
             {!page && <div style={{ fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 40 }}>No screens designed yet.</div>}
-            {page?.sections?.map((s, i) => (
+            {sections.map((s, i) => (
               <PreviewSection key={s.id || i} section={s} tokens={tokens} />
             ))}
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Menu, Bell } from "lucide-react";
+import { Menu, Bell, Search } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { getKbRoleLabel } from "../../services/permissions";
 import api from "../../services/api";
@@ -21,11 +21,12 @@ const pageLabels = {
   settings: "Platform Configuration",
 };
 
-function AdminTopbar({ page, onMenuClick }) {
+function AdminTopbar({ page, onMenuClick, setPage }) {
   const { admin, logout } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const avatarRef = useRef(null);
 
   useEffect(() => {
@@ -43,9 +44,33 @@ function AdminTopbar({ page, onMenuClick }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
+  useEffect(() => {
+    const openFromSidebar = () => setNotifOpen(true);
+    window.addEventListener("admin:open-notifications", openFromSidebar);
+    return () => window.removeEventListener("admin:open-notifications", openFromSidebar);
+  }, []);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (typeof setPage === "function") setPage("merchants");
+  };
+
   return (
     <header className={styles.topbar}>
       <div className={styles.leftSection}><button className={styles.menuBtn} onClick={onMenuClick} aria-label="Open navigation"><Menu size={20} /></button><h1 className={styles.pageTitle}>{pageLabels[page] || "Admin Portal"}</h1></div>
+      <div className={styles.searchCenter}>
+        <form className={styles.searchWrapper} role="search" onSubmit={handleSearchSubmit}>
+          <Search size={16} className={styles.searchIcon} aria-hidden="true" />
+          <input
+            type="search"
+            className={styles.searchInput}
+            placeholder="Search merchants, users, apps..."
+            aria-label="Search merchants, users, apps"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </form>
+      </div>
       <div className={styles.rightSection}>
         <div className={styles.notifWrapper}>
           <button className={styles.notifBtn} onClick={() => setNotifOpen(!notifOpen)} aria-label={`Notifications${notifications.length ? ` (${notifications.length} new)` : ""}`}>

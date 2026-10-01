@@ -145,6 +145,7 @@ export default function MerchantManagement({ showToast }) {
         description="Review merchant credentials and app designs — approve in two stages."
         load={load}
         rowKey="id"
+        onRowClick={(row) => setReviewId(row.id)}
         columns={columns}
         searchable={true}
         sortable={true}
