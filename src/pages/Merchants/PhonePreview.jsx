@@ -83,6 +83,11 @@ export default function PhonePreview({ preview }) {
   const page = pages.length ? pages[Math.min(screenIdx, pages.length - 1)] : null;
   const sections = page?.sections || page?.content?.sections || page?.blocks || [];
   const appName = preview?.tenant?.name || preview?.app?.name || preview?.name || "App preview";
+  const previewLabel = preview?.source === "published"
+    ? `Published app preview${preview?.releaseVersion ? ` · v${preview.releaseVersion}` : ""}`
+    : preview?.source === "empty"
+      ? "No app screens available"
+      : "Draft preview · not yet live";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -164,7 +169,7 @@ export default function PhonePreview({ preview }) {
         </div>
       </div>
       <div style={{ fontSize: 11, color: "var(--gray-500)" }}>
-        {pages.length} screen{pages.length === 1 ? "" : "s"} · draft preview, not yet live
+        {pages.length} screen{pages.length === 1 ? "" : "s"} · {previewLabel}
       </div>
     </div>
   );
