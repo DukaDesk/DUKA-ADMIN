@@ -227,19 +227,6 @@ export const businessDashboardApi = {
       return { data: [] };
     });
   }),
-  // Commerce — Orders (BD-ORD): live via Tenant Self-Service App tier (auto-tenant) and merchant drill-down
-  getOrders: (params) => apiClient.get(`/app/commerce/orders${queryString(params)}`).catch(() => apiClient.get(`/merchants/${params?.merchantId || 'all'}/orders${queryString(params)}`).catch(() => ({ data: [] }))),
-  getOrder: (id) => apiClient.get(`/orders/${id}`).catch(() => apiClient.get(`/app/commerce/orders/${id}`)),
-  updateOrderStatus: (id, payload) => apiClient.post(`/app/commerce/orders/${id}/status`, payload),
-  // Commerce — Products (BD-PROD) + Inventory (BD-INV)
-  getProducts: (params) => apiClient.get(`/app/commerce/products${queryString(params)}`),
-  getProduct: (id) => apiClient.get(`/products/${id}`),
-  updateProduct: (id, payload) => apiClient.put(`/app/commerce/products/${id}`, payload),
-  deleteProduct: (id) => apiClient.delete(`/app/commerce/products/${id}`),
-  adjustStock: (id, payload) => apiClient.post(`/app/commerce/products/${id}/adjust-stock`, payload),
-  getCategories: (params) => apiClient.get(`/app/commerce/categories${queryString(params)}`).catch(() => apiClient.get(`/merchants/${params?.merchantId || 'all'}/categories${queryString(params)}`).catch(() => ({ data: [] }))),
-  // Customers (BD-CUST) — tenant users with customer role
-  getCustomers: (params) => apiClient.get(`${ADMIN}/users${queryString({ ...params, role: 'customer' })}`, { retry: 0 }).catch(() => apiClient.get(`${ADMIN}/users${queryString(params)}`, { retry: 0 })),
   // Analytics reports — live requires tenantId
   getRevenueReport: (params) => apiClient.get(`/analytics/reports/revenue${queryString(params)}`),
   getUserAnalytics: (params) => apiClient.get(`/analytics/reports/users${queryString(params)}`),

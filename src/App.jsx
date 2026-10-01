@@ -18,9 +18,6 @@ const MarketplaceListings = lazy(() => import("./pages/Marketplace/MarketplaceLi
 const AuditLog = lazy(() => import("./pages/Audit/AuditLog"));
 const SubscriptionManagement = lazy(() => import("./pages/Subscriptions/SubscriptionManagement"));
 const PendingAdmins = lazy(() => import("./pages/PendingAdmins/PendingAdmins"));
-const Orders = lazy(() => import("./pages/Orders/Orders"));
-const Products = lazy(() => import("./pages/Products/Products"));
-const Customers = lazy(() => import("./pages/Customers/Customers"));
 const Analytics = lazy(() => import("./pages/Analytics/Analytics"));
 const Marketing = lazy(() => import("./pages/Marketing/Marketing"));
 const Infrastructure = lazy(() => import("./pages/Infrastructure/Infrastructure"));
@@ -29,7 +26,7 @@ const Settings = lazy(() => import("./pages/Settings/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Forbidden = lazy(() => import("./pages/Forbidden/Forbidden"));
 
-const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register", "orders", "products", "customers", "analytics", "marketing", "infrastructure"];
+const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register", "analytics", "marketing", "infrastructure"];
 
 function Loading() {
   return (
@@ -160,9 +157,6 @@ return (
             <Suspense fallback={<Loading />}>
               {page === "dashboard" && <AdminDashboard setPage={setPage} showToast={showToast} />}
               {page === "merchants" && <MerchantManagement showToast={showToast} />}
-              {page === "orders" && <Orders showToast={showToast} />}
-              {page === "products" && <Products showToast={showToast} />}
-              {page === "customers" && <Customers showToast={showToast} />}
               {page === "marketplace" && <MarketplaceListings showToast={showToast} />}
               {page === "analytics" && <Analytics showToast={showToast} />}
               {page === "marketing" && <Marketing showToast={showToast} />}

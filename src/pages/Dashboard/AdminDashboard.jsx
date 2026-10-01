@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, ShoppingBag, Globe, Shield, BarChart3, Puzzle, Settings } from "lucide-react";
+import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, Shield, BarChart3, Puzzle, Settings } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import styles from "./AdminDashboard.module.css";
 
@@ -24,8 +24,6 @@ const METRIC_CARDS = [
   { key: "monthlyRevenue", label: "Monthly Revenue", icon: Wallet, color: "var(--purple)", formatter: formatCurrency },
   { key: "totalSubscriptions", label: "Total Subscriptions", icon: ClipboardList, color: "var(--indigo)" },
   { key: "activeSubscriptions", label: "Active Subscriptions", icon: CircleDot, color: "var(--teal)" },
-  { key: "totalMarketplaceListings", label: "Marketplace Listings", icon: ShoppingBag, color: "var(--orange)" },
-  { key: "publishedListings", label: "Published Listings", icon: Globe, color: "var(--cyan)" },
 ];
 
 function SkeletonCard() {
@@ -189,7 +187,6 @@ export default function AdminDashboard({ showToast, setPage }) {
   const [platformStats, setPlatformStats] = useState(null);
   const [health, setHealth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
-  const [marketplaceStats, setMarketplaceStats] = useState(null);
   const [recentEvents, setRecentEvents] = useState([]);
   const [tenantRevenueTrend, setTenantRevenueTrend] = useState(null);
   const [tenantGrowthTrend, setTenantGrowthTrend] = useState(null);
@@ -203,11 +200,10 @@ export default function AdminDashboard({ showToast, setPage }) {
       businessDashboardApi.getPlatformStats(),
       businessDashboardApi.getHealth().catch(() => null),
       businessDashboardApi.getBffAnalytics().catch(() => null),
-      businessDashboardApi.getMarketplaceStats().catch(() => null),
       businessDashboardApi.getAuditLog({ page: 1, limit: 5 }).catch(() => null),
     ]).then((results) => {
       if (!active) return;
-      const [ovRes, statsRes, healthRes, analyticsRes, marketplaceRes, eventsRes] = results;
+      const [ovRes, statsRes, healthRes, analyticsRes, eventsRes] = results;
       if (ovRes.status === "fulfilled") {
         const ov = ovRes.value?.overview || ovRes.value?.stats || ovRes.value?.data || ovRes.value;
         setOverview(ov);
@@ -252,7 +248,6 @@ export default function AdminDashboard({ showToast, setPage }) {
       }
       if (healthRes.status === "fulfilled") setHealth(healthRes.value?.data || healthRes.value);
       if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value?.data || analyticsRes.value);
-      if (marketplaceRes.status === "fulfilled") setMarketplaceStats(marketplaceRes.value?.data || marketplaceRes.value);
       if (eventsRes.status === "fulfilled" && eventsRes.value) {
         const raw = eventsRes.value;
         const list = Array.isArray(raw) ? raw : raw?.data || raw?.logs || raw?.items || raw?.events || [];
@@ -277,7 +272,7 @@ export default function AdminDashboard({ showToast, setPage }) {
           </div>
         </header>
         <div className={styles.metricsGrid} role="status" aria-live="polite">
-          {[...Array(8)].map((_, i) => <SkeletonCard key={i} />)}
+        {METRIC_CARDS.map((metric) => <SkeletonCard key={metric.key} />)}
         </div>
         <div className={styles.chartsGrid}>
           <section className={styles.chartCard}><div className={styles.chartSkeleton} /></section>
@@ -301,7 +296,6 @@ export default function AdminDashboard({ showToast, setPage }) {
 
   const overviewData = overview || {};
   const statsData = platformStats || {};
-  const marketData = marketplaceStats || {};
 
   // Backend uses tenant/tenants naming (KB merchant = tenant). Map to UI metric keys.
   const getMetricValue = (key) => {
@@ -313,12 +307,10 @@ export default function AdminDashboard({ showToast, setPage }) {
       monthlyRevenue: ["totalRevenue", "revenue", "monthlyRevenue", "gmv"],
       totalSubscriptions: ["totalSubscriptions", "subscriptions", "totalSubs"],
       activeSubscriptions: ["activeSubscriptions", "activeSubs"],
-      totalMarketplaceListings: ["total", "totalListings", "totalMarketplaceListings", "listings", "totalProducts"],
-      publishedListings: ["published", "publishedListings", "isPublished", "publishedTenants"],
     };
     const keys = aliases[key] || [key];
     for (const k of keys) {
-      const v = overviewData[k] ?? statsData[k] ?? marketData[k] ?? overviewData?.data?.[k] ?? statsData?.data?.[k];
+      const v = overviewData[k] ?? statsData[k] ?? overviewData?.data?.[k] ?? statsData?.data?.[k];
       if (v !== undefined && v !== null) return v;
     }
     // Fallback: check nested data objects from envelope

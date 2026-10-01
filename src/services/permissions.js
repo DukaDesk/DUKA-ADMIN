@@ -77,9 +77,6 @@ export const PAGE_PERMISSIONS = {
   settings: "settings:manage",
   "pending-admins": "users:manage", // user:invite / role:assign alias
   users: "users:read",
-  orders: "order:read",
-  products: "product:read",
-  customers: "users:read",
   analytics: "analytics:read",
   marketing: "marketing:read",
   infrastructure: "system:monitor",

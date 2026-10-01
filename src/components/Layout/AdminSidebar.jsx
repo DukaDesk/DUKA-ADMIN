@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, ShoppingCart, Package, Users, BarChart3, Megaphone, Server, Bell, Ticket } from "lucide-react";
+import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, BarChart3, Megaphone, Server, Bell, Ticket } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { canAccessPage, getKbRoleLabel } from "../../services/permissions";
@@ -9,9 +9,6 @@ const navItems = [
   { id: "dashboard", icon: LayoutDashboard, label: "Overview" },
   { id: "merchants", icon: Store, label: "Merchants" },
   { id: "pending-admins", icon: UserCheck, label: "Pending Admins" },
-  { id: "orders", icon: ShoppingCart, label: "Orders" },
-  { id: "products", icon: Package, label: "Products" },
-  { id: "customers", icon: Users, label: "Customers" },
   { id: "marketplace", icon: Puzzle, label: "Marketplace" },
   { id: "analytics", icon: BarChart3, label: "Analytics" },
   { id: "marketing", icon: Megaphone, label: "Marketing" },
@@ -28,7 +25,7 @@ const navItems = [
 // - Tickets routes to the existing audit page as a placeholder (no reports route exists).
 const navSections = [
   { label: "PLATFORM", ids: ["dashboard", "analytics", "infrastructure", "audit"] },
-  { label: "MANAGEMENT", ids: ["merchants", "orders", "products", "customers", "subscriptions", "marketing"] },
+  { label: "MANAGEMENT", ids: ["merchants", "subscriptions", "marketing"] },
   { label: "MODERATION", ids: ["pending-admins", "marketplace"] },
   { label: "ACCOUNT", ids: ["__notifications", "settings"] },
   { label: "SUPPORT", ids: ["__tickets"] },

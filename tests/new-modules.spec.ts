@@ -1,10 +1,7 @@
 import { test, expect } from "./utils/auth";
 
-test.describe("New Business Dashboard Modules (BD-ORD/BD-PROD/BD-CUST/BD-ANAL/BD-MKT)", () => {
+test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
   const pages = [
-    { path: "/orders", title: "Orders", spec: "BD-ORD-001" },
-    { path: "/products", title: "Products", spec: "BD-PROD-001" },
-    { path: "/customers", title: "Customers", spec: "BD-CUST-001" },
     { path: "/analytics", title: "Analytics & Reports", spec: "BD-ANAL-001" },
     { path: "/marketing", title: "Campaigns", spec: "BD-MKT-001" },
     { path: "/infrastructure", title: "Infrastructure", spec: "KB-141" },
@@ -20,21 +17,6 @@ test.describe("New Business Dashboard Modules (BD-ORD/BD-PROD/BD-CUST/BD-ANAL/BD
       await expect(authenticatedPage.locator('[role="alert"]')).toHaveCount(0);
     });
   }
-
-  test("orders status update action is RBAC-gated", async ({ authenticatedPage }) => {
-    await authenticatedPage.goto("/orders");
-    await authenticatedPage.waitForLoadState("networkidle");
-    const firstRowActions = authenticatedPage.locator('[role="group"][aria-label="Row actions"]').first();
-    if (await firstRowActions.isVisible()) {
-      await expect(firstRowActions.locator('button:has-text("View")')).toBeVisible();
-    }
-  });
-
-  test("products stock adjustment prompts (live POST /app/commerce/products/:id/adjust-stock)", async ({ authenticatedPage }) => {
-    await authenticatedPage.goto("/products");
-    await authenticatedPage.waitForLoadState("networkidle");
-    await expect(authenticatedPage.locator('h2:has-text("Products")')).toBeVisible();
-  });
 
   test("analytics saved reports CRUD (live POST /app/analytics/reports)", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/analytics");
