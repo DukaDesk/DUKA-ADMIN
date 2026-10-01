@@ -4,6 +4,7 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
+import { toneBackground } from "../../utils/badgeTones";
 
 export default function Marketing({ showToast }) {
   const { admin } = useAuth();
@@ -33,7 +34,7 @@ export default function Marketing({ showToast }) {
     { key: "status", label: "Status", width: 120, sortable: true, render: (v) => {
       const s = String(v || "disconnected").toLowerCase();
       const c = s === "connected" ? "var(--green)" : "var(--gray-500)";
-      return <span style={{ padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 600, background: c+"22", color: c, textTransform:"capitalize" }}>{s}</span>;
+      return <span style={{ padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 600, background: toneBackground(c), color: c, textTransform:"capitalize" }}>{s}</span>;
     }},
     { key: "lastSyncAt", label: "Last Sync", width: 140, sortable: true, render: (v) => v ? new Date(v).toLocaleString() : "—" },
   ];

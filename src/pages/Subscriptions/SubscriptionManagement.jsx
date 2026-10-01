@@ -4,6 +4,7 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
+import { toneBackground } from "../../utils/badgeTones";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
@@ -80,7 +81,7 @@ export default function SubscriptionManagement({ showToast }) {
             borderRadius: "var(--radius-full)",
             fontSize: 11,
             fontWeight: 600,
-            background: (colors[status] || "var(--gray-200)") + "22",
+            background: toneBackground(colors[status] || "var(--gray-200)"),
             color: colors[status] || "var(--gray-500)",
             textTransform: "capitalize",
           }}>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { BarChart3, Users, Calendar, DollarSign } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
+import { toneBackground } from "../../utils/badgeTones";
 import styles from "./Analytics.module.css";
 
 function Stat({ label, value, icon: Icon, color }) {
   return (
     <article className={styles.stat}>
-      <div className={styles.statIcon} style={{ background: color + "22", color }}><Icon size={18} /></div>
+      <div className={styles.statIcon} style={{ background: toneBackground(color), color }}><Icon size={18} /></div>
       <div className={styles.statValue}>{value}</div>
       <div className={styles.statLabel}>{label}</div>
     </article>

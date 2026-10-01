@@ -4,6 +4,7 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
+import { toneBackground } from "../../utils/badgeTones";
 
 const STATUS_OPTIONS = [
   { value: "pending_payment", label: "Pending Payment" },
@@ -29,7 +30,7 @@ export default function Orders({ showToast }) {
     { key: "status", label: "Status", width: 130, sortable: true, render: (v) => {
       const s = String(v || "pending").toLowerCase();
       const colors = { pending_payment: "var(--amber)", paid: "var(--green)", processing: "var(--blue)", shipped: "var(--purple)", delivered: "var(--teal)", cancelled: "var(--red)" };
-      return <span style={{ padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 600, background: (colors[s]||"var(--gray-200)")+"22", color: colors[s]||"var(--gray-500)", textTransform:"capitalize" }}>{s.replace("_"," ")}</span>;
+      return <span style={{ padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 600, background: toneBackground(colors[s]||"var(--gray-200)"), color: colors[s]||"var(--gray-500)", textTransform:"capitalize" }}>{s.replace("_"," ")}</span>;
     }},
     { key: "total", label: "Total", width: 110, sortable: true, render: (v, r) => {
       const amt = Number(v ?? r.total ?? 0);

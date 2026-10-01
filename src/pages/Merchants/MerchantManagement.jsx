@@ -8,6 +8,7 @@ import { canPerform, isInvestor, canViewEmail } from "../../services/permissions
 import { useAuth } from "../../context/AuthContext";
 import { maskEmail } from "../../utils/maskEmail";
 import { recordAuditEvent } from "../../services/audit";
+import { toneBackground } from "../../utils/badgeTones";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active" },
@@ -40,7 +41,7 @@ function StatusBadge({ value, tones }) {
   const v = String(value || "—").toLowerCase();
   const color = tones[v] || "var(--gray-500)";
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 600, background: color + "22", color, textTransform: "capitalize" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 600, background: toneBackground(color), color, textTransform: "capitalize" }}>
       {String(value || "—").replace("_", " ")}
     </span>
   );

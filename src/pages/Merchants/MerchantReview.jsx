@@ -7,6 +7,7 @@ import { businessDashboardApi } from "../../services/businessDashboard";
 import { canViewEmail } from "../../services/permissions";
 import { maskEmail } from "../../utils/maskEmail";
 import { recordAuditEvent } from "../../services/audit";
+import { toneBackground } from "../../utils/badgeTones";
 
 function initials(name) {
   return String(name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
@@ -16,7 +17,7 @@ function StatusPill({ value, tones }) {
   const v = String(value || "—").toLowerCase();
   const color = tones[v] || "var(--gray-500)";
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 700, background: color + "22", color, textTransform: "capitalize" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: "var(--radius-full)", fontSize: 11, fontWeight: 700, background: toneBackground(color), color, textTransform: "capitalize" }}>
       {String(value || "—")}
     </span>
   );
