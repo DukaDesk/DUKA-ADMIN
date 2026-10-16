@@ -37,6 +37,11 @@ const ROLE_PERMISSIONS = {
     "support:access",
     "order:read", "product:read", "analytics:read",
   ],
+  operations: [
+    "dashboard:read",
+    "merchants:read",
+    "merchant-apps:review",
+  ],
   // Legacy aliases → KB strict (do not expand — map to nearest KB equivalent for backward compat)
   admin: [], // mapped dynamically to platform_operator
   operator: [], // alias
@@ -164,6 +169,10 @@ export function canPerform(admin, permission) {
   return hasPermission(perms, permission);
 }
 
+export function canReviewMerchantApps(admin) {
+  return canPerform(admin, "merchant-apps:review");
+}
+
 export function canAccessPage(admin, page) {
   if (page === "dashboard" && (admin?.email || admin?.token || admin?.name)) {
     const normalized = normalizeRole(admin?.role || admin?.roles?.[0] || admin?.username);
@@ -184,5 +193,6 @@ export function getKbRoleLabel(role) {
   if (kb === "super_admin" || r === "super_admin") return "Super Admin";
   if (kb === "platform_operator") return "Platform Operator";
   if (kb === "support_agent") return "Support Agent";
+  if (r === "operations") return "Operations";
   return r;
 }

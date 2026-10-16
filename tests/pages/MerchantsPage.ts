@@ -9,8 +9,7 @@ export class MerchantsPage {
   readonly table: Locator;
   readonly rows: Locator;
   readonly approveButtons: Locator;
-  readonly suspendButtons: Locator;
-  readonly viewButtons: Locator;
+  readonly actionMenus: Locator;
   readonly pagination: Locator;
   readonly pageSizeSelect: Locator;
   readonly toast: Locator;
@@ -24,8 +23,7 @@ export class MerchantsPage {
     this.table = page.locator("table");
     this.rows = page.locator("tbody tr");
     this.approveButtons = page.locator('button:has-text("Approve")');
-    this.suspendButtons = page.locator('button:has-text("Suspend")');
-    this.viewButtons = page.locator('button:has-text("View")');
+    this.actionMenus = page.locator('button[aria-haspopup="menu"]');
     this.pagination = page.locator('[aria-label="Pagination"]');
     this.pageSizeSelect = page.locator('select:has(option:has-text("per page"))');
     this.toast = page.locator('[role="status"], [role="alert"]');
@@ -69,11 +67,13 @@ export class MerchantsPage {
   }
 
   async clickSuspend(rowIndex: number = 0) {
-    await this.suspendButtons.nth(rowIndex).click();
+    await this.actionMenus.nth(rowIndex).click();
+    await this.page.getByRole("menuitem", { name: /^(Suspend|Unsuspend) merchant/ }).click();
   }
 
   async clickView(rowIndex: number = 0) {
-    await this.viewButtons.nth(rowIndex).click();
+    await this.actionMenus.nth(rowIndex).click();
+    await this.page.getByRole("menuitem", { name: /View details for merchant/ }).click();
   }
 
   async expectToast(message: string) {

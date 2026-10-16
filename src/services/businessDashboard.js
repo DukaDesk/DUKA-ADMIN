@@ -111,6 +111,7 @@ export const businessDashboardApi = {
   },
   getCompliance: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/compliance`),
   getMerchantReview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/review`),
+  getMerchantAppReview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/apps/review`),
   getMerchantPreview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/preview`),
   approveApp: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/apps/approve`),
   rejectApp: (merchantId, payload) => {
@@ -230,7 +231,6 @@ export const businessDashboardApi = {
   // Analytics reports — live requires tenantId
   getRevenueReport: (params) => apiClient.get(`/analytics/reports/revenue${queryString(params)}`),
   getUserAnalytics: (params) => apiClient.get(`/analytics/reports/users${queryString(params)}`),
-  getBookingAnalytics: (params) => apiClient.get(`/analytics/reports/bookings${queryString(params)}`),
   getSavedReports: (params) => apiClient.get(`/analytics/reports/saved${queryString(params)}`),
   createReport: (payload) => apiClient.post(`/app/analytics/reports`, payload),
   getReport: (id, params) => apiClient.get(`/analytics/reports/${id}${queryString(params)}`),

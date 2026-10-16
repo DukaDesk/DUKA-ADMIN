@@ -4,7 +4,7 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import ConfirmModal from "../../components/UI/ConfirmModal";
 import MerchantReview from "./MerchantReview";
 import { businessDashboardApi } from "../../services/businessDashboard";
-import { canPerform, isInvestor, canViewEmail } from "../../services/permissions";
+import { canPerform, canReviewMerchantApps, isInvestor, canViewEmail } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
 import { maskEmail } from "../../utils/maskEmail";
 import { recordAuditEvent } from "../../services/audit";
@@ -55,6 +55,7 @@ export default function MerchantManagement({ showToast }) {
   const [tableKey, setTableKey] = useState(0);
 
   const canManage = !readOnly && canPerform(admin, "merchants:manage");
+  const canReviewApps = canReviewMerchantApps(admin);
 
   const load = useCallback(async (params) => {
     return businessDashboardApi.getMerchants(params);
@@ -90,24 +91,29 @@ export default function MerchantManagement({ showToast }) {
   const actions = [
     {
       key: "view",
-      label: "Review",
+      label: "View Details",
       icon: Eye,
       variant: "Ghost",
-      ariaLabel: (row) => `Review merchant ${row.name}`,
+      ariaLabel: (row) => `View details for merchant ${row.name}`,
       onClick: async (row) => setReviewId(row.id),
     },
     {
       key: "suspend",
-      label: "Suspend",
+      label: (row) => String(row.status).toLowerCase() === "suspended" ? "Unsuspend" : "Suspend",
       icon: Pause,
       variant: "Danger",
-      disabled: (row) => String(row.status).toLowerCase() === "suspended" || !canManage,
-      ariaLabel: (row) => `Suspend merchant ${row.name}`,
+      disabled: () => !canManage,
+      ariaLabel: (row) => `${String(row.status).toLowerCase() === "suspended" ? "Unsuspend" : "Suspend"} merchant ${row.name}`,
       onClick: async (row) => {
         try {
-          await businessDashboardApi.suspendMerchant(row.id);
-          recordAuditEvent({ admin, action: "merchant.suspend", target: row.id });
-          showToast?.(`${row.name} suspended`, "success");
+          const isSuspended = String(row.status).toLowerCase() === "suspended";
+          if (isSuspended) {
+            await businessDashboardApi.updateTenantById(row.id, { status: "published" });
+          } else {
+            await businessDashboardApi.suspendMerchant(row.id);
+          }
+          recordAuditEvent({ admin, action: isSuspended ? "merchant.unsuspend" : "merchant.suspend", target: row.id });
+          showToast?.(`${row.name} ${isSuspended ? "unsuspended" : "suspended"}`, "success");
           setTableKey((k) => k + 1);
         } catch (err) {
           showToast?.(err.message || "Failed to suspend", "error");
@@ -142,7 +148,7 @@ export default function MerchantManagement({ showToast }) {
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Merchants"
-        description="Review merchant credentials and app designs — approve in two stages."
+        titleTooltip="Review merchant credentials and app designs. Credential submission is not required to approve an app."
         load={load}
         rowKey="id"
         onRowClick={(row) => setReviewId(row.id)}
@@ -155,6 +161,7 @@ export default function MerchantManagement({ showToast }) {
         filters={filters}
         defaultSort={{ key: "createdAt", direction: "desc" }}
         actions={actions}
+        actionsDisplay="menu"
         emptyMessage="No merchants found matching your criteria."
       />
       {reviewId && (
@@ -162,6 +169,7 @@ export default function MerchantManagement({ showToast }) {
           merchantId={reviewId}
           admin={admin}
           canManage={canManage}
+          canReviewApps={canReviewApps}
           showToast={showToast}
           onClose={() => setReviewId(null)}
           onChanged={() => setTableKey((k) => k + 1)}

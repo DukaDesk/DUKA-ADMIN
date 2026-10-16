@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Users, Calendar, DollarSign } from "lucide-react";
+import { BarChart3, Users, Store, DollarSign } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { toneBackground } from "../../utils/badgeTones";
 import styles from "./Analytics.module.css";
+
+function metricCount(data, keys = ["total", "count"]) {
+  const sources = [data, data?.data, data?.meta, data?.data?.meta];
+  for (const source of sources) {
+    for (const key of keys) {
+      if (source?.[key] !== undefined && source?.[key] !== null) return source[key];
+    }
+  }
+  return "—";
+}
 
 function Stat({ label, value, icon: Icon, color }) {
   return (
@@ -17,7 +27,7 @@ function Stat({ label, value, icon: Icon, color }) {
 export default function Analytics({ showToast }) {
   const [revenue, setRevenue] = useState(null);
   const [users, setUsers] = useState(null);
-  const [bookings, setBookings] = useState(null);
+  const [merchants, setMerchants] = useState(null);
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,13 +37,13 @@ export default function Analytics({ showToast }) {
     Promise.allSettled([
       businessDashboardApi.getRevenueReport({}).catch(() => null),
       businessDashboardApi.getUserAnalytics({}).catch(() => null),
-      businessDashboardApi.getBookingAnalytics({}).catch(() => null),
+      businessDashboardApi.getPlatformMerchants({ status: "active", page: 1, limit: 1 }).catch(() => null),
       businessDashboardApi.getSavedReports({}).catch(() => ({ data: [] })),
-    ]).then(([rev, usr, book, sav]) => {
+    ]).then(([rev, usr, merchantResult, sav]) => {
       if (!active) return;
       if (rev.status === "fulfilled" && rev.value) setRevenue(rev.value?.data || rev.value);
       if (usr.status === "fulfilled" && usr.value) setUsers(usr.value?.data || usr.value);
-      if (book.status === "fulfilled" && book.value) setBookings(book.value?.data || book.value);
+      if (merchantResult.status === "fulfilled" && merchantResult.value) setMerchants(merchantResult.value);
       if (sav.status === "fulfilled" && sav.value) {
         const list = sav.value?.data || sav.value?.reports || sav.value?.items || sav.value || [];
         setSaved(Array.isArray(list) ? list : []);
@@ -60,7 +70,7 @@ export default function Analytics({ showToast }) {
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
-        <div><h2 className={styles.title}>Analytics & Reports</h2><p className={styles.subtitle}>Revenue, user and booking analytics.</p></div>
+        <div><h2 className={styles.title}>Analytics & Reports</h2><p className={styles.subtitle}>Revenue, user and merchant analytics.</p></div>
         <button className={styles.createBtn} onClick={handleCreate}>+ New Report</button>
       </header>
       {error && <div className={styles.error} role="alert">{error}</div>}
@@ -68,7 +78,7 @@ export default function Analytics({ showToast }) {
         <Stat label="Revenue (period)" value={revenue ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(revenue.revenue ?? revenue.total ?? 0)) : "—"} icon={DollarSign} color="var(--green)" />
         <Stat label="Transactions" value={revenue?.transactionCount ?? revenue?.count ?? "—"} icon={BarChart3} color="var(--blue)" />
         <Stat label="Active Users" value={users?.activeCount ?? users?.total ?? "—"} icon={Users} color="var(--purple)" />
-        <Stat label="Bookings" value={bookings?.total ?? bookings?.count ?? "—"} icon={Calendar} color="var(--amber)" />
+        <Stat label="Active Merchants" value={metricCount(merchants, ["activeCount", "total", "count"])} icon={Store} color="var(--amber)" />
       </div>
 
       <div className={styles.cardsGrid}>
@@ -79,10 +89,6 @@ export default function Analytics({ showToast }) {
         <article className={styles.card}>
           <h3 className={styles.cardTitle}>User Analytics</h3>
           <pre className={styles.json}>{users ? JSON.stringify(users, null, 2) : "No data yet"}</pre>
-        </article>
-        <article className={styles.card}>
-          <h3 className={styles.cardTitle}>Booking Analytics</h3>
-          <pre className={styles.json}>{bookings ? JSON.stringify(bookings, null, 2) : "No data yet"}</pre>
         </article>
       </div>
 
