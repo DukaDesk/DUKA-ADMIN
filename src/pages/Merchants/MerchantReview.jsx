@@ -48,7 +48,7 @@ function ApprovalStage({ number, title, description, status, tones, locked = fal
   );
 }
 
-export default function MerchantReview({ merchantId, admin, canManage, showToast, onClose, onChanged }) {
+export default function MerchantReview({ merchantId, admin, canManage, canReviewApps, showToast, onClose, onChanged }) {
   const [review, setReview] = useState(null);
   const [preview, setPreview] = useState(null);
   const [previewFailed, setPreviewFailed] = useState(false);
@@ -66,7 +66,9 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
     setPreview(null);
     setPreviewFailed(false);
     try {
-      const res = await businessDashboardApi.getMerchantReview(merchantId);
+      const res = canReviewApps && !canManage
+        ? await businessDashboardApi.getMerchantAppReview(merchantId)
+        : await businessDashboardApi.getMerchantReview(merchantId);
       const data = responseData(res, "review");
       setReview(data);
       try {
@@ -82,7 +84,7 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
     } finally {
       setLoading(false);
     }
-  }, [merchantId]);
+  }, [canManage, canReviewApps, merchantId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -110,7 +112,7 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
   const hasPreview = Array.isArray(previewPages) && previewPages.length > 0;
   const hasComplianceSubmission = compliance.length > 0 || Boolean(tenant.complianceSubmittedAt || tenant.credentialsSubmittedAt || tenant.verificationSubmittedAt || tenant.complianceStatus === "submitted");
   const canVerify = verification !== "verified" && hasComplianceSubmission;
-  const canApproveApp = verification === "verified" && appStatus === "in_review" && hasPreview;
+  const canApproveApp = appStatus === "in_review";
 
   const runAction = async (kind, fn, auditAction, successMsg) => {
     setBusy(kind);
@@ -180,14 +182,13 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
               <ApprovalStage
                 number={2}
                 title="App approval"
-                description={verification !== "verified" ? "Available after merchant verification." : appStatus === "in_review" && hasPreview ? "The app is ready for review. Check the mobile preview before approving or declining." : appStatus === "in_review" ? "The merchant submitted an app, but its preview is not available yet." : appStatus === "approved" ? "The app has been approved and is live." : appStatus === "rejected" ? "The app was declined. Review the submission again after the merchant updates it." : "Waiting for the verified merchant to create and submit an app."}
+                description={appStatus === "in_review" && hasPreview ? "The app is ready for review. Review the mobile preview, then approve or decline it." : appStatus === "in_review" ? "The app is submitted. Credential verification and an available preview are not required for approval." : appStatus === "approved" ? "The app has been approved and is live." : appStatus === "rejected" ? "The app was declined. Review the submission again after the merchant updates it." : "Waiting for the merchant to submit an app for review."}
                 status={appStatus === "none" ? "pending" : appStatus}
                 tones={{ ...APP_TONES, pending: "var(--gray-400)" }}
-                locked={verification !== "verified"}
               />
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
-              <section aria-label="Credentials" style={{ background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 12, padding: 16 }}>
+              {canManage && <section aria-label="Credentials" style={{ background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 12, padding: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
                   <ShieldCheck size={16} aria-hidden="true" /> Credentials
                 </h3>
@@ -234,9 +235,9 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
                     </button>
                   </div>
                 )}
-              </section>
+              </section>}
 
-              <section aria-label="Subscription" style={{ background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 12, padding: 16 }}>
+              {canManage && <section aria-label="Subscription" style={{ background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 12, padding: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", margin: "0 0 12px" }}>Subscription</h3>
                 {subscription ? (
                   <div style={{ display: "grid", gap: 6, fontSize: 13 }}>
@@ -248,7 +249,7 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
                   <p style={{ fontSize: 13, color: "var(--gray-500)", margin: 0 }}>No subscription yet.</p>
                 )}
                 {quota && <div style={{ fontSize: 12, marginTop: 8, padding: 8, background: "var(--gray-50)", borderRadius: 6 }}>API quota: {quota.used ?? quota.currentDay ?? "—"}/{quota.limit ?? quota.max ?? quota.requestsPerDay ?? "—"}</div>}
-              </section>
+              </section>}
 
               <section aria-label="App details" style={{ background: "#fff", border: "1px solid var(--gray-200)", borderRadius: 12, padding: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--navy)", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
@@ -284,18 +285,18 @@ export default function MerchantReview({ merchantId, admin, canManage, showToast
       <footer style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 24px", borderTop: "1px solid var(--gray-200)", flexShrink: 0, background: "#fff" }}>
         <button
           type="button"
-          disabled={!canManage || !canApproveApp || busy}
+          disabled={!canReviewApps || !canApproveApp || busy}
           onClick={() => runAction("approve", () => businessDashboardApi.approveApp(merchantId), "merchant.app_approve", `${tenant.name || "Merchant"} app approved — now live`)}
-          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "var(--green)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: canManage && canApproveApp && !busy ? "pointer" : "not-allowed", opacity: canManage && canApproveApp && !busy ? 1 : 0.6 }}
-          title={canApproveApp ? "Approve app and publish live" : verification !== "verified" ? "Verify the merchant first" : appStatus !== "in_review" ? "Waiting for the merchant to submit the app" : "A submitted app preview is required before approval"}
+          style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "var(--green)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: canReviewApps && canApproveApp && !busy ? "pointer" : "not-allowed", opacity: canReviewApps && canApproveApp && !busy ? 1 : 0.6 }}
+          title={canApproveApp ? "Approve app and publish live" : appStatus === "approved" ? "App is already approved" : "Waiting for the merchant to submit the app for review"}
         >
           <Check size={16} aria-hidden="true" /> {busy === "approve" ? "Approving…" : "Approve App"}
         </button>
         <span style={{ fontSize: 12, color: "var(--gray-500)" }}>
-          {!canManage ? "Read-only access." : verification !== "verified" ? "Stage 1: verify the merchant first." : appStatus === "in_review" && hasPreview ? "Stage 2: review the preview, then approve." : appStatus === "in_review" ? "App preview unavailable; approval is disabled." : appStatus === "approved" ? "App is live." : "Waiting for the merchant to submit the app."}
+          {!canReviewApps ? "Read-only access." : appStatus === "in_review" && hasPreview ? "Review the app and approve when ready." : appStatus === "in_review" ? "Submitted apps can be approved without credentials or a preview." : appStatus === "approved" ? "App is live." : "Waiting for the merchant to submit an app for review."}
         </span>
         <span style={{ flex: 1 }} />
-        {canManage && appStatus === "in_review" && (
+        {canReviewApps && appStatus === "in_review" && (
           <button type="button" disabled={busy} onClick={() => { setDeclineMode("app"); setReason(""); setReasonError(""); }} style={{ padding: "10px 16px", background: "#fff", border: "1px solid var(--red)", color: "var(--red)", borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: "pointer" }}>
             Decline App
           </button>

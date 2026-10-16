@@ -1,4 +1,18 @@
 import { test, expect } from "./utils/auth";
+import { canAccessPage, canPerform, canReviewMerchantApps } from "../src/services/permissions";
+
+test("merchant app review is limited to super_admin and operations", () => {
+  const operations = { role: "operations" };
+  const support = { role: "support_agent" };
+  const platformOperator = { role: "platform_operator" };
+
+  expect(canAccessPage(operations, "merchants")).toBe(true);
+  expect(canReviewMerchantApps(operations)).toBe(true);
+  expect(canPerform(operations, "merchants:manage")).toBe(false);
+  expect(canReviewMerchantApps({ role: "super_admin" })).toBe(true);
+  expect(canReviewMerchantApps(support)).toBe(false);
+  expect(canReviewMerchantApps(platformOperator)).toBe(false);
+});
 
 test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
   const pages = [
@@ -23,6 +37,8 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
     await authenticatedPage.waitForLoadState("networkidle");
     await expect(authenticatedPage.locator('h2:has-text("Analytics & Reports")')).toBeVisible();
     await expect(authenticatedPage.locator('button:has-text("New Report")')).toBeVisible();
+    await expect(authenticatedPage.getByText("Bookings", { exact: true })).toHaveCount(0);
+    await expect(authenticatedPage.getByText("Booking Analytics", { exact: true })).toHaveCount(0);
   });
 
   test("marketing bulk and infrastructure overview render", async ({ authenticatedPage }) => {
@@ -39,9 +55,18 @@ test.describe("Quotas & Audit — Administration domain", () => {
   test("merchant quota shows live via GET /admin/quotas/:merchantId", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
     await authenticatedPage.waitForLoadState("networkidle");
-    const viewBtn = authenticatedPage.locator('button:has-text("View")').first();
-    if (await viewBtn.isVisible()) {
-      await viewBtn.click();
+    const actionMenu = authenticatedPage.getByRole("button", { name: /Actions for/ }).first();
+    if (await actionMenu.isVisible()) {
+      await actionMenu.click();
+      const menu = authenticatedPage.getByRole("menu");
+      await expect(menu.getByRole("menuitem")).toHaveCount(3);
+      await expect(menu).toContainText("View Details");
+      await expect(menu).toContainText(/Suspend|Unsuspend/);
+      await expect(menu).toContainText("Delete");
+      await authenticatedPage.locator("h2").click();
+      await expect(actionMenu).toHaveAttribute("aria-expanded", "false");
+      await actionMenu.click();
+      await authenticatedPage.getByRole("menuitem", { name: /View details for merchant/ }).click();
       await expect(authenticatedPage.locator('text=Quota:')).toBeVisible({ timeout: 10000 });
     }
   });

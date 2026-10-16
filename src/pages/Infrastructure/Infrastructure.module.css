@@ -1,0 +1,396 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0 0 5px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+
+.liveIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  color: var(--gray-600);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.liveIndicator > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-alpha-15);
+}
+
+.error {
+  padding: 12px 16px;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-md);
+  color: var(--red);
+  background: #FEF2F2;
+  font-size: 13px;
+}
+
+.loading {
+  padding: 24px;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metricCard,
+.panel {
+  min-width: 0;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.metricCard {
+  padding: 18px;
+}
+
+.metricHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.metricIcon,
+.environmentIcon,
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.metricIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+}
+
+.metricLabel {
+  color: var(--gray-500);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metricValue {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.sparkline,
+.sparklineEmpty {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  color: var(--gray-400);
+  font-size: 10px;
+}
+
+.sparkline svg,
+.sparklineEmpty svg {
+  width: 104px;
+  height: 28px;
+  overflow: visible;
+}
+
+.sparkline polyline {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sparklineEmpty path {
+  fill: none;
+  stroke: var(--gray-200);
+  stroke-width: 2;
+  stroke-dasharray: 3 4;
+}
+
+.sparklineEmpty circle {
+  fill: var(--gray-300);
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  padding: 18px;
+}
+
+.panelHeader,
+.panelTitle {
+  display: flex;
+  align-items: center;
+}
+
+.panelHeader {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panelTitle {
+  gap: 8px;
+  color: var(--gray-600);
+}
+
+.panelTitle h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusGood {
+  color: #15803D;
+  background: #DCFCE7;
+}
+
+.statusNeutral {
+  color: var(--gray-600);
+  background: var(--gray-100);
+}
+
+.countBadge {
+  min-width: 26px;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  color: var(--gray-600);
+  background: var(--gray-100);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.healthContent {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 130px;
+}
+
+.uptimeRing {
+  display: grid;
+  place-items: center;
+  width: 106px;
+  height: 106px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: conic-gradient(var(--green) var(--uptime), var(--gray-100) 0);
+}
+
+.uptimeUnknown {
+  background: conic-gradient(var(--gray-300) 20%, var(--gray-100) 0);
+}
+
+.uptimeRing > div {
+  display: flex;
+  width: 82px;
+  height: 82px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.uptimeRing strong {
+  color: var(--navy);
+  font-size: 19px;
+}
+
+.uptimeRing span {
+  color: var(--gray-500);
+  font-size: 10px;
+}
+
+.healthDetails {
+  min-width: 0;
+}
+
+.healthDetails > strong {
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.healthDetails p,
+.panelNote {
+  margin: 6px 0 10px;
+  color: var(--gray-500);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.environmentList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.environmentRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-md);
+  background: var(--gray-50);
+}
+
+.environmentIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  color: var(--gray-500);
+  background: var(--gray-200);
+}
+
+.environmentIconActive {
+  color: #15803D;
+  background: #DCFCE7;
+}
+
+.environmentInfo {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.environmentInfo strong {
+  overflow: hidden;
+  color: var(--navy);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.environmentInfo > span {
+  color: var(--gray-500);
+  font-size: 10px;
+}
+
+.backupContent {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 12px;
+}
+
+.backupValue {
+  color: var(--navy);
+  font-family: var(--font-display);
+  font-size: 28px;
+}
+
+.backupLabel {
+  color: var(--gray-500);
+  font-size: 11px;
+}
+
+.emptyState {
+  display: flex;
+  min-height: 145px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  color: var(--gray-500);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 9px;
+  border-radius: 50%;
+  color: var(--gray-500);
+  background: var(--gray-100);
+}
+
+.emptyState strong {
+  color: var(--gray-700);
+  font-size: 12px;
+}
+
+.emptyState p {
+  max-width: 290px;
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 800px) {
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .healthContent {
+    align-items: flex-start;
+    gap: 14px;
+  }
+}

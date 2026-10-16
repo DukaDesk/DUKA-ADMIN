@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { ArrowUp, ArrowDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { ArrowUp, ArrowDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, EllipsisVertical, Info } from "lucide-react";
 import styles from "./EnhancedRemoteTablePage.module.css";
 
 function recordsFrom(response) {
@@ -32,6 +32,7 @@ function display(value) {
 export default function EnhancedRemoteTablePage({
   title,
   description,
+  titleTooltip,
   load,
   rowKey = "id",
   columns: columnConfig = [],
@@ -41,6 +42,7 @@ export default function EnhancedRemoteTablePage({
   pageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
   actions = [],
+  actionsDisplay = "inline",
   filters = [],
   defaultSort = { key: null, direction: "asc" },
   emptyMessage = "No records found.",
@@ -56,9 +58,27 @@ export default function EnhancedRemoteTablePage({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPageSize, setSelectedPageSize] = useState(pageSize);
   const [filterValues, setFilterValues] = useState({});
+  const [openActionMenu, setOpenActionMenu] = useState(null);
+  const actionMenuRef = useRef(null);
 
   const searchId = `search-${title.replace(/\s+/g, "-").toLowerCase()}`;
   const pageSizeId = `page-size-${title.replace(/\s+/g, "-").toLowerCase()}`;
+
+  useEffect(() => {
+    if (openActionMenu === null) return undefined;
+    const handlePointerDown = (event) => {
+      if (!actionMenuRef.current?.contains(event.target)) setOpenActionMenu(null);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setOpenActionMenu(null);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openActionMenu]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -157,7 +177,19 @@ export default function EnhancedRemoteTablePage({
     <section className={styles.section}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <h2 className={styles.title}>{title}</h2>
+          <div className={styles.titleRow}>
+            <h2 className={styles.title}>{title}</h2>
+            {titleTooltip && (
+              <button
+                type="button"
+                className={styles.titleTooltip}
+                title={titleTooltip}
+                aria-label={`${title} information`}
+              >
+                <Info size={16} aria-hidden="true" />
+              </button>
+            )}
+          </div>
           {description && <p className={styles.description}>{description}</p>}
         </div>
         <div className={styles.toolbar}>
@@ -245,7 +277,7 @@ export default function EnhancedRemoteTablePage({
                     </th>
                   );
                 })}
-                {actions.length > 0 && <th className={styles.th} style={{ width: 120 }}>Actions</th>}
+                {actions.length > 0 && <th className={styles.th} style={{ width: actionsDisplay === "menu" ? 72 : 120 }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -278,23 +310,71 @@ export default function EnhancedRemoteTablePage({
                   })}
                   {actions.length > 0 && (
                     <td className={styles.td}>
-                      <div className={styles.actions} role="group" aria-label="Row actions">
-                        {actions.map((action) => (
-                          <button
-                            key={action.key}
-                            className={styles.actionBtn + " " + styles["action" + (action.variant || "Primary")]}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              action.onClick(row);
-                            }}
-                            disabled={action.disabled?.(row)}
-                            aria-label={action.ariaLabel?.(row) || action.label}
-                          >
-                            {action.icon && <span aria-hidden="true">{typeof action.icon === "string" ? action.icon : (() => { const Ico = action.icon; return <Ico size={14} />; })()}</span>}
-                            <span className={styles.actionText}>{action.label}</span>
-                          </button>
-                        ))}
-                      </div>
+                      {actionsDisplay === "menu" ? (() => {
+                        const rowMenuKey = String(row[rowKey] ?? index);
+                        const menuIsOpen = openActionMenu === rowMenuKey;
+                        return (
+                          <div className={styles.actionMenu} ref={menuIsOpen ? actionMenuRef : null}>
+                            <button
+                              type="button"
+                              className={styles.actionMenuTrigger}
+                              aria-label={`Actions for ${row.name || "row"}`}
+                              aria-haspopup="menu"
+                              aria-expanded={menuIsOpen}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setOpenActionMenu(menuIsOpen ? null : rowMenuKey);
+                              }}
+                            >
+                              <EllipsisVertical size={18} aria-hidden="true" />
+                            </button>
+                            {menuIsOpen && (
+                              <div className={styles.actionMenuList} role="menu">
+                                {actions.map((action) => {
+                                  const ActionIcon = action.icon;
+                                  const actionLabel = typeof action.label === "function" ? action.label(row) : action.label;
+                                  return (
+                                    <button
+                                      key={action.key}
+                                      type="button"
+                                      className={`${styles.actionMenuItem} ${action.variant === "Danger" ? styles.actionMenuDanger : ""}`}
+                                      role="menuitem"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setOpenActionMenu(null);
+                                        action.onClick(row);
+                                      }}
+                                      disabled={action.disabled?.(row)}
+                                      aria-label={action.ariaLabel?.(row) || actionLabel}
+                                    >
+                                      {ActionIcon && <ActionIcon size={14} aria-hidden="true" />}
+                                      <span>{actionLabel}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : (
+                        <div className={styles.actions} role="group" aria-label="Row actions">
+                          {actions.map((action) => (
+                            <button
+                              key={action.key}
+                              className={styles.actionBtn + " " + styles["action" + (action.variant || "Primary")]}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                action.onClick(row);
+                              }}
+                              disabled={action.disabled?.(row)}
+                              aria-label={action.ariaLabel?.(row) || action.label}
+                            >
+                              {action.icon && <span aria-hidden="true">{typeof action.icon === "string" ? action.icon : (() => { const Ico = action.icon; return <Ico size={14} />; })()}</span>}
+                              <span className={styles.actionText}>{action.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>

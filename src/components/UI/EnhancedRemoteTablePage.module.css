@@ -21,12 +21,43 @@
   min-width: 200px;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .title {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 22px;
   color: var(--navy);
   margin: 0 0 4px;
+}
+
+.titleTooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--gray-500);
+  background: transparent;
+  cursor: help;
+}
+
+.titleTooltip:hover,
+.titleTooltip:focus-visible {
+  color: var(--navy);
+  background: var(--gray-100);
+}
+
+.titleTooltip:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
 }
 
 .description {
@@ -225,6 +256,89 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.actionMenu {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.actionMenuTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--gray-600);
+  background: transparent;
+  cursor: pointer;
+}
+
+.actionMenuTrigger:hover,
+.actionMenuTrigger[aria-expanded="true"] {
+  border-color: var(--gray-200);
+  background: var(--gray-50);
+}
+
+.actionMenuTrigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--amber-alpha-30);
+}
+
+.actionMenuList {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 176px;
+  padding: 4px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-md);
+}
+
+.actionMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--gray-700);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.actionMenuItem:hover:not(:disabled) {
+  background: var(--gray-50);
+}
+
+.actionMenuItem:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: -2px;
+}
+
+.actionMenuItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.actionMenuDanger {
+  color: var(--red);
+}
+
+.actionMenuDanger:hover:not(:disabled) {
+  background: #FEF2F2;
 }
 
 .actionBtn {
