@@ -25,9 +25,16 @@ const VERIFICATION_OPTIONS = [
 
 const APP_OPTIONS = [
   { value: "none", label: "No App" },
-  { value: "in_review", label: "In Review" },
+  { value: "in_review", label: "Needs Review" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
+];
+
+const APP_QUEUE_FILTERS = [
+  { key: "appStatus", value: "", label: "All Apps" },
+  { key: "appStatus", value: "in_review", label: "Needs Review" },
+  { key: "appStatus", value: "approved", label: "Approved" },
+  { key: "appStatus", value: "rejected", label: "Rejected" },
 ];
 
 const PLAN_OPTIONS = [
@@ -162,6 +169,7 @@ export default function MerchantManagement({ showToast }) {
         defaultSort={{ key: "createdAt", direction: "desc" }}
         actions={actions}
         actionsDisplay="menu"
+        quickFilters={APP_QUEUE_FILTERS}
         refreshIntervalMs={30000}
         emptyMessage="No merchants found matching your criteria."
       />
