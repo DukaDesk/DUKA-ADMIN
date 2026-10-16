@@ -1,11 +1,9 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 
 let nextId = 0;
 
 export default function useToast() {
   const [toasts, setToasts] = useState([]);
-  const timer = useRef(null);
-
   const showToast = useCallback((msg, type = "success") => {
     const id = ++nextId;
     setToasts((prev) => [...prev, { id, msg, type }]);
