@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { ArrowUp, ArrowDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, EllipsisVertical, Info, RefreshCw } from "lucide-react";
 import styles from "./EnhancedRemoteTablePage.module.css";
 

@@ -160,7 +160,7 @@ return (
               {page === "marketplace" && <MarketplaceListings showToast={showToast} />}
               {page === "analytics" && <Analytics showToast={showToast} />}
               {page === "marketing" && <Marketing showToast={showToast} />}
-              {page === "audit" && <AuditLog showToast={showToast} />}
+              {page === "audit" && <AuditLog />}
               {page === "subscriptions" && <SubscriptionManagement showToast={showToast} />}
               {page === "infrastructure" && <Infrastructure showToast={showToast} />}
               {page === "pending-admins" && <PendingAdmins showToast={showToast} />}

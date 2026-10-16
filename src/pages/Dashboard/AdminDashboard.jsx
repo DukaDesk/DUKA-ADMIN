@@ -102,23 +102,6 @@ const QUICK_ACTIONS = [
   { icon: Settings, title: "System Settings", subtitle: "Configure platform", button: "Configure", filled: false, route: "settings" },
 ];
 
-function Sparkline({ data, color = "var(--amber)" }) {
-  if (!data || data.length < 2) return null;
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const points = data.map((value, i) => {
-    const x = (i / (data.length - 1)) * 100;
-    const y = 100 - ((value - min) / range) * 90;
-    return `${x}% ${y}%`;
-  }).join(", ");
-  return (
-    <svg className={styles.sparkline} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
-    </svg>
-  );
-}
-
 function RevenueChart({ data, tenantData }) {
   const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
   if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>No revenue data yet</div>;

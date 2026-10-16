@@ -36,10 +36,8 @@ async function request(method, endpoint, data) {
     const rid = response.headers.get("x-railway-request-id") || response.headers.get("x-request-id") || "";
     try {
       const body = await response.json();
-      const raw = body.message || body.errors?.join(", ") || (Array.isArray(body.errors) ? body.errors.join(", ") : null) || message;
       if (Array.isArray(body.errors) && !body.message) message = body.errors.join(", ");
       if (Array.isArray(body.message)) message = body.message.join(", ");
-      const rawMsg = body.message || body.errors?.join(", ") || body.error || message;
       const friendly = friendlyFromRaw(Array.isArray(body.message) ? body.message.join(", ") : body.message || body.errors?.join(", ") || body.error || message, response.status);
       message = rid ? `${friendly} (Ref: ${rid.slice(0, 8)})` : friendly;
       if (rid) console.warn("[API legacy]", endpoint, response.status, rid);

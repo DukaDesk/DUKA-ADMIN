@@ -20,7 +20,7 @@ const ACTION_OPTIONS = [
   { value: "logout", label: "Admin Logout" },
 ];
 
-export default function AuditLog({ showToast }) {
+export default function AuditLog() {
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [quickRange, setQuickRange] = useState("7d");
 
