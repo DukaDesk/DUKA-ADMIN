@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { ArrowUp, ArrowDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, EllipsisVertical, Info } from "lucide-react";
+import { ArrowUp, ArrowDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, EllipsisVertical, Info, RefreshCw } from "lucide-react";
 import styles from "./EnhancedRemoteTablePage.module.css";
 
 function recordsFrom(response) {
@@ -45,6 +45,7 @@ export default function EnhancedRemoteTablePage({
   actionsDisplay = "inline",
   filters = [],
   defaultSort = { key: null, direction: "asc" },
+  refreshIntervalMs = 0,
   emptyMessage = "No records found.",
   loadingMessage = "Loading…",
   onRowClick,
@@ -60,6 +61,7 @@ export default function EnhancedRemoteTablePage({
   const [filterValues, setFilterValues] = useState({});
   const [openActionMenu, setOpenActionMenu] = useState(null);
   const actionMenuRef = useRef(null);
+  const inFlightCountRef = useRef(0);
 
   const searchId = `search-${title.replace(/\s+/g, "-").toLowerCase()}`;
   const pageSizeId = `page-size-${title.replace(/\s+/g, "-").toLowerCase()}`;
@@ -81,6 +83,7 @@ export default function EnhancedRemoteTablePage({
   }, [openActionMenu]);
 
   const fetchData = useCallback(async () => {
+    inFlightCountRef.current += 1;
     setLoading(true);
     setError("");
     try {
@@ -131,13 +134,22 @@ export default function EnhancedRemoteTablePage({
       const friendly = String(raw).includes("prisma") || String(raw).includes("Unknown field") ? `Service temporarily unavailable.${rid}` : raw + rid;
       setError(friendly);
     } finally {
-      setLoading(false);
+      inFlightCountRef.current -= 1;
+      if (inFlightCountRef.current === 0) setLoading(false);
     }
   }, [load, currentPage, selectedPageSize, searchTerm, sortConfig, filterValues, pagination, title]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!refreshIntervalMs) return undefined;
+    const intervalId = window.setInterval(() => {
+      if (inFlightCountRef.current === 0) fetchData();
+    }, refreshIntervalMs);
+    return () => window.clearInterval(intervalId);
+  }, [fetchData, refreshIntervalMs]);
 
   const handleSort = (key) => {
     if (!sortable) return;
@@ -193,6 +205,19 @@ export default function EnhancedRemoteTablePage({
           {description && <p className={styles.description}>{description}</p>}
         </div>
         <div className={styles.toolbar}>
+          {refreshIntervalMs > 0 && (
+            <button
+              type="button"
+              className={styles.refreshBtn}
+              onClick={fetchData}
+              disabled={loading}
+              aria-label={`Refresh ${title}`}
+              title="Refresh now (also refreshes automatically)"
+            >
+              <RefreshCw size={15} aria-hidden="true" />
+              <span>Refresh</span>
+            </button>
+          )}
           {searchable && (
             <div className={styles.searchWrapper}>
               <label htmlFor={searchId} className={styles.visuallyHidden}>

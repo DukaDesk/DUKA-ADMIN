@@ -63,7 +63,7 @@ export default function MerchantManagement({ showToast }) {
 
   const columns = [
     { key: "name", label: "Merchant", width: 200, sortable: true },
-    { key: "email", label: "Email", width: 200, sortable: true, render: (v) => canViewEmail(admin) ? v : maskEmail(v) },
+    { key: "email", label: "Email", width: 200, sortable: false, render: (v) => canViewEmail(admin) ? v : maskEmail(v) },
     { key: "status", label: "Status", width: 120, sortable: true,
       render: (value) => <StatusBadge value={value} tones={{ active: "var(--green)", published: "var(--green)", pending: "var(--amber)", draft: "var(--amber)", suspended: "var(--red)", rejected: "var(--gray-500)" }} />
     },
@@ -73,7 +73,7 @@ export default function MerchantManagement({ showToast }) {
     { key: "appStatus", label: "App Review", width: 130, sortable: true,
       render: (value) => <StatusBadge value={String(value || "none").replace("_", " ")} tones={{ none: "var(--gray-400)", in_review: "var(--amber)", "in review": "var(--amber)", approved: "var(--green)", rejected: "var(--red)" }} />
     },
-    { key: "plan", label: "Plan", width: 140, sortable: true,
+    { key: "plan", label: "Plan", width: 140, sortable: false,
       render: (value) => String(value).charAt(0).toUpperCase() + String(value).slice(1)
     },
     { key: "createdAt", label: "Joined", width: 160, sortable: true,
@@ -162,6 +162,7 @@ export default function MerchantManagement({ showToast }) {
         defaultSort={{ key: "createdAt", direction: "desc" }}
         actions={actions}
         actionsDisplay="menu"
+        refreshIntervalMs={30000}
         emptyMessage="No merchants found matching your criteria."
       />
       {reviewId && (
