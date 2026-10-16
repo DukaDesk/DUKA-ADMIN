@@ -44,6 +44,7 @@ export default function EnhancedRemoteTablePage({
   actions = [],
   actionsDisplay = "inline",
   filters = [],
+  quickFilters = [],
   defaultSort = { key: null, direction: "asc" },
   refreshIntervalMs = 0,
   emptyMessage = "No records found.",
@@ -170,6 +171,11 @@ export default function EnhancedRemoteTablePage({
     setCurrentPage(1);
   };
 
+  const handleQuickFilter = (filter) => {
+    setFilterValues((prev) => ({ ...prev, [filter.key]: filter.value || undefined }));
+    setCurrentPage(1);
+  };
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
@@ -252,6 +258,24 @@ export default function EnhancedRemoteTablePage({
                   ))}
                 </select>
               ))}
+            </div>
+          )}
+          {quickFilters.length > 0 && (
+            <div className={styles.quickFilters} role="group" aria-label={`${title} quick filters`}>
+              {quickFilters.map((filter) => {
+                const isActive = (filterValues[filter.key] || "") === (filter.value || "");
+                return (
+                  <button
+                    key={`${filter.key}-${filter.value || "all"}`}
+                    type="button"
+                    className={`${styles.quickFilter} ${isActive ? styles.quickFilterActive : ""}`}
+                    aria-pressed={isActive}
+                    onClick={() => handleQuickFilter(filter)}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

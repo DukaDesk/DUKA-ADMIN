@@ -151,6 +151,46 @@
   gap: 10px;
 }
 
+.quickFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: var(--gray-50);
+}
+
+.quickFilter {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--gray-600);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quickFilter:hover {
+  color: var(--navy);
+  background: #fff;
+}
+
+.quickFilter:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.quickFilterActive,
+.quickFilterActive:hover {
+  color: var(--navy);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
 .filterSelect {
   padding: 10px 14px;
   border: 1px solid var(--gray-200);

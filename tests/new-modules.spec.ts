@@ -51,6 +51,24 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
   });
 });
 
+test.describe("Merchant app review queue", () => {
+  test("queue shortcuts sync with the app review filter", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/merchants");
+    const appStatus = authenticatedPage.getByRole("combobox", { name: "App Review" });
+    const needsReview = authenticatedPage.getByRole("button", { name: "Needs Review", exact: true });
+
+    await expect(needsReview).toHaveAttribute("aria-pressed", "false");
+    await needsReview.click();
+    await expect(needsReview).toHaveAttribute("aria-pressed", "true");
+    await expect(appStatus).toHaveValue("in_review");
+
+    const allApps = authenticatedPage.getByRole("button", { name: "All Apps", exact: true });
+    await allApps.click();
+    await expect(allApps).toHaveAttribute("aria-pressed", "true");
+    await expect(appStatus).toHaveValue("");
+  });
+});
+
 test.describe("Quotas & Audit — Administration domain", () => {
   test("merchant quota shows live via GET /admin/quotas/:merchantId", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
