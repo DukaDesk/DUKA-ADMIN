@@ -31,9 +31,21 @@ const handleCredentials = (e) => {
     setLoading(true);
     api.post("/auth/login", { email, password })
       .then(async (result) => {
-        await api.post("/auth/send-otp", { email });
-        const { token, admin } = unwrapAuth(result);
-        setAuthResult({ token, admin });
+        const { admin } = unwrapAuth(result);
+        const roles = [admin?.role, ...(Array.isArray(admin?.roles) ? admin.roles : [])]
+          .map((role) => String(role || "").toLowerCase().replace(/[\s-]+/g, "_"));
+        if (!roles.some((role) => ["super_admin", "platform_operator", "support_agent", "operations"].includes(role))) {
+          setError("This account does not have a platform admin role.");
+          return;
+        }
+        const payload = result?.data && typeof result.data === "object" ? result.data : result;
+        const challengeId = payload?.challengeId;
+        if (!payload?.requiresOtp || !challengeId) {
+          setError("The server did not start a secure admin sign-in challenge.");
+          return;
+        }
+        await api.post("/auth/send-otp", { email, challengeId });
+        setAuthResult({ challengeId });
         setStep("2fa");
       })
       .catch((requestError) => {
@@ -58,12 +70,18 @@ const handleOtp = (e) => {
       return;
     }
     setLoading(true);
-    api.post("/auth/verify-otp", { email, otp: code })
+    api.post("/auth/verify-admin-login", {
+      email,
+      otp: code,
+      challengeId: authResult?.challengeId,
+    })
       .then((result) => {
-        const { token, admin } = unwrapAuth(result);
-        const fallback = authResult ? { token: authResult.token, admin: authResult.admin } : null;
-        const payload = token ? { token, admin } : fallback;
-        onLogin(payload);
+        const { token, refreshToken, admin } = unwrapAuth(result);
+        if (!token || !refreshToken) {
+          setError("The server did not issue a complete authenticated session.");
+          return;
+        }
+        onLogin({ token, refreshToken, admin });
       })
       .catch((requestError) => {
         const msg = requestError.message || "";
@@ -236,7 +254,7 @@ const handleOtp = (e) => {
                   className={styles.resendLink}
                   onClick={async () => {
                     try {
-                      await api.post("/auth/send-otp", { email });
+                      await api.post("/auth/send-otp", { email, challengeId: authResult?.challengeId });
                       showToast("Verification code resent", "info");
 } catch (requestError) {
                       const msg = requestError.message || "";

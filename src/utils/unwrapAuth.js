@@ -29,6 +29,7 @@ export function unwrapAuth(raw) {
   delete clean.accessToken;
   delete clean.access_token;
   delete clean.jwt;
+  delete clean.refreshToken;
   delete clean.roles;
-  return { token, admin: clean };
+  return { token, refreshToken: cur?.refreshToken ?? cur?.refresh_token ?? null, admin: clean };
 }

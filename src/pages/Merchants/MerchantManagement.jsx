@@ -4,7 +4,7 @@ import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage
 import ConfirmModal from "../../components/UI/ConfirmModal";
 import MerchantReview from "./MerchantReview";
 import { businessDashboardApi } from "../../services/businessDashboard";
-import { canPerform, canReviewMerchantApps, isInvestor, canViewEmail } from "../../services/permissions";
+import { canPerform, canReviewMerchantApps, canViewEmail } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
 import { maskEmail } from "../../utils/maskEmail";
 import { recordAuditEvent } from "../../services/audit";
@@ -29,6 +29,8 @@ const APP_OPTIONS = [
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
 ];
+
+const APP_REVIEW_OPTIONS = APP_OPTIONS.filter((option) => option.value !== "none");
 
 const APP_QUEUE_FILTERS = [
   { key: "appStatus", value: "", label: "All Apps" },
@@ -56,19 +58,20 @@ function StatusBadge({ value, tones }) {
 
 export default function MerchantManagement({ showToast }) {
   const { admin } = useAuth();
-  const readOnly = isInvestor(admin);
   const [reviewId, setReviewId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [statusTarget, setStatusTarget] = useState(null);
+  const [busyAction, setBusyAction] = useState("");
   const [tableKey, setTableKey] = useState(0);
 
-  const canManage = !readOnly && canPerform(admin, "merchants:manage");
+  const canManage = canPerform(admin, "merchants:manage");
   const canReviewApps = canReviewMerchantApps(admin);
 
   const load = useCallback(async (params) => {
     return businessDashboardApi.getMerchants(params);
   }, []);
 
-  const columns = [
+  const merchantColumns = [
     { key: "name", label: "Merchant", width: 200, sortable: true },
     { key: "email", label: "Email", width: 200, sortable: false, render: (v) => canViewEmail(admin) ? v : maskEmail(v) },
     { key: "status", label: "Status", width: 120, sortable: true,
@@ -88,12 +91,25 @@ export default function MerchantManagement({ showToast }) {
     },
   ];
 
-  const filters = [
+  const appReviewColumns = [
+    { key: "name", label: "Merchant", width: 240, sortable: true },
+    { key: "appStatus", label: "App Review", width: 160, sortable: true,
+      render: (value) => <StatusBadge value={String(value || "none").replace("_", " ")} tones={{ none: "var(--gray-400)", in_review: "var(--amber)", "in review": "var(--amber)", approved: "var(--green)", rejected: "var(--red)" }} />
+    },
+  ];
+
+  const columns = canReviewApps && !canManage ? appReviewColumns : merchantColumns;
+
+  const merchantFilters = [
     { key: "status", label: "Status", placeholder: "All Statuses", options: STATUS_OPTIONS },
     { key: "verification", label: "Verification", placeholder: "All Verifications", options: VERIFICATION_OPTIONS },
     { key: "appStatus", label: "App Review", placeholder: "All Reviews", options: APP_OPTIONS },
     { key: "plan", label: "Plan", placeholder: "All Plans", options: PLAN_OPTIONS },
   ];
+
+  const filters = canReviewApps && !canManage
+    ? [{ key: "appStatus", label: "App Review", placeholder: "Needs Review", options: APP_REVIEW_OPTIONS }]
+    : merchantFilters;
 
   const actions = [
     {
@@ -109,23 +125,9 @@ export default function MerchantManagement({ showToast }) {
       label: (row) => String(row.status).toLowerCase() === "suspended" ? "Unsuspend" : "Suspend",
       icon: Pause,
       variant: "Danger",
-      disabled: () => !canManage,
+      disabled: () => !canManage || Boolean(busyAction),
       ariaLabel: (row) => `${String(row.status).toLowerCase() === "suspended" ? "Unsuspend" : "Suspend"} merchant ${row.name}`,
-      onClick: async (row) => {
-        try {
-          const isSuspended = String(row.status).toLowerCase() === "suspended";
-          if (isSuspended) {
-            await businessDashboardApi.updateTenantById(row.id, { status: "published" });
-          } else {
-            await businessDashboardApi.suspendMerchant(row.id);
-          }
-          recordAuditEvent({ admin, action: isSuspended ? "merchant.unsuspend" : "merchant.suspend", target: row.id });
-          showToast?.(`${row.name} ${isSuspended ? "unsuspended" : "suspended"}`, "success");
-          setTableKey((k) => k + 1);
-        } catch (err) {
-          showToast?.(err.message || "Failed to suspend", "error");
-        }
-      },
+      onClick: (row) => setStatusTarget(row),
     },
     {
       key: "delete",
@@ -136,17 +138,43 @@ export default function MerchantManagement({ showToast }) {
       ariaLabel: (row) => `Delete merchant ${row.name}`,
       onClick: (row) => setDeleteTarget(row),
     },
-  ];
+  ].filter((action) => action.key === "view" ? canManage || canReviewApps : canManage);
+
+  const handleStatusChange = async () => {
+    if (!statusTarget || busyAction) return;
+    const target = statusTarget;
+    const isSuspended = String(target.status).toLowerCase() === "suspended";
+    setBusyAction("status");
+    try {
+      if (isSuspended) {
+        await businessDashboardApi.updateTenantById(target.id, { status: "published" });
+      } else {
+        await businessDashboardApi.suspendMerchant(target.id);
+      }
+      recordAuditEvent({ admin, action: isSuspended ? "merchant.unsuspend" : "merchant.suspend", target: target.id });
+      showToast?.(`${target.name} ${isSuspended ? "unsuspended" : "suspended"}`, "success");
+      setStatusTarget(null);
+      setTableKey((k) => k + 1);
+    } catch (err) {
+      showToast?.(err.message || "Failed to update merchant status", "error");
+    } finally {
+      setBusyAction("");
+    }
+  };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || busyAction) return;
+    const target = deleteTarget;
+    setBusyAction("delete");
     try {
-      await businessDashboardApi.deleteMerchant(deleteTarget.id);
-      showToast?.(`${deleteTarget.name} deleted`, "success");
+      await businessDashboardApi.deleteMerchant(target.id);
+      showToast?.(`${target.name} deleted`, "success");
       setDeleteTarget(null);
       setTableKey((k) => k + 1);
     } catch (err) {
-      showToast?.(err.message || "Failed to delete", "error");
+      showToast?.(err.message || "Failed to delete merchant", "error");
+    } finally {
+      setBusyAction("");
     }
   };
 
@@ -155,10 +183,12 @@ export default function MerchantManagement({ showToast }) {
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Merchants"
-        titleTooltip="Review merchant credentials and app designs. Credential submission is not required to approve an app."
+        titleTooltip={canReviewApps && !canManage
+          ? "Review merchant app submissions. Credential submission is not required to approve an app."
+          : "Review merchant credentials and app designs. Credential submission is not required to approve an app."}
         load={load}
         rowKey="id"
-        onRowClick={(row) => setReviewId(row.id)}
+        onRowClick={canManage || canReviewApps ? (row) => setReviewId(row.id) : undefined}
         columns={columns}
         searchable={true}
         sortable={true}
@@ -190,8 +220,21 @@ export default function MerchantManagement({ showToast }) {
         message={deleteTarget ? `Delete ${deleteTarget.name}? This cannot be undone. Use Suspend for reversible action.` : ""}
         confirmLabel="Delete"
         variant="Danger"
+        busy={busyAction === "delete"}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+      <ConfirmModal
+        open={!!statusTarget}
+        title={statusTarget && String(statusTarget.status).toLowerCase() === "suspended" ? "Unsuspend merchant?" : "Suspend merchant?"}
+        message={statusTarget && String(statusTarget.status).toLowerCase() === "suspended"
+          ? `Restore ${statusTarget.name} to active status?`
+          : `Suspend ${statusTarget?.name}? The merchant will lose access until unsuspended.`}
+        confirmLabel={statusTarget && String(statusTarget.status).toLowerCase() === "suspended" ? "Unsuspend" : "Suspend"}
+        variant={statusTarget && String(statusTarget.status).toLowerCase() === "suspended" ? "Primary" : "Danger"}
+        busy={busyAction === "status"}
+        onConfirm={handleStatusChange}
+        onCancel={() => setStatusTarget(null)}
       />
     </>
   );

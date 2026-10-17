@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Eye, ArrowLeftRight, Pause, X } from "lucide-react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
+import ConfirmModal from "../../components/UI/ConfirmModal";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
@@ -20,11 +21,6 @@ const PLAN_OPTIONS = [
   { value: "starter", label: "Starter" },
   { value: "professional", label: "Professional" },
   { value: "enterprise", label: "Enterprise" },
-];
-
-const INTERVAL_OPTIONS = [
-  { value: "monthly", label: "Monthly" },
-  { value: "yearly", label: "Yearly" },
 ];
 
 function normalizeSubscriptionResponse(response) {
@@ -53,6 +49,8 @@ export default function SubscriptionManagement({ showToast }) {
   const { admin } = useAuth();
   const canManage = canPerform(admin, "subscriptions:manage") || canPerform(admin, "plan:manage");
   const [tableKey, setTableKey] = useState(0);
+  const [confirmation, setConfirmation] = useState(null);
+  const [mutationBusy, setMutationBusy] = useState(false);
   const refresh = () => setTableKey((k) => k + 1);
 
   const load = useCallback(async (params) => {
@@ -66,21 +64,6 @@ export default function SubscriptionManagement({ showToast }) {
       render: (value, row) => (
         <div>
           <div style={{ fontWeight: 600, color: "var(--navy)" }}>{value || row.plan}</div>
-          {row.interval && (
-            <span style={{
-              display: "inline-block",
-              marginTop: 2,
-              padding: "1px 6px",
-              borderRadius: "var(--radius-sm)",
-              fontSize: 10,
-              fontWeight: 600,
-              background: "var(--gray-100)",
-              color: "var(--gray-600)",
-              textTransform: "capitalize",
-            }}>
-              {row.interval}
-            </span>
-          )}
         </div>
       )
     },
@@ -124,9 +107,6 @@ export default function SubscriptionManagement({ showToast }) {
     { key: "currentPeriodEnd", label: "Renews", width: 160, sortable: true,
       render: (value) => value ? new Date(value).toLocaleDateString() : "—"
     },
-    { key: "trialEnd", label: "Trial Ends", width: 160, sortable: true,
-      render: (value) => value ? new Date(value).toLocaleDateString() : "—"
-    },
     { key: "createdAt", label: "Started", width: 160, sortable: true,
       render: (value) => value ? new Date(value).toLocaleDateString() : "—"
     },
@@ -135,8 +115,41 @@ export default function SubscriptionManagement({ showToast }) {
   const filters = [
     { key: "status", label: "Status", placeholder: "All Statuses", options: STATUS_OPTIONS },
     { key: "plan", label: "Plan", placeholder: "All Plans", options: PLAN_OPTIONS },
-    { key: "interval", label: "Billing", placeholder: "All Intervals", options: INTERVAL_OPTIONS },
   ];
+
+  const confirmMutation = async () => {
+    if (!confirmation || mutationBusy) return;
+    const { kind, row } = confirmation;
+    setMutationBusy(true);
+    try {
+      if (kind === "change_plan") {
+        const targetSlug = row.plan === "professional" ? "enterprise" : "professional";
+        const response = await businessDashboardApi.getPlans();
+        const payload = response?.success === true ? response.data : response;
+        const plans = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload?.plans)
+              ? payload.plans
+              : [];
+        const targetPlan = plans.find((plan) => plan.slug === targetSlug);
+        if (!targetPlan?.id) throw new Error(`The ${targetSlug} plan is unavailable.`);
+        await businessDashboardApi.updateSubscription(row.id, { planId: targetPlan.id });
+        showToast?.(`Plan updated for ${row.merchantName}`, "success");
+      } else {
+        const status = kind === "pause" ? "paused" : "canceled";
+        await businessDashboardApi.updateSubscription(row.id, { status });
+        showToast?.(`${kind === "pause" ? "Paused" : "Canceled"} ${row.merchantName}`, "success");
+      }
+      setConfirmation(null);
+      refresh();
+    } catch (err) {
+      showToast?.(err.message || "Failed to update subscription", "error");
+    } finally {
+      setMutationBusy(false);
+    }
+  };
 
   const actions = [
     {
@@ -146,7 +159,7 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Ghost",
       ariaLabel: (row) => `View subscription for ${row.merchantName}`,
       onClick: (row) => {
-        showToast?.(`${row.merchantName}: ${row.planName} • ${row.status} • ${row.interval}`, "info");
+        showToast?.(`${row.merchantName}: ${row.planName} • ${row.status}`, "info");
       },
     },
     {
@@ -156,13 +169,7 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Secondary",
       disabled: (row) => row.status === "canceled" || !canManage,
       ariaLabel: (row) => `Change plan for ${row.merchantName}`,
-      onClick: async (row) => {
-        try {
-          await businessDashboardApi.updateSubscription(row.id, { plan: row.plan === "professional" ? "enterprise" : "professional" });
-          showToast?.(`Plan updated for ${row.merchantName}`, "success");
-          refresh();
-        } catch (err) { showToast?.(err.message, "error"); }
-      },
+      onClick: (row) => setConfirmation({ kind: "change_plan", row }),
     },
     {
       key: "pause",
@@ -171,13 +178,7 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Secondary",
       disabled: (row) => row.status !== "active" || !canManage,
       ariaLabel: (row) => `Pause subscription for ${row.merchantName}`,
-      onClick: async (row) => {
-        try {
-          await businessDashboardApi.updateSubscription(row.id, { status: "paused" });
-          showToast?.(`Paused ${row.merchantName}`, "success");
-          refresh();
-        } catch (err) { showToast?.(err.message, "error"); }
-      },
+      onClick: (row) => setConfirmation({ kind: "pause", row }),
     },
     {
       key: "cancel",
@@ -186,33 +187,43 @@ export default function SubscriptionManagement({ showToast }) {
       variant: "Danger",
       disabled: (row) => row.status === "canceled" || !canManage,
       ariaLabel: (row) => `Cancel subscription for ${row.merchantName}`,
-      onClick: async (row) => {
-        try {
-          await businessDashboardApi.updateSubscription(row.id, { status: "canceled" });
-          showToast?.(`Canceled ${row.merchantName}`, "success");
-          refresh();
-        } catch (err) { showToast?.(err.message, "error"); }
-      },
+      onClick: (row) => setConfirmation({ kind: "cancel", row }),
     },
   ];
 
   return (
-    <EnhancedRemoteTablePage
-      key={tableKey}
-      title="Subscriptions"
-      description="Monitor and manage all merchant subscriptions — change plan, pause or cancel."
-      load={load}
-      rowKey="id"
-      columns={columns}
-      searchable={true}
-      sortable={true}
-      pagination={true}
-      pageSize={10}
-      pageSizeOptions={[10, 25, 50, 100]}
-      filters={filters}
-      defaultSort={{ key: "createdAt", direction: "desc" }}
-      actions={actions}
-      emptyMessage="No subscriptions found matching your criteria."
-    />
+    <>
+      <EnhancedRemoteTablePage
+        key={tableKey}
+        title="Subscriptions"
+        description="Monitor and manage all merchant subscriptions — change plan, pause or cancel."
+        load={load}
+        rowKey="id"
+        columns={columns}
+        searchable={true}
+        sortable={true}
+        pagination={true}
+        pageSize={10}
+        pageSizeOptions={[10, 25, 50, 100]}
+        filters={filters}
+        defaultSort={{ key: "createdAt", direction: "desc" }}
+        actions={actions}
+        emptyMessage="No subscriptions found matching your criteria."
+      />
+      <ConfirmModal
+        open={!!confirmation}
+        title={confirmation?.kind === "change_plan" ? "Change subscription plan?"
+          : confirmation?.kind === "pause" ? "Pause subscription?" : "Cancel subscription?"}
+        message={confirmation
+          ? `${confirmation.kind === "change_plan" ? "Change the plan for" : `${confirmation.kind === "pause" ? "Pause" : "Cancel"} the subscription for`} ${confirmation.row.merchantName}?`
+          : ""}
+        confirmLabel={confirmation?.kind === "change_plan" ? "Change Plan"
+          : confirmation?.kind === "pause" ? "Pause" : "Cancel Subscription"}
+        variant={confirmation?.kind === "cancel" ? "Danger" : "Primary"}
+        busy={mutationBusy}
+        onConfirm={confirmMutation}
+        onCancel={() => setConfirmation(null)}
+      />
+    </>
   );
 }

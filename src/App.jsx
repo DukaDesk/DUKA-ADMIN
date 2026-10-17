@@ -117,8 +117,8 @@ useEffect(() => {
   }, [location.pathname, admin, page]);
 
   const handleLogin = (data) => {
-    const { token, admin } = unwrapAuth(data);
-    const nextAdmin = { ...admin, token };
+    const { token, refreshToken, admin } = unwrapAuth(data);
+    const nextAdmin = { ...admin, token, refreshToken };
     login(nextAdmin);
     const nextPage = getDefaultPage(nextAdmin) || "dashboard";
     setPageState(nextPage);

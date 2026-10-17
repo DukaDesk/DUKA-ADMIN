@@ -23,6 +23,38 @@ function normalizeMerchantStatus(status) {
   return s;
 }
 
+function normalizeUser(user) {
+  if (!user || typeof user !== "object") return user;
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "—";
+  const role = user.roles?.find((assignment) => assignment.tenantId == null)?.role?.name
+    || user.roles?.[0]?.role?.name
+    || user.role;
+  return { ...user, name, role };
+}
+
+function normalizeUsersResponse(response) {
+  if (Array.isArray(response)) return response.map(normalizeUser);
+  if (!response || typeof response !== "object") return response;
+  if (Array.isArray(response.users)) {
+    return { ...response, users: response.users.map(normalizeUser) };
+  }
+  if (Array.isArray(response.data)) {
+    return { ...response, data: response.data.map(normalizeUser) };
+  }
+  if (response.data && typeof response.data === "object" && Array.isArray(response.data.users)) {
+    return { ...response, data: { ...response.data, users: response.data.users.map(normalizeUser) } };
+  }
+  return response;
+}
+
+function normalizeUserResponse(response) {
+  if (!response || typeof response !== "object") return response;
+  if (response.data && typeof response.data === "object" && !Array.isArray(response.data)) {
+    return { ...response, data: normalizeUser(response.data) };
+  }
+  return normalizeUser(response);
+}
+
 export const businessDashboardApi = {
   // Overview / BFF — live only, errors propagate to UI error states
   getOverview: () => apiClient.get(`${BFF_ADMIN}/overview`),
@@ -51,7 +83,7 @@ export const businessDashboardApi = {
   suspendTenant: (id) => apiClient.post(`${ADMIN}/merchants/${id}/suspend`),
   getMyTenants: (params) => {
     const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
-    return apiClient.get(`/tenants${queryString(normalized)}`).catch(() => apiClient.get(`${BFF_ADMIN}/merchants${queryString(normalized)}`));
+    return apiClient.get(`/tenants${queryString(normalized)}`);
   },
   getAuditLog: (params) => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`),
   getPlatformStats: () => apiClient.get(`${ADMIN}/stats`),
@@ -131,7 +163,7 @@ export const businessDashboardApi = {
   // Settings
   getSettings: (category) => apiClient.get(`${ADMIN}/settings${queryString({ category })}`),
   getSetting: (key) => apiClient.get(`${ADMIN}/settings/${key}`),
-  updateSetting: (key, value) => apiClient.put(`${ADMIN}/settings/${key}`, value),
+  updateSetting: (key, value) => apiClient.put(`${ADMIN}/settings/${key}`, { value }),
   deleteSetting: (key) => apiClient.delete(`${ADMIN}/settings/${key}`),
   // Marketplace
   getMarketplaceListings: (params) => apiClient.get(`/marketplace/listings/all${queryString({ page: 1, limit: 10, ...params })}`),
@@ -154,21 +186,22 @@ export const businessDashboardApi = {
   createAnnouncement: (payload) => apiClient.post(`${ADMIN}/announcements`, payload),
   updateAnnouncement: (id, payload) => apiClient.put(`${ADMIN}/announcements/${id}`, payload),
   deleteAnnouncement: (id) => apiClient.delete(`${ADMIN}/announcements/${id}`),
-  // Users — live swagger uses UserStatus enum PENDING/ACTIVE (accepts both pending/PENDING after backend fix)
+  // Users — role=platform_admin restricts the directory to global platform roles.
+  // live swagger uses UserStatus enum PENDING/ACTIVE (accepts both pending/PENDING after backend fix)
   // No mock fallback — errors propagate to EnhancedRemoteTablePage error banner
-  getUsers: (params) => {
+  getUsers: async (params) => {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
-    return apiClient.get(`${ADMIN}/users${queryString(liveParams)}`, { retry: 0 });
+    return normalizeUsersResponse(await apiClient.get(`${ADMIN}/users${queryString(liveParams)}`, { retry: 0 }));
   },
-  getUser: (id) => apiClient.get(`${ADMIN}/users/${id}`),
-  getMerchantUsers: (merchantId, params) => {
+  getUser: async (id) => normalizeUserResponse(await apiClient.get(`${ADMIN}/users/${id}`)),
+  getMerchantUsers: async (merchantId, params) => {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
-    return apiClient.get(`${ADMIN}/users/merchant/${merchantId}${queryString(liveParams)}`, { retry: 0 });
+    return normalizeUsersResponse(await apiClient.get(`${ADMIN}/users/merchant/${merchantId}${queryString(liveParams)}`, { retry: 0 }));
   },
   // deprecated alias (was tenant)
-  getTenantUsers: (merchantId, params) => {
+  getTenantUsers: async (merchantId, params) => {
     const liveParams = params?.status ? { ...params, status: String(params.status).toUpperCase() } : params;
-    return apiClient.get(`${ADMIN}/users/merchant/${merchantId}${queryString(liveParams)}`, { retry: 0 });
+    return normalizeUsersResponse(await apiClient.get(`${ADMIN}/users/merchant/${merchantId}${queryString(liveParams)}`, { retry: 0 }));
   },
   // Admin invites — invite-only signup (single-use token bound to email + role)
   createInvite: (payload) => apiClient.post(`${ADMIN}/invites`, payload),
@@ -200,34 +233,9 @@ export const businessDashboardApi = {
   getInfraHealth: (params) => apiClient.get(`/infra/status${queryString(params)}`),
   getHealthHistory: (params) => apiClient.get(`/infra/health/history${queryString(params)}`),
   // Administration domain — KB: Platform Operations, Maintenance Windows, Policies (graceful 404 -> empty, not banner; 500 logged)
-  getMaintenanceWindows: (params) => apiClient.get(`${ADMIN}/maintenance${queryString(params)}`).catch((e) => {
-    if (e?.status === 404 || String(e?.message).includes("not available")) return { data: [] };
-    console.warn("[businessDashboard] maintenance fallback", e?.requestId, e?.message);
-    return apiClient.get(`/infra/maintenance${queryString(params)}`).catch((e2) => {
-      if (e2?.status === 404 || String(e2?.message).includes("not available")) return { data: [] };
-      console.warn("[businessDashboard] infra/maintenance fallback failed", e2?.requestId);
-      return { data: [], meta: { emptyReason: "unavailable", requestId: e2?.requestId } };
-    });
-  }),
-  createMaintenanceWindow: (payload) => apiClient.post(`${ADMIN}/maintenance`, payload),
-  updateMaintenanceWindow: (id, payload) => apiClient.put(`${ADMIN}/maintenance/${id}`, payload),
-  deleteMaintenanceWindow: (id) => apiClient.delete(`${ADMIN}/maintenance/${id}`),
-  getPolicies: (params) => apiClient.get(`${ADMIN}/policies${queryString(params)}`).catch((e) => {
-    if (e?.status === 404 || String(e?.message).includes("not available")) return { data: [] };
-    return apiClient.get(`${ADMIN}/settings${queryString({ category: "policy", ...params })}`).catch((e2) => {
-      if (e2?.status === 404) return { data: [] };
-      console.warn("[businessDashboard] policies fallback failed", e2?.requestId);
-      return { data: [], meta: { emptyReason: "unavailable", requestId: e2?.requestId } };
-    });
-  }),
-  getAlerts: (params) => apiClient.get(`${ADMIN}/alerts${queryString(params)}`).catch((e) => {
-    if (e?.status === 404) return { data: [] };
-    return apiClient.get(`/infra/alerts${queryString(params)}`).catch((e2) => {
-      if (e2?.status === 404) return { data: [] };
-      console.warn("[businessDashboard] alerts fallback failed", e2?.requestId);
-      return { data: [] };
-    });
-  }),
+  getMaintenanceWindows: (params) => apiClient.get(`${ADMIN}/maintenance${queryString(params)}`),
+  getPolicies: (params) => apiClient.get(`${ADMIN}/policies${queryString(params)}`),
+  getAlerts: (params) => apiClient.get(`${ADMIN}/alerts${queryString(params)}`),
   // Analytics reports — live requires tenantId
   getRevenueReport: (params) => apiClient.get(`/analytics/reports/revenue${queryString(params)}`),
   getUserAnalytics: (params) => apiClient.get(`/analytics/reports/users${queryString(params)}`),
@@ -236,13 +244,12 @@ export const businessDashboardApi = {
   getReport: (id, params) => apiClient.get(`/analytics/reports/${id}${queryString(params)}`),
   updateReport: (id, payload) => apiClient.post(`/app/analytics/reports/${id}`, payload),
   deleteReport: (id, params) => apiClient.delete(`/app/analytics/reports/${id}${queryString(params)}`),
-  // Marketing (BD-MKT) — campaigns + integrations live
-  getCampaigns: (params) => apiClient.get(`/app/notifications/campaigns${queryString(params)}`).catch(() => apiClient.get(`/app/notifications/templates${queryString(params)}`).catch(() => ({ data: [] }))),
+  // Marketing — integrations are a provider catalogue; campaigns remain tenant-scoped.
   sendCampaign: (payload) => apiClient.post(`/app/notifications/campaigns`, payload),
-  getIntegrations: (params) => apiClient.get(`/app/integrations/available${queryString(params)}`).catch(() => apiClient.get(`/merchants/${params?.merchantId || 'all'}/integrations${queryString(params)}`).catch(() => ({ data: [] }))),
+  getIntegrations: () => apiClient.get(`/app/integrations/available`),
   // Infra overview — live via /infra/overview
-  getInfraOverview: () => apiClient.get(`/infra/overview`).catch(() => ({ data: null })),
-  getEnvironments: (params) => apiClient.get(`/infra/environments${queryString(params)}`).catch(() => ({ data: [] })),
+  getInfraOverview: () => apiClient.get(`/infra/overview`),
+  getEnvironments: (params) => apiClient.get(`/infra/environments${queryString(params)}`),
 };
 
 export default businessDashboardApi;

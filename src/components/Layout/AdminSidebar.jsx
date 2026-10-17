@@ -51,8 +51,8 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
     } catch { /* ignore */ }
     try {
       if (canAccessPage(admin, "pending-admins")) {
-        const r = await businessDashboardApi.getUsers({ status: "pending", page: 1, limit: 1 });
-        setPendingAdmins(r.total ?? 0);
+        const r = await businessDashboardApi.getUsers({ role: "platform_admin", status: "pending", page: 1, limit: 1 });
+        setPendingAdmins(r.total ?? r.data?.total ?? 0);
       }
     } catch { /* ignore */ }
   };
@@ -115,9 +115,6 @@ function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSideb
             );
           };
           const visibleRouteIds = new Set(navItems.filter((item) => canAccessPage(admin, item.id)).map((item) => item.id));
-          if (visibleRouteIds.size === 0 && admin?.email) {
-            visibleRouteIds.add("dashboard");
-          }
           if (visibleRouteIds.size === 0)
             return (
               <li style={{ padding: 16, fontSize: 12, color: "var(--gray-500)", lineHeight: 1.5 }}>
