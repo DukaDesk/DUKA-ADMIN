@@ -19,27 +19,17 @@ const ROLE_PERMISSIONS = {
     "system:monitor", "infra:read",
     "audit:read",
     "subscription:read", "subscription:manage", "subscriptions:read", "subscriptions:manage",
-    "users:read", "users:manage", "user:read", "user:create", "user:update", "user:invite", "role:assign",
     "settings:manage",
-    "users:email:read", "merchants:email:read",
+    "merchants:email:read",
     "order:read", "order:update_status", "orders:read",
     "product:read", "product:update", "product:delete", "catalog:manage",
     "analytics:read", "reports:read",
     "marketing:read", "campaign:read",
   ],
   support_agent: [
-    "dashboard:read",
-    "tenant:read",
-    "merchants:read",
-    "marketplace:read",
-    "audit:read",
-    "users:read",
     "support:access",
-    "order:read", "product:read", "analytics:read",
   ],
   operations: [
-    "dashboard:read",
-    "merchants:read",
     "merchant-apps:review",
   ],
   // Legacy aliases → KB strict (do not expand — map to nearest KB equivalent for backward compat)
@@ -80,7 +70,7 @@ export const PAGE_PERMISSIONS = {
   audit: "audit:read",
   subscriptions: "subscriptions:read", // subscription:read alias
   settings: "settings:manage",
-  "pending-admins": "users:manage", // user:invite / role:assign alias
+  "pending-admins": "users:manage",
   users: "users:read",
   analytics: "analytics:read",
   marketing: "marketing:read",
@@ -163,9 +153,8 @@ function hasPermission(permissions, needed) {
 }
 
 export function canPerform(admin, permission) {
-  const normalized = normalizeRole(admin?.role || admin?.roles?.[0] || admin?.username);
+  const normalized = normalizeRole(admin?.role || admin?.roles?.[0]);
   const perms = permissionsFor(normalized);
-  if (!perms.length && permission === "dashboard:read" && (admin?.email || admin?.token || admin?.name)) return true;
   return hasPermission(perms, permission);
 }
 
@@ -174,10 +163,7 @@ export function canReviewMerchantApps(admin) {
 }
 
 export function canAccessPage(admin, page) {
-  if (page === "dashboard" && (admin?.email || admin?.token || admin?.name)) {
-    const normalized = normalizeRole(admin?.role || admin?.roles?.[0] || admin?.username);
-    if (!permissionsFor(normalized).length) return true;
-  }
+  if (page === "merchants" && canReviewMerchantApps(admin)) return true;
   const needed = PAGE_PERMISSIONS[page];
   if (!needed) return false;
   return canPerform(admin, needed);

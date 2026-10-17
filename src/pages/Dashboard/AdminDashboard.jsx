@@ -16,12 +16,19 @@ function formatCurrency(value, currency = "NGN") {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
 }
 
+function seriesValues(series, field) {
+  if (!Array.isArray(series)) return [];
+  return series
+    .map((point) => (typeof point === "number" ? point : Number(point?.[field])))
+    .filter(Number.isFinite);
+}
+
 const METRIC_CARDS = [
   { key: "totalMerchants", label: "Total Merchants", icon: Store, color: "var(--blue)" },
   { key: "activeMerchants", label: "Active Merchants", icon: BadgeCheck, color: "var(--green)" },
   { key: "pendingMerchants", label: "Pending Review", icon: Hourglass, color: "var(--amber)" },
   { key: "totalPlatformStaff", label: "Platform Staff", icon: ClipboardList, color: "var(--indigo)", formatter: formatNumber },
-  { key: "monthlyRevenue", label: "Monthly Revenue", icon: Wallet, color: "var(--purple)", formatter: formatCurrency },
+  { key: "revenue30Days", label: "Revenue (30 days)", icon: Wallet, color: "var(--purple)", formatter: formatCurrency },
   { key: "totalSubscriptions", label: "Total Subscriptions", icon: ClipboardList, color: "var(--indigo)" },
   { key: "activeSubscriptions", label: "Active Subscriptions", icon: CircleDot, color: "var(--teal)" },
 ];
@@ -51,7 +58,7 @@ function MetricCard({ metric, value, loading }) {
         </span>
       </div>
       <div className={styles.metricValue}>
-        {metric.formatter ? metric.formatter(value) : formatNumber(value)}
+        {value == null ? "—" : metric.formatter ? metric.formatter(value) : formatNumber(value)}
       </div>
       {trendText && (
         <div className={`${styles.metricTrendLine} ${trendNegative ? styles.metricTrendNegative : styles.metricTrendPositive}`}>
@@ -74,6 +81,16 @@ function timeAgo(timestamp) {
   if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function formatUptime(seconds) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds < 0) return "—";
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 function eventBadges(action) {
@@ -102,149 +119,104 @@ const QUICK_ACTIONS = [
   { icon: Settings, title: "System Settings", subtitle: "Configure platform", button: "Configure", filled: false, route: "settings" },
 ];
 
-function RevenueChart({ data, tenantData }) {
-  const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
-  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>No revenue data yet</div>;
-  const primary = data && data.length ? data : hasTenant ? tenantData : [];
-  const max = Math.max(...(hasTenant ? [...primary, ...tenantData] : primary));
-  const min = Math.min(...(hasTenant ? [...primary, ...tenantData] : primary));
+function RevenueChart({ data }) {
+  if (!Array.isArray(data) || data.length === 0) return <div className={styles.chartPlaceholder}>No revenue data yet</div>;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
   const range = max - min || 1;
-  const toPoints = (arr) => arr.map((value, i) => {
-    const x = (i / (arr.length - 1)) * 100;
+  const points = data.map((value, i) => {
+    const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100;
     const y = 100 - ((value - min) / range) * 80 + 10;
     return `${x}% ${y}%`;
   }).join(", ");
-  const points = primary.length ? toPoints(primary) : "";
-  const tenantPoints = hasTenant ? toPoints(tenantData) : "";
-  const areaPoints = primary.length ? [0 + "% 100%", ...points.split(", "), 100 + "% 100%"].join(", ") : "";
+  const areaPoints = ["0% 100%", ...points.split(", "), "100% 100%"].join(", ");
   return (
     <div className={styles.chart}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.chartSvg} role="img" aria-label="Revenue trend chart">
-        {primary.length > 0 && <polygon fill="var(--amber-alpha-10)" points={areaPoints} />}
-        {primary.length > 0 && <polyline fill="none" stroke="var(--amber)" strokeWidth="2.5" points={points} />}
-        {hasTenant && <polyline fill="none" stroke="var(--teal)" strokeWidth="2" strokeDasharray="3 2" points={tenantPoints} />}
+        <polygon fill="var(--amber-alpha-10)" points={areaPoints} />
+        <polyline fill="none" stroke="var(--amber)" strokeWidth="2.5" points={points} />
       </svg>
       <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: "var(--gray-500)" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--amber)", borderRadius: 2, display: "inline-block" }} /> Merchant (Site Builder)</span>
-        {hasTenant && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--teal)", borderRadius: 2, display: "inline-block", border: "1px dashed var(--teal)" }} /> Tenant (Mobile App)</span>}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--amber)", borderRadius: 2, display: "inline-block" }} /> Platform revenue</span>
       </div>
     </div>
   );
 }
 
-function MerchantGrowthChart({ data, tenantData }) {
-  const hasTenant = Array.isArray(tenantData) && tenantData.length > 1;
-  if ((!data || data.length === 0) && !hasTenant) return <div className={styles.chartPlaceholder}>No merchant data yet</div>;
-  const primary = data && data.length ? data : hasTenant ? tenantData : [];
-  const allVals = hasTenant ? [...primary, ...tenantData] : primary;
-  const max = Math.max(...allVals);
-  const min = Math.min(...allVals);
+function MerchantGrowthChart({ data }) {
+  if (!Array.isArray(data) || data.length === 0) return <div className={styles.chartPlaceholder}>No user data yet</div>;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
   const range = max - min || 1;
-  const bars = primary.map((value, i) => {
+  const bars = data.map((value, i) => {
     const height = ((value - min) / range) * 80 + 10;
-    const x = (i / (primary.length - 1)) * 100;
-    const width = 100 / primary.length * 0.7;
+    const x = data.length === 1 ? 15 : (i / (data.length - 1)) * 85;
+    const width = data.length === 1 ? 70 : 100 / data.length * 0.7;
     return <rect key={i} x={x + "%"} y={100 - height + "%"} width={width + "%"} height={height + "%"} fill="var(--blue)" rx="2" />;
   });
-  const tenantPoints = hasTenant ? tenantData.map((value, i) => {
-    const x = (i / (tenantData.length - 1)) * 100;
-    const y = 100 - ((value - min) / range) * 80 + 10;
-    return `${x}% ${y}%`;
-  }).join(", ") : "";
   return (
     <div className={styles.chart}>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.chartSvg} role="img" aria-label="Merchant growth chart">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className={styles.chartSvg} role="img" aria-label="Platform user growth chart">
         {bars}
-        {hasTenant && <polyline fill="none" stroke="var(--teal)" strokeWidth="2" points={tenantPoints} />}
       </svg>
       <div style={{ display: "flex", gap: 12, marginTop: 8, fontSize: 11, color: "var(--gray-500)" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, background: "var(--blue)", borderRadius: 2, display: "inline-block" }} /> Merchant (Site Builder)</span>
-        {hasTenant && <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 12, height: 3, background: "var(--teal)", borderRadius: 2, display: "inline-block" }} /> Tenant (Mobile)</span>}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><span style={{ width: 10, height: 10, background: "var(--blue)", borderRadius: 2, display: "inline-block" }} /> Platform users</span>
       </div>
     </div>
   );
 }
 
-export default function AdminDashboard({ showToast, setPage }) {
+export default function AdminDashboard({ setPage }) {
   const [overview, setOverview] = useState(null);
   const [platformStats, setPlatformStats] = useState(null);
   const [health, setHealth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [recentEvents, setRecentEvents] = useState([]);
-  const [tenantRevenueTrend, setTenantRevenueTrend] = useState(null);
-  const [tenantGrowthTrend, setTenantGrowthTrend] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     let active = true;
+    const dateTo = new Date();
+    const dateFrom = new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000);
     Promise.allSettled([
       businessDashboardApi.getOverview(),
       businessDashboardApi.getPlatformStats(),
-      businessDashboardApi.getHealth().catch(() => null),
-      businessDashboardApi.getBffAnalytics().catch(() => null),
-      businessDashboardApi.getAuditLog({ page: 1, limit: 5 }).catch(() => null),
+      businessDashboardApi.getHealth(),
+      businessDashboardApi.getBffAnalytics({
+        dateFrom: dateFrom.toISOString(),
+        dateTo: dateTo.toISOString(),
+        groupBy: "day",
+      }),
+      businessDashboardApi.getAuditLog({ page: 1, limit: 5 }),
     ]).then((results) => {
       if (!active) return;
       const [ovRes, statsRes, healthRes, analyticsRes, eventsRes] = results;
+      const nextErrors = [];
       if (ovRes.status === "fulfilled") {
         const ov = ovRes.value?.overview || ovRes.value?.stats || ovRes.value?.data || ovRes.value;
         setOverview(ov);
-        const an = analyticsRes.status === "fulfilled" ? analyticsRes.value?.data || analyticsRes.value : null;
-        if (an?.tenantRevenueTrend || an?.tenantGrowth) {
-          setTenantRevenueTrend(an.tenantRevenueTrend || null);
-          setTenantGrowthTrend(an.tenantGrowth || an.tenantUserGrowth || null);
-        } else if (ov) {
-          businessDashboardApi.getMerchants({ page: 1, limit: 5 }).then((mRes) => {
-            const list = mRes?.data || mRes?.merchants || mRes?.items || [];
-            const linked = list.find((m) => m.tenantId || m.tenant_id || m.slug);
-            if (!linked || !active) return;
-            const tenantId = linked.tenantId || linked.tenant_id || linked.slug;
-            businessDashboardApi.getTenantAnalytics(tenantId).then((tRes) => {
-              const t = tRes?.data || tRes;
-              const rev = t?.revenueTrend || t?.revenue || t?.monthlyRevenue;
-              const growth = t?.userGrowth || t?.growth || t?.tenantGrowth;
-              if (active) {
-                if (Array.isArray(rev)) setTenantRevenueTrend(rev);
-                else if (Array.isArray(t?.trend)) setTenantRevenueTrend(t.trend);
-                if (Array.isArray(growth)) setTenantGrowthTrend(growth);
-              }
-            }).catch(() => {});
-            businessDashboardApi.getTenantSummary(tenantId).then((sRes) => {
-              const s = sRes?.data || sRes;
-              if (active && !tenantRevenueTrend && s?.revenueTrend && Array.isArray(s.revenueTrend)) {
-                setTenantRevenueTrend(s.revenueTrend);
-              }
-            }).catch(() => {});
-          }).catch(() => {});
-        }
-      } else if (ovRes.reason) {
-        const rid = ovRes.reason?.requestId ? ` (Ref: ${String(ovRes.reason.requestId).slice(0, 8)})` : "";
-        console.warn("[AdminDashboard] overview failed", ovRes.reason.requestId, ovRes.reason.message);
-        setError(ovRes.reason.message + rid);
-      }
+      } else nextErrors.push(`Overview: ${ovRes.reason?.message || "Unavailable"}`);
       if (statsRes.status === "fulfilled") {
         setPlatformStats(statsRes.value?.stats || statsRes.value?.data || statsRes.value);
-      } else if (statsRes.reason) {
-        console.warn("[AdminDashboard] stats failed", statsRes.reason.requestId, statsRes.reason.message);
-        if (!error) showToast?.(`Stats temporarily unavailable. (Ref: ${String(statsRes.reason.requestId||"").slice(0,8)})`, "error");
-      }
+      } else nextErrors.push(`Subscription metrics: ${statsRes.reason?.message || "Unavailable"}`);
       if (healthRes.status === "fulfilled") setHealth(healthRes.value?.data || healthRes.value);
+      else nextErrors.push(`System health: ${healthRes.reason?.message || "Unavailable"}`);
       if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value?.data || analyticsRes.value);
+      else nextErrors.push(`Revenue trend: ${analyticsRes.reason?.message || "Unavailable"}`);
       if (eventsRes.status === "fulfilled" && eventsRes.value) {
         const raw = eventsRes.value;
         const list = Array.isArray(raw) ? raw : raw?.data || raw?.logs || raw?.items || raw?.events || [];
         if (Array.isArray(list)) setRecentEvents(list.slice(0, 5));
-      }
-      // Log any failures for support; health/analytics/marketplace are optional so no error banner
-      results.forEach((r, i) => {
-        if (r.status === "rejected" && r.reason?.requestId) console.warn("[AdminDashboard] part failed", i, r.reason.requestId);
-      });
+      } else if (eventsRes.status === "rejected") nextErrors.push(`Recent events: ${eventsRes.reason?.message || "Unavailable"}`);
+      setErrors(nextErrors);
+      if (results.some((result) => result.status === "fulfilled")) setLastUpdated(new Date());
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [showToast]);
+  }, []);
 
   if (loading) {
     return (
@@ -265,49 +237,28 @@ export default function AdminDashboard({ showToast, setPage }) {
     );
   }
 
-  const hasCriticalError = Boolean(error && !overview && !platformStats);
-  if (hasCriticalError) {
-    return (
-      <section className={styles.dashboard}>
-        <div className={styles.error} role="alert">
-          {error}
-          <button className={styles.retryBtn} onClick={() => window.location.reload()}>Retry</button>
-        </div>
-      </section>
-    );
-  }
-
   const overviewData = overview || {};
   const statsData = platformStats || {};
+  const analyticsData = analytics || {};
 
-  // Backend uses tenant/tenants naming (KB merchant = tenant). Map to UI metric keys.
   const getMetricValue = (key) => {
-    const aliases = {
-      totalMerchants: ["totalTenants", "totalMerchants", "tenants", "totalTenantsCount"],
-      activeMerchants: ["publishedTenants", "activeTenants", "activeMerchants", "published"],
-      pendingMerchants: ["draftTenants", "pendingMerchants", "pending", "draft"],
-      totalPlatformStaff: ["totalPlatformStaff"],
-      monthlyRevenue: ["totalRevenue", "revenue", "monthlyRevenue", "gmv"],
-      totalSubscriptions: ["totalSubscriptions", "subscriptions", "totalSubs"],
-      activeSubscriptions: ["activeSubscriptions", "activeSubs"],
+    const values = {
+      totalMerchants: overviewData.totalTenants,
+      activeMerchants: overviewData.publishedTenants,
+      pendingMerchants: overviewData.inReviewTenants,
+      totalPlatformStaff: overviewData.totalPlatformStaff,
+      revenue30Days: analyticsData.gmv,
+      totalSubscriptions: statsData.totalSubscriptions,
+      activeSubscriptions: statsData.activeSubscriptions,
     };
-    const keys = aliases[key] || [key];
-    for (const k of keys) {
-      const v = overviewData[k] ?? statsData[k] ?? overviewData?.data?.[k] ?? statsData?.data?.[k];
-      if (v !== undefined && v !== null) return v;
-    }
-    // Fallback: check nested data objects from envelope
-    if (overviewData.data && typeof overviewData.data === "object") {
-      for (const k of keys) if (overviewData.data[k] !== undefined) return overviewData.data[k];
-    }
-    return 0;
+    const value = values[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
   };
 
   const systemMetricRows = [
-    { label: "API Uptime", value: health?.uptime ? health.uptime + "%" : statsData.platformUptime ? statsData.platformUptime + "%" : "—" },
-    { label: "Error Rate (24h)", value: statsData.errorRate != null ? statsData.errorRate + "%" : "—" },
-    { label: "Avg Response Time", value: statsData.avgResponseTime != null ? statsData.avgResponseTime + "ms" : "—" },
-    { label: "Storage Used", value: statsData.storageUsedGB != null ? statsData.storageUsedGB + " GB" : "—" },
+    { label: "API Status", value: health?.status || "Unavailable" },
+    { label: "Database", value: health?.checks?.database || "Unavailable" },
+    { label: "Process Uptime", value: formatUptime(health?.uptime) },
   ];
 
   return (
@@ -325,12 +276,13 @@ export default function AdminDashboard({ showToast, setPage }) {
           </div>
         </div>
         <div className={styles.headerRight}>
-          <span className={styles.refreshTime}>Last updated: {new Date().toLocaleTimeString()}</span>
+          <span className={styles.refreshTime}>Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : "—"}</span>
         </div>
       </header>
-      {error && (overview || platformStats) && (
+      {errors.length > 0 && (
         <div className={styles.error} role="alert" style={{ marginBottom: 16 }}>
-          {error} <span style={{ opacity: 0.8 }}>— showing cached/partial data.</span>
+          <strong>Some dashboard data is unavailable.</strong>
+          {errors.map((message) => <div key={message}>{message}</div>)}
         </div>
       )}
 
@@ -347,17 +299,17 @@ export default function AdminDashboard({ showToast, setPage }) {
       <div className={styles.chartsGrid}>
         <section className={styles.chartCard} aria-labelledby="revenue-chart-title">
           <header className={styles.chartHeader}>
-            <h3 id="revenue-chart-title" className={styles.chartTitle}>Revenue Trend (12 months)</h3>
-            <p className={styles.chartDesc}>Monthly revenue in NGN</p>
+            <h3 id="revenue-chart-title" className={styles.chartTitle}>Revenue Trend (30 days)</h3>
+            <p className={styles.chartDesc}>Paid revenue in NGN</p>
           </header>
-          <RevenueChart data={analytics?.revenueTrend || overviewData.revenueTrend || []} tenantData={tenantRevenueTrend || analytics?.tenantRevenueTrend || overviewData.tenantRevenueTrend} />
+          <RevenueChart data={seriesValues(analytics?.revenueTrend || overviewData.revenueTrend, "revenue")} />
         </section>
         <section className={styles.chartCard} aria-labelledby="merchant-chart-title">
           <header className={styles.chartHeader}>
-            <h3 id="merchant-chart-title" className={styles.chartTitle}>Merchant Growth (12 months)</h3>
-            <p className={styles.chartDesc}>Active merchants count</p>
+            <h3 id="merchant-chart-title" className={styles.chartTitle}>Platform User Growth (12 months)</h3>
+            <p className={styles.chartDesc}>New platform users</p>
           </header>
-          <MerchantGrowthChart data={analytics?.userGrowth || overviewData.merchantGrowth || []} tenantData={tenantGrowthTrend || analytics?.tenantGrowth} />
+          <MerchantGrowthChart data={seriesValues(analytics?.userGrowth, "count")} />
         </section>
       </div>
 

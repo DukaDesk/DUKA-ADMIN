@@ -14,10 +14,49 @@ test("merchant app review is limited to super_admin and operations", () => {
   expect(canReviewMerchantApps(platformOperator)).toBe(false);
 });
 
+test("admin access defaults to deny without an explicit authorized role", () => {
+  const incompleteIdentity = {
+    email: "admin@example.test",
+    name: "Admin User",
+    token: "test-token",
+    username: "admin",
+  };
+
+  expect(canPerform(incompleteIdentity, "dashboard:read")).toBe(false);
+  expect(canAccessPage(incompleteIdentity, "dashboard")).toBe(false);
+  expect(canAccessPage({ role: "unknown_role" }, "merchants")).toBe(false);
+});
+
+test("platform admin-user management is restricted to super admins", () => {
+  const platformOperator = { role: "platform_operator" };
+  const support = { role: "support_agent" };
+  const superAdmin = { role: "super_admin" };
+
+  expect(canPerform(platformOperator, "users:manage")).toBe(false);
+  expect(canAccessPage(platformOperator, "pending-admins")).toBe(false);
+  expect(canPerform(support, "users:manage")).toBe(false);
+  expect(canPerform(superAdmin, "users:manage")).toBe(true);
+  expect(canAccessPage(superAdmin, "pending-admins")).toBe(true);
+});
+
+test("Operations and Support Agent receive only their canonical permissions", () => {
+  const operations = { role: "operations" };
+  const support = { role: "support_agent" };
+
+  expect(canAccessPage(operations, "merchants")).toBe(true);
+  expect(canAccessPage(operations, "dashboard")).toBe(false);
+  expect(canPerform(operations, "merchants:read")).toBe(false);
+  expect(canPerform(operations, "merchant-apps:review")).toBe(true);
+
+  expect(canPerform(support, "support:access")).toBe(true);
+  expect(canAccessPage(support, "merchants")).toBe(false);
+  expect(canAccessPage(support, "audit")).toBe(false);
+});
+
 test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
   const pages = [
-    { path: "/analytics", title: "Analytics & Reports", spec: "BD-ANAL-001" },
-    { path: "/marketing", title: "Campaigns", spec: "BD-MKT-001" },
+    { path: "/analytics", title: "Platform Analytics", spec: "BD-ANAL-001" },
+    { path: "/marketing", title: "Marketing", spec: "BD-MKT-001" },
     { path: "/infrastructure", title: "Infrastructure", spec: "KB-141" },
   ];
 
@@ -32,23 +71,28 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
     });
   }
 
-  test("analytics saved reports CRUD (live POST /app/analytics/reports)", async ({ authenticatedPage }) => {
+  test("platform analytics shows B2B metrics without booking analytics", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/analytics");
     await authenticatedPage.waitForLoadState("networkidle");
-    await expect(authenticatedPage.locator('h2:has-text("Analytics & Reports")')).toBeVisible();
-    await expect(authenticatedPage.locator('button:has-text("New Report")')).toBeVisible();
+    await expect(authenticatedPage.locator('h2:has-text("Platform Analytics")')).toBeVisible();
+    await expect(authenticatedPage.getByText("Revenue", { exact: true })).toBeVisible();
+    await expect(authenticatedPage.getByText("Transactions", { exact: true }).first()).toBeVisible();
+    await expect(authenticatedPage.getByText("Active Users · 30 days", { exact: true })).toBeVisible();
+    await expect(authenticatedPage.getByText("Published Merchants", { exact: true })).toBeVisible();
     await expect(authenticatedPage.getByText("Bookings", { exact: true })).toHaveCount(0);
     await expect(authenticatedPage.getByText("Booking Analytics", { exact: true })).toHaveCount(0);
   });
 
-  test("marketing bulk and infrastructure overview render", async ({ authenticatedPage }) => {
+  test("marketing shows supported integrations and infrastructure overview renders", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/marketing");
     await authenticatedPage.waitForLoadState("networkidle");
-    await expect(authenticatedPage.locator('h2:has-text("Campaigns")')).toBeVisible();
-    await authenticatedPage.goto("/infrastructure");
-    await authenticatedPage.waitForLoadState("networkidle");
-    await expect(authenticatedPage.locator('h2:has-text("Infrastructure")')).toBeVisible();
-  });
+      await expect(authenticatedPage.locator('h2:has-text("Marketing")')).toBeVisible();
+      await expect(authenticatedPage.getByRole("note")).toContainText("Campaign history and sending are not available");
+      await expect(authenticatedPage.locator('h2:has-text("Available Integrations")')).toBeVisible();
+      await authenticatedPage.goto("/infrastructure");
+      await authenticatedPage.waitForLoadState("networkidle");
+      await expect(authenticatedPage.locator('h2:has-text("Infrastructure")')).toBeVisible();
+    });
 });
 
 test.describe("Merchant app review queue", () => {

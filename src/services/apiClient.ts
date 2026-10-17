@@ -1,6 +1,11 @@
 const BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const API_PREFIX = (import.meta.env.VITE_API_PREFIX || "/api/v1").replace(/\/$/, "");
 const TOKEN_KEY = "admin_token";
+const REFRESH_TOKEN_KEY = "admin_refresh_token";
+const ADMIN_STORAGE_KEY = "dukadesk_admin";
+
+type RefreshResult = "refreshed" | "expired" | "unavailable";
+let refreshPromise: Promise<RefreshResult> | null = null;
 
 function getVersionedBaseUrl(): string {
   if (!BASE_URL) throw new Error("VITE_API_URL is not configured.");
@@ -13,6 +18,7 @@ interface RequestConfig extends RequestInit {
   params?: Record<string, unknown>;
   retry?: number;
   retryDelay?: number;
+  authRetry?: boolean;
 }
 
 interface ApiError extends Error {
@@ -51,13 +57,75 @@ function isRetryableError(error: ApiError): boolean {
   return error.status >= 500 || error.status === 429 || error.status === 0;
 }
 
+function expireSession(): void {
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  window.dispatchEvent(new Event("admin:session-expired"));
+}
+
+async function refreshAccessToken(): Promise<RefreshResult> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) return "expired";
+
+    try {
+      const response = await fetch(`${getVersionedBaseUrl()}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (response.status === 401 || response.status === 403) return "expired";
+      if (!response.ok) {
+        console.warn("[Auth] Session refresh was temporarily unavailable", response.status);
+        return "unavailable";
+      }
+
+      const raw = await response.json() as {
+        data?: { accessToken?: string; refreshToken?: string; user?: Record<string, unknown> };
+        accessToken?: string;
+        refreshToken?: string;
+        user?: Record<string, unknown>;
+      };
+      const payload = raw.data && typeof raw.data === "object" ? raw.data : raw;
+      const accessToken = payload.accessToken;
+      if (!accessToken || !payload.refreshToken) return "expired";
+
+      localStorage.setItem(TOKEN_KEY, accessToken);
+      sessionStorage.setItem(REFRESH_TOKEN_KEY, payload.refreshToken);
+      try {
+        const storedAdmin = JSON.parse(localStorage.getItem(ADMIN_STORAGE_KEY) || "null");
+        if (storedAdmin) {
+          localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify({
+            ...storedAdmin,
+            ...payload.user,
+            token: accessToken,
+          }));
+        }
+      } catch (error) {
+        console.warn("[Auth] Could not update the persisted session profile", error);
+      }
+      return "refreshed";
+    } catch (error) {
+      console.warn("[Auth] Session refresh request failed", error);
+      return "unavailable";
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
 export async function request<T>(
   method: string,
   endpoint: string,
   data?: unknown,
   config: RequestConfig = {}
 ): Promise<T> {
-  const { params, retry = 3, retryDelay = 1000, ...fetchOptions } = config;
+  const defaultRetry = method.toUpperCase() === "GET" ? 3 : 0;
+  const { params, retry = defaultRetry, retryDelay = 1000, authRetry = false, ...fetchOptions } = config;
   const token = localStorage.getItem(TOKEN_KEY);
 
   const headers: HeadersInit = {
@@ -76,6 +144,14 @@ export async function request<T>(
         ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
         ...fetchOptions,
       });
+
+      if (response.status === 401 && token && !authRetry && !endpoint.startsWith("/auth/")) {
+        const refreshResult = await refreshAccessToken();
+        if (refreshResult === "refreshed") {
+          return request<T>(method, endpoint, data, { ...config, retry: 0, authRetry: true });
+        }
+        if (refreshResult === "expired") expireSession();
+      }
 
       if (!response.ok) {
         let message = "API request failed";

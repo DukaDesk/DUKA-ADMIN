@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { X, Check, ShieldCheck, Store } from "lucide-react";
 import { Modal } from "../../components/UI/Modal";
+import ConfirmModal from "../../components/UI/ConfirmModal";
 import Field from "../../components/UI/Field";
 import PhonePreview from "./PhonePreview";
 import styles from "./MerchantReview.module.css";
@@ -58,6 +59,7 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
   const [declineMode, setDeclineMode] = useState(null); // 'credentials' | 'app' | null
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState("");
+  const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +99,9 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
   const tenant = review?.tenant || {};
   const ownerEntry = Array.isArray(tenant.users) ? tenant.users[0] : null;
   const owner = ownerEntry?.user || tenant.owner || tenant.user || {};
-  const merchantPhoto = owner.profilePicture || owner.profileImage || owner.avatarUrl || owner.avatar || owner.image || tenant.profilePicture || tenant.profileImage;
+  const merchantPhoto = canManage
+    ? owner.profilePicture || owner.profileImage || owner.avatarUrl || owner.avatar || owner.image || tenant.profilePicture || tenant.profileImage
+    : null;
   const compliance = Array.isArray(review?.compliance) ? review.compliance : [];
   const subscription = review?.tenant?.subscription || tenant.subscription || null;
   const plan = subscription?.plan || null;
@@ -124,11 +128,19 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
       setReason("");
       await load();
       onChanged?.();
+      return true;
     } catch (err) {
       showToast?.(err.message || "Action failed", "error");
+      return false;
     } finally {
       setBusy("");
     }
+  };
+
+  const confirmApproveApp = async () => {
+    if (busy) return;
+    const approved = await runAction("approve", () => businessDashboardApi.approveApp(merchantId), "merchant.app_approve", `${tenant.name || "Merchant"} app approved — now live`);
+    if (approved) setApproveConfirmOpen(false);
   };
 
   const submitDecline = () => {
@@ -151,7 +163,7 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
           </h2>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <StatusPill value={verification} tones={VERIFICATION_TONES} />
+          {canManage && <StatusPill value={verification} tones={VERIFICATION_TONES} />}
           <StatusPill value={appStatus.replace("_", " ")} tones={APP_TONES} />
         </div>
         {merchantPhoto ? (
@@ -172,13 +184,13 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
         {!loading && !error && review && (
           <div className={styles.reviewGrid}>
             <div className={styles.approvalStages}>
-              <ApprovalStage
+              {canManage && <ApprovalStage
                 number={1}
                 title="Merchant verification"
                 description={verification === "verified" ? "Credentials and compliance have been approved. The merchant can submit an app for review." : verification === "rejected" ? "Credentials were rejected. Review the compliance notes and documents before taking further action." : hasComplianceSubmission ? "Compliance details have been submitted. Review the credentials and documents, then verify or reject them." : "Waiting for the merchant to submit compliance credentials for verification."}
                 status={verification}
                 tones={VERIFICATION_TONES}
-              />
+              />}
               <ApprovalStage
                 number={2}
                 title="App approval"
@@ -286,7 +298,7 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
         <button
           type="button"
           disabled={!canReviewApps || !canApproveApp || busy}
-          onClick={() => runAction("approve", () => businessDashboardApi.approveApp(merchantId), "merchant.app_approve", `${tenant.name || "Merchant"} app approved — now live`)}
+          onClick={() => setApproveConfirmOpen(true)}
           style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "var(--green)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: canReviewApps && canApproveApp && !busy ? "pointer" : "not-allowed", opacity: canReviewApps && canApproveApp && !busy ? 1 : 0.6 }}
           title={canApproveApp ? "Approve app and publish live" : appStatus === "approved" ? "App is already approved" : "Waiting for the merchant to submit the app for review"}
         >
@@ -321,6 +333,15 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
           </div>
         </div>
       </Modal>
+      <ConfirmModal
+        open={approveConfirmOpen}
+        title="Approve and publish app?"
+        message={`Approve ${tenant.name || "this merchant"}'s submitted app and make it live? Credential verification is not required during the testing phase.`}
+        confirmLabel={busy === "approve" ? "Approving…" : "Approve & Publish"}
+        variant="Primary"
+        onConfirm={confirmApproveApp}
+        onCancel={() => setApproveConfirmOpen(false)}
+      />
     </div>
   );
 }

@@ -61,11 +61,30 @@ export default function EnhancedRemoteTablePage({
   const [selectedPageSize, setSelectedPageSize] = useState(pageSize);
   const [filterValues, setFilterValues] = useState({});
   const [openActionMenu, setOpenActionMenu] = useState(null);
+  const [pendingActions, setPendingActions] = useState({});
   const actionMenuRef = useRef(null);
   const inFlightCountRef = useRef(0);
+  const pendingActionsRef = useRef(new Set());
 
   const searchId = `search-${title.replace(/\s+/g, "-").toLowerCase()}`;
   const pageSizeId = `page-size-${title.replace(/\s+/g, "-").toLowerCase()}`;
+
+  const invokeAction = async (action, row) => {
+    const actionId = `${row?.[rowKey] ?? ""}:${action.key}`;
+    if (pendingActionsRef.current.has(actionId)) return;
+    pendingActionsRef.current.add(actionId);
+    setPendingActions((current) => ({ ...current, [actionId]: true }));
+    try {
+      await action.onClick(row);
+    } finally {
+      pendingActionsRef.current.delete(actionId);
+      setPendingActions((current) => {
+        const next = { ...current };
+        delete next[actionId];
+        return next;
+      });
+    }
+  };
 
   useEffect(() => {
     if (openActionMenu === null) return undefined;
@@ -382,6 +401,8 @@ export default function EnhancedRemoteTablePage({
                                 {actions.map((action) => {
                                   const ActionIcon = action.icon;
                                   const actionLabel = typeof action.label === "function" ? action.label(row) : action.label;
+                                  const actionId = `${row?.[rowKey] ?? ""}:${action.key}`;
+                                  const actionPending = Boolean(pendingActions[actionId]);
                                   return (
                                     <button
                                       key={action.key}
@@ -391,13 +412,13 @@ export default function EnhancedRemoteTablePage({
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         setOpenActionMenu(null);
-                                        action.onClick(row);
+                                        void invokeAction(action, row);
                                       }}
-                                      disabled={action.disabled?.(row)}
+                                      disabled={actionPending || action.disabled?.(row)}
                                       aria-label={action.ariaLabel?.(row) || actionLabel}
                                     >
                                       {ActionIcon && <ActionIcon size={14} aria-hidden="true" />}
-                                      <span>{actionLabel}</span>
+                                      <span>{actionPending ? "Working…" : actionLabel}</span>
                                     </button>
                                   );
                                 })}
@@ -407,21 +428,26 @@ export default function EnhancedRemoteTablePage({
                         );
                       })() : (
                         <div className={styles.actions} role="group" aria-label="Row actions">
-                          {actions.map((action) => (
+                          {actions.map((action) => {
+                            const actionId = `${row?.[rowKey] ?? ""}:${action.key}`;
+                            const actionPending = Boolean(pendingActions[actionId]);
+                            const actionLabel = typeof action.label === "function" ? action.label(row) : action.label;
+                            return (
                             <button
                               key={action.key}
                               className={styles.actionBtn + " " + styles["action" + (action.variant || "Primary")]}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                action.onClick(row);
+                                void invokeAction(action, row);
                               }}
-                              disabled={action.disabled?.(row)}
-                              aria-label={action.ariaLabel?.(row) || action.label}
+                              disabled={actionPending || action.disabled?.(row)}
+                              aria-label={action.ariaLabel?.(row) || actionLabel}
                             >
                               {action.icon && <span aria-hidden="true">{typeof action.icon === "string" ? action.icon : (() => { const Ico = action.icon; return <Ico size={14} />; })()}</span>}
-                              <span className={styles.actionText}>{action.label}</span>
+                              <span className={styles.actionText}>{actionPending ? "Working…" : actionLabel}</span>
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </td>

@@ -1,10 +1,12 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { recordAuditEvent } from "../services/audit";
 import { unwrapAuth } from "../utils/unwrapAuth";
+import { apiClient } from "../services/apiClient";
 
 const AuthContext = createContext(null);
 
 const STORAGE_KEY = "dukadesk_admin";
+const REFRESH_TOKEN_KEY = "admin_refresh_token";
 
 /**
  * KB Strict healing: maps any legacy or display role to KB canonical platform roles
@@ -26,16 +28,11 @@ function toKbCanonical(roleRaw) {
 
 function healStoredAdmin(obj) {
   if (!obj || typeof obj !== "object") return obj;
-  let role = obj.role || (Array.isArray(obj.roles) && obj.roles[0]) || obj.username || null;
-  if (role === "getdukadesk" || role === "getdukadesk_admin") role = "platform_operator";
-  if (!role) {
-    if (obj.email || obj.name || obj.username || obj.token) role = obj.email && obj.email.includes("superadmin") ? "super_admin" : "platform_operator";
-  }
+  let role = obj.role || (Array.isArray(obj.roles) && obj.roles[0]) || null;
   if (role) {
     role = toKbCanonical(role);
     obj = { ...obj, role };
     if (Array.isArray(obj.roles)) delete obj.roles;
-    if (obj.username && obj.username === obj.role) delete obj.username;
   }
   return obj;
 }
@@ -86,19 +83,14 @@ export function AuthProvider({ children }) {
   }, []);
 
 const login = useCallback((data) => {
-    const { token, admin } = unwrapAuth(data);
+    const { token, refreshToken, admin } = unwrapAuth(data);
     const resolvedToken = token || data?.token || data?.accessToken || data?.access_token || null;
     if (resolvedToken) localStorage.setItem("admin_token", resolvedToken);
+    if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    else sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     const base = admin && typeof admin === "object" ? admin : {};
     const nextAdmin = { ...base, token: resolvedToken || base.token || null };
     if (!nextAdmin.role && Array.isArray(nextAdmin.roles) && nextAdmin.roles[0]) nextAdmin.role = nextAdmin.roles[0];
-    if (!nextAdmin.role && nextAdmin.username) {
-      const u = String(nextAdmin.username).toLowerCase();
-      if (u.includes("superadmin")) nextAdmin.role = "super_admin";
-      else if (u === "getdukadesk" || u === "admin") nextAdmin.role = "platform_operator";
-    }
-    if (!nextAdmin.role && nextAdmin.email?.includes("superadmin")) nextAdmin.role = "super_admin";
-    if (!nextAdmin.role) nextAdmin.role = "platform_operator";
     if (nextAdmin.role) nextAdmin.role = toKbCanonical(nextAdmin.role);
     if (Array.isArray(nextAdmin.roles)) delete nextAdmin.roles;
     // ensure at least fallback name/email from data if admin was empty wrapper
@@ -119,9 +111,21 @@ const login = useCallback((data) => {
       action: "admin.session.ended",
       target: "admin-portal",
     });
+    if (localStorage.getItem("admin_token")) {
+      apiClient.post("/auth/logout").catch((error) => {
+        console.warn("[Auth] Server-side logout could not revoke the session", error?.requestId, error?.message);
+      });
+    }
     localStorage.removeItem("admin_token");
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
     setAdmin(null);
   }, [admin]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => logout();
+    window.addEventListener("admin:session-expired", handleSessionExpired);
+    return () => window.removeEventListener("admin:session-expired", handleSessionExpired);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ admin, login, logout }}>

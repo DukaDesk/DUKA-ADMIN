@@ -23,13 +23,17 @@ const ACTION_OPTIONS = [
 export default function AuditLog() {
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [quickRange, setQuickRange] = useState("7d");
+  const [actor, setActor] = useState("");
+  const [resource, setResource] = useState("");
 
   const load = useCallback(async (params) => {
     const searchParams = { ...params };
+    if (actor.trim()) searchParams.actor = actor.trim();
+    if (resource.trim()) searchParams.resource = resource.trim();
     if (dateRange.from) searchParams.from = dateRange.from;
     if (dateRange.to) searchParams.to = dateRange.to;
     return businessDashboardApi.getAuditLog(searchParams);
-  }, [dateRange]);
+  }, [actor, dateRange, resource]);
 
   useEffect(() => {
     if (!quickRange) return;
@@ -77,6 +81,9 @@ export default function AuditLog() {
         </code>
       ) : "—"
     },
+    { key: "outcome", label: "Outcome", width: 120, sortable: false,
+      render: (value) => value || "Not recorded"
+    },
     { key: "metadata", label: "Details", width: 240, sortable: false,
       render: (value) => value ? (
         <details style={{ cursor: "pointer" }}>
@@ -91,6 +98,11 @@ export default function AuditLog() {
 
   const filters = [
     { key: "action", label: "Action", placeholder: "All Actions", options: ACTION_OPTIONS },
+    { key: "outcome", label: "Outcome", options: [
+      { value: "success", label: "Success" },
+      { value: "denied", label: "Denied" },
+      { value: "failed", label: "Failed" },
+    ] },
   ];
 
   return (
@@ -116,6 +128,28 @@ export default function AuditLog() {
           Date Range Filter
         </h3>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "var(--gray-600)" }}>
+            Actor:
+            <input
+              type="search"
+              value={actor}
+              onChange={(event) => setActor(event.target.value)}
+              placeholder="User ID or email"
+              aria-label="Filter audit logs by actor"
+              style={{ padding: "8px 12px", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-sm)", fontSize: 13 }}
+            />
+          </label>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "var(--gray-600)" }}>
+            Resource:
+            <input
+              type="search"
+              value={resource}
+              onChange={(event) => setResource(event.target.value)}
+              placeholder="Resource type"
+              aria-label="Filter audit logs by resource"
+              style={{ padding: "8px 12px", border: "1px solid var(--gray-200)", borderRadius: "var(--radius-sm)", fontSize: 13 }}
+            />
+          </label>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <label style={{ fontSize: 13, color: "var(--gray-600)" }}>Quick:</label>
             <select

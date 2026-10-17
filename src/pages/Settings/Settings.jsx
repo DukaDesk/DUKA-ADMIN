@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import AccessibleToggle from "../../components/UI/AccessibleToggle";
+import ConfirmModal from "../../components/UI/ConfirmModal";
 import RemoteTablePage from "../../components/UI/RemoteTablePage";
 import { Modal } from "../../components/UI/Modal";
 import Field from "../../components/UI/Field";
@@ -30,6 +31,18 @@ const SETTING_CATEGORIES = {
   ],
 };
 
+function normalizeSettingValues(response) {
+  const settings = response?.settings ?? response?.data ?? response;
+  if (Array.isArray(settings)) {
+    return Object.fromEntries(
+      settings
+        .filter((setting) => setting && typeof setting.key === "string")
+        .map((setting) => [setting.key, setting.value])
+    );
+  }
+  return settings && typeof settings === "object" ? settings : {};
+}
+
 // KB Strict SEC-0002: Platform roles are Super Admin, Platform Operator, Support Agent. Legacy kept as fallback.
 const ROLE_OPTIONS = ["platform_operator", "support_agent", "super_admin"];
 
@@ -50,8 +63,15 @@ export default function Settings({ showToast }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
   const [invites, setInvites] = useState([]);
+  const [pendingMutations, setPendingMutations] = useState({});
+  const pendingMutationsRef = useRef(new Set());
+  const [confirmation, setConfirmation] = useState(null);
 
   const loadInvites = useCallback(async () => {
+    if (readOnly) {
+      setInvites([]);
+      return;
+    }
     try {
       const res = await businessDashboardApi.listInvites({ status: "pending" });
       const list = res?.data || res?.invites || res?.items || res || [];
@@ -59,12 +79,47 @@ export default function Settings({ showToast }) {
     } catch {
       setInvites([]);
     }
-  }, []);
+  }, [readOnly]);
   const [annTitle, setAnnTitle] = useState("");
   const [annMsg, setAnnMsg] = useState("");
 
   const [maintenance, setMaintenance] = useState([]);
+  const [maintenanceUnavailable, setMaintenanceUnavailable] = useState(false);
   const [policies, setPolicies] = useState([]);
+  const runMutation = async (key, operation, successMessage, onSuccess) => {
+    if (pendingMutationsRef.current.has(key)) return null;
+    pendingMutationsRef.current.add(key);
+    setPendingMutations((current) => ({ ...current, [key]: true }));
+    try {
+      const result = await operation();
+      onSuccess?.(result);
+      if (successMessage) showToast(successMessage, "success");
+      return true;
+    } catch (err) {
+      showToast(err.message || `Failed to ${key}`, "error");
+      return false;
+    } finally {
+      pendingMutationsRef.current.delete(key);
+      setPendingMutations((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
+  const requestConfirmation = (details) => setConfirmation(details);
+  const executeConfirmation = async () => {
+    if (!confirmation) return;
+    const completed = await runMutation(
+      confirmation.key,
+      confirmation.operation,
+      confirmation.successMessage,
+      confirmation.onSuccess,
+    );
+    if (completed) setConfirmation(null);
+  };
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -72,7 +127,7 @@ export default function Settings({ showToast }) {
       const results = await Promise.allSettled([
         businessDashboardApi.getSettings(),
         businessDashboardApi.getFeatureFlags(),
-        businessDashboardApi.getUsers({ limit: 50 }),
+        readOnly ? Promise.resolve(null) : businessDashboardApi.getUsers({ limit: 50, role: "platform_admin" }),
         businessDashboardApi.getAnnouncements({ page: 1, limit: 20 }),
         businessDashboardApi.getPlans(),
         businessDashboardApi.getMaintenanceWindows({ page: 1, limit: 10 }),
@@ -92,11 +147,13 @@ export default function Settings({ showToast }) {
           showToast?.(`User list temporarily unavailable.${rid}`, "error");
         }
       }
-      if (settingsRes) setAllSettings(settingsRes?.settings || settingsRes?.data || settingsRes || {});
+      if (settingsRes) setAllSettings(normalizeSettingValues(settingsRes));
       if (flagsRes) setFeatureFlags(Array.isArray(flagsRes) ? flagsRes : flagsRes?.flags || flagsRes?.data || flagsRes || []);
       if (usersRes) {
-        const u = usersRes?.data || usersRes?.users || usersRes?.items || usersRes || [];
+        const u = usersRes?.data?.users || usersRes?.users || usersRes?.items || usersRes?.data || usersRes || [];
         setUsers(Array.isArray(u) ? u : []);
+      } else if (readOnly) {
+        setUsers([]);
       } else if (failures.find(({ idx }) => idx === 2)) {
         setUsers([]);
       }
@@ -110,6 +167,7 @@ export default function Settings({ showToast }) {
       }
       const m = maintRes?.data || maintRes?.items || maintRes || [];
       setMaintenance(Array.isArray(m) ? m : []);
+      setMaintenanceUnavailable(!maintRes);
       const p = polRes?.data || polRes?.items || polRes || [];
       setPolicies(Array.isArray(p) ? p : []);
     } catch (err) {
@@ -117,7 +175,7 @@ export default function Settings({ showToast }) {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [readOnly, showToast]);
 
   useEffect(() => {
     loadData();
@@ -125,28 +183,19 @@ export default function Settings({ showToast }) {
   }, [loadData, loadInvites]);
 
   const handleSettingChange = async (key, newValue) => {
+    if (pendingMutationsRef.current.has(`setting:${key}`)) return;
     const previousValue = allSettings[key];
     setAllSettings((prev) => ({ ...prev, [key]: newValue }));
-    try {
-      await businessDashboardApi.updateSetting(key, newValue);
-      showToast(`${key} updated`, "success");
-    } catch (err) {
+    const completed = await runMutation(
+      `setting:${key}`,
+      () => businessDashboardApi.updateSetting(key, newValue),
+      `${key} updated`,
+    );
+    if (completed === false) {
       setAllSettings((prev) => ({ ...prev, [key]: previousValue }));
-      showToast(err.message || "Failed to update setting", "error");
     }
   };
-
-  const handlePlatformSettingChange = async (key, newValue) => {
-    const previousValue = allSettings[key];
-    setAllSettings((prev) => ({ ...prev, [key]: newValue }));
-    try {
-      await businessDashboardApi.updateSetting(key, newValue);
-      showToast(`${key} updated`, "success");
-    } catch (err) {
-      setAllSettings((prev) => ({ ...prev, [key]: previousValue }));
-      showToast(err.message || "Failed to update setting", "error");
-    }
-  };
+  const handlePlatformSettingChange = handleSettingChange;
 
   if (loading) {
     return <div className={styles.loading} aria-live="polite">Loading settings…</div>;
@@ -199,6 +248,7 @@ export default function Settings({ showToast }) {
                   label={setting.label}
                   description={setting.description}
                   id={`setting-${setting.key}`}
+                  disabled={Boolean(pendingMutations[`setting:${setting.key}`])}
                 />
               </div>
             ))}
@@ -215,13 +265,31 @@ export default function Settings({ showToast }) {
                   <div style={{ flex: 1 }}><strong style={{ fontSize: 13 }}>{f.key}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{f.description}</div></div>
                   <AccessibleToggle
                     checked={Boolean(f.enabled)}
-                    onChange={async (val) => {
-                      try { await businessDashboardApi.updateFeatureFlag(f.key, { enabled: val }); setFeatureFlags((prev) => prev.map((x) => x.key === f.key ? { ...x, enabled: val } : x)); showToast(`${f.key} updated`, "success"); } catch (e) { showToast(e.message, "error"); }
-                    }}
+                    onChange={(val) => runMutation(
+                      `flag:${f.key}`,
+                      () => businessDashboardApi.updateFeatureFlag(f.key, { enabled: val }),
+                      `${f.key} updated`,
+                      () => setFeatureFlags((prev) => prev.map((x) => x.key === f.key ? { ...x, enabled: val } : x)),
+                    )}
                     label={f.key}
                     id={`flag-${f.key}`}
+                    disabled={Boolean(pendingMutations[`flag:${f.key}`])}
                   />
-                  <button onClick={async () => { try { await businessDashboardApi.deleteFeatureFlag(f.key); setFeatureFlags((p) => p.filter((x) => x.key !== f.key)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } } } style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+                  <button
+                    disabled={Boolean(pendingMutations[`delete-flag:${f.key}`])}
+                    onClick={() => requestConfirmation({
+                      key: `delete-flag:${f.key}`,
+                      title: "Delete feature flag?",
+                      message: `Delete the ${f.key} feature flag?`,
+                      confirmLabel: "Delete",
+                      operation: () => businessDashboardApi.deleteFeatureFlag(f.key),
+                      successMessage: "Feature flag deleted",
+                      onSuccess: () => setFeatureFlags((p) => p.filter((x) => x.key !== f.key)),
+                    })}
+                    style={{ fontSize: 11, color: "var(--red)" }}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
             </div>
@@ -269,6 +337,7 @@ export default function Settings({ showToast }) {
                               onChange={(val) => handlePlatformSettingChange(key, val)}
                               label={`Toggle ${key}`}
                               id={`platform-${key}`}
+                              disabled={Boolean(pendingMutations[`setting:${key}`])}
                             />
                           )}
                           {typeof value !== "boolean" && (
@@ -294,15 +363,29 @@ export default function Settings({ showToast }) {
         {activeTab === "team" && (
           <section className={styles.section} aria-label="Admin team">
             <h3 className={styles.sectionTitle}>Admin Team (customer care) — {users.length} shown {readOnly ? "· read-only" : ""}</h3>
-            {readOnly && <p style={{ fontSize: 12, color: "var(--amber)", background: "var(--amber-alpha-10)", padding: 8, borderRadius: 6, marginBottom: 12 }}>Support Agent is read-only per SEC-0002 — only Super Admin / Platform Operator can invite or remove members.</p>}
+            {readOnly && <p style={{ fontSize: 12, color: "var(--amber)", background: "var(--amber-alpha-10)", padding: 8, borderRadius: 6, marginBottom: 12 }}>Admin-user management is restricted to Super Admins.</p>}
             <div className={styles.teamList}>
-              {users.length === 0 && <p className={styles.empty}>No users.</p>}
+              {!readOnly && users.length === 0 && <p className={styles.empty}>No platform admins.</p>}
               {users.map((member, idx) => (
                 <div key={member.id || idx} className={styles.teamItem} style={{ borderBottom: idx < users.length - 1 ? "1px solid var(--gray-100)" : "none" }}>
-                  <div className={styles.teamAvatar} style={{ background: "#7C3AED" }}>{(member.name || member.email || "?").split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase()}</div>
-                  <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || member.email}</div><div className={styles.teamEmail}>{canViewEmail(admin) ? member.email : maskEmail(member.email)}</div></div>
-                  <span className={styles.teamRole} style={{ background: "#7C3AED22", color: "#7C3AED" }}>{member.role || "—"}</span>
-                  <button disabled={readOnly} onClick={async () => { if (readOnly) return; try { await businessDashboardApi.removeUser(member.id, member.merchantId || member.tenantId || ""); setUsers((p) => p.filter((x) => x.id !== member.id)); showToast("Removed", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: readOnly ? "var(--gray-400)" : "var(--red)", cursor: readOnly ? "not-allowed" : "pointer", opacity: readOnly ? 0.6 : 1 }}>Remove</button>
+                  <div className={styles.teamAvatar} style={{ background: "#7C3AED" }}>{(member.name || `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email || "?").split(" ").map((n) => n[0]).join("").slice(0,2).toUpperCase()}</div>
+                  <div className={styles.teamInfo}><div className={styles.teamName}>{member.name || `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email}</div><div className={styles.teamEmail}>{canViewEmail(admin) ? member.email : maskEmail(member.email)}</div></div>
+                  <span className={styles.teamRole} style={{ background: "#7C3AED22", color: "#7C3AED" }}>{member.role || member.roles?.map((assignment) => assignment.role?.name).filter(Boolean).join(", ") || "—"}</span>
+                  <button
+                    disabled={readOnly || Boolean(pendingMutations[`remove-user:${member.id}`])}
+                    onClick={() => requestConfirmation({
+                      key: `remove-user:${member.id}`,
+                      title: "Remove platform admin?",
+                      message: `Remove ${member.name || member.email} from platform administration?`,
+                      confirmLabel: "Remove",
+                      operation: () => businessDashboardApi.removeUser(member.id),
+                      successMessage: "Removed from platform",
+                      onSuccess: () => setUsers((p) => p.filter((x) => x.id !== member.id)),
+                    })}
+                    style={{ fontSize: 11, color: "var(--red)", cursor: "pointer" }}
+                  >
+                    Remove
+                  </button>
                 </div>
               ))}
             </div>
@@ -313,7 +396,21 @@ export default function Settings({ showToast }) {
                 {invites.map((inv) => (
                   <div key={inv.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div><strong style={{ fontSize: 13 }}>{inv.email}</strong> <span style={{ fontSize: 11, color: "var(--gray-500)" }}>{inv.role} · expires {inv.expiresAt ? new Date(inv.expiresAt).toLocaleDateString() : "—"}</span></div>
-                    <button disabled={readOnly} onClick={async () => { try { await businessDashboardApi.revokeInvite(inv.id); setInvites((p) => p.filter((x) => x.id !== inv.id)); showToast("Invite revoked", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>Revoke</button>
+                    <button
+                      disabled={readOnly || Boolean(pendingMutations[`revoke-invite:${inv.id}`])}
+                      onClick={() => requestConfirmation({
+                        key: `revoke-invite:${inv.id}`,
+                        title: "Revoke admin invite?",
+                        message: `Revoke the pending invite for ${inv.email}?`,
+                        confirmLabel: "Revoke Invite",
+                        operation: () => businessDashboardApi.revokeInvite(inv.id),
+                        successMessage: "Invite revoked",
+                        onSuccess: () => setInvites((p) => p.filter((x) => x.id !== inv.id)),
+                      })}
+                      style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      Revoke
+                    </button>
                   </div>
                 ))}
               </div>
@@ -327,20 +424,28 @@ export default function Settings({ showToast }) {
                     <p style={{ fontSize: 11, color: "var(--gray-500)", margin: 0 }}>Single-use link, bound to this email and role, expires in 7 days. Share it directly with the new admin.</p>
                     <button
                       className={styles.inviteBtn}
+                      disabled={Boolean(pendingMutations["create-invite"])}
                       onClick={async () => {
-                        if (!inviteEmail) return showToast("Email required", "error");
-                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) return showToast("Invalid email", "error");
-                        try {
-                          const res = await businessDashboardApi.createInvite({ email: inviteEmail.trim(), role: inviteRole });
-                          const data = res?.data || res;
-                          const link = `${window.location.origin}/register?token=${data.token}`;
-                          setGeneratedLink(link);
-                          showToast("Invite link generated", "success");
-                          loadInvites();
-                        } catch (e) { showToast(e.message || "Failed to generate invite", "error"); }
+                        const email = inviteEmail.trim();
+                        if (!email) return showToast("Email required", "error");
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showToast("Invalid email", "error");
+                        const completed = await runMutation(
+                          "create-invite",
+                          async () => {
+                            const response = await businessDashboardApi.createInvite({ email, role: inviteRole });
+                            const data = response?.data || response;
+                            if (typeof data?.token !== "string" || !data.token.trim()) {
+                              throw new Error("The server did not return an invite token. Please try again.");
+                            }
+                            return data;
+                          },
+                          "Invite link generated",
+                          (data) => setGeneratedLink(`${window.location.origin}/register?token=${data.token}`),
+                        );
+                        if (completed) void loadInvites();
                       }}
                     >
-                      Generate Link
+                      {pendingMutations["create-invite"] ? "Generating…" : "Generate Link"}
                     </button>
                   </>
                 ) : (
@@ -369,13 +474,47 @@ export default function Settings({ showToast }) {
               {announcements.map((a) => (
                 <div key={a.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
                   <div><strong style={{ fontSize: 13 }}>{a.title}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{a.message}</div></div>
-                  <button onClick={async () => { try { await businessDashboardApi.deleteAnnouncement(a.id); setAnnouncements((p) => p.filter((x) => x.id !== a.id)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+                  <button
+                    disabled={Boolean(pendingMutations[`delete-announcement:${a.id}`])}
+                    onClick={() => requestConfirmation({
+                      key: `delete-announcement:${a.id}`,
+                      title: "Delete announcement?",
+                      message: `Delete “${a.title}”?`,
+                      confirmLabel: "Delete",
+                      operation: () => businessDashboardApi.deleteAnnouncement(a.id),
+                      successMessage: "Announcement deleted",
+                      onSuccess: () => setAnnouncements((p) => p.filter((x) => x.id !== a.id)),
+                    })}
+                    style={{ fontSize: 11, color: "var(--red)" }}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                 <input placeholder="Title" value={annTitle} onChange={(e) => setAnnTitle(e.target.value)} style={{ flex: 1, padding: 6, border: "1px solid var(--gray-200)", borderRadius: 6 }} />
                 <input placeholder="Message" value={annMsg} onChange={(e) => setAnnMsg(e.target.value)} style={{ flex: 2, padding: 6, border: "1px solid var(--gray-200)", borderRadius: 6 }} />
-                <button className={styles.inviteBtn} onClick={async () => { if (!annTitle) return; try { const na = await businessDashboardApi.createAnnouncement({ title: annTitle, message: annMsg, type: "info" }); setAnnouncements((p) => [...p, na?.data || na]); setAnnTitle(""); setAnnMsg(""); showToast("Created", "success"); } catch (e) { showToast(e.message, "error"); } }}>Create</button>
+                <button
+                  className={styles.inviteBtn}
+                  disabled={Boolean(pendingMutations["create-announcement"])}
+                  onClick={async () => {
+                    const title = annTitle.trim();
+                    const message = annMsg.trim();
+                    if (!title || !message) return showToast("Announcement title and message are required.", "error");
+                    await runMutation(
+                      "create-announcement",
+                      () => businessDashboardApi.createAnnouncement({ title, message, type: "info" }),
+                      "Announcement created",
+                      (response) => {
+                        setAnnouncements((p) => [...p, response?.data || response]);
+                        setAnnTitle("");
+                        setAnnMsg("");
+                      },
+                    );
+                  }}
+                >
+                  {pendingMutations["create-announcement"] ? "Creating…" : "Create"}
+                </button>
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
@@ -384,7 +523,21 @@ export default function Settings({ showToast }) {
               {plans.map((p) => (
                 <div key={p.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
                   <div><strong>{p.name}</strong> <span style={{ fontSize: 11, color: "var(--gray-500)" }}>{p.interval} • {p.price}</span></div>
-                  <button onClick={async () => { try { await businessDashboardApi.deletePlan(p.id); setPlans((prev) => prev.filter((x) => x.id !== p.id)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
+                  <button
+                    disabled={Boolean(pendingMutations[`delete-plan:${p.id}`])}
+                    onClick={() => requestConfirmation({
+                      key: `delete-plan:${p.id}`,
+                      title: "Delete subscription plan?",
+                      message: `Delete the ${p.name} plan? Existing subscriptions may prevent deletion.`,
+                      confirmLabel: "Delete Plan",
+                      operation: () => businessDashboardApi.deletePlan(p.id),
+                      successMessage: "Plan deleted",
+                      onSuccess: () => setPlans((prev) => prev.filter((x) => x.id !== p.id)),
+                    })}
+                    style={{ fontSize: 11, color: "var(--red)" }}
+                  >
+                    Delete
+                  </button>
                 </div>
               ))}
             </div>
@@ -394,14 +547,13 @@ export default function Settings({ showToast }) {
         {activeTab === "maintenance" && (
           <section className={styles.section} aria-label="Maintenance windows">
             <h3 className={styles.sectionTitle}>Maintenance Windows</h3>
-            {maintenance.length === 0 && <p className={styles.empty}>No maintenance windows. Platform is operational.</p>}
+            {maintenanceUnavailable && <p className={styles.empty} role="status">Maintenance scheduling is not available in the current backend.</p>}
+            {!maintenanceUnavailable && maintenance.length === 0 && <p className={styles.empty}>No maintenance windows are scheduled.</p>}
             {maintenance.map((m) => (
               <div key={m.id} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
                 <div><strong style={{ fontSize: 13 }}>{m.title || m.name || m.id}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{m.startAt ? new Date(m.startAt).toLocaleString() : ""} {m.endAt ? `→ ${new Date(m.endAt).toLocaleString()}` : ""} · {m.status || "scheduled"}</div></div>
-                <button onClick={async () => { try { await businessDashboardApi.deleteMaintenanceWindow(m.id); setMaintenance((p) => p.filter((x) => x.id !== m.id)); showToast("Deleted", "success"); } catch (e) { showToast(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)" }}>Delete</button>
               </div>
             ))}
-            <button className={styles.inviteBtn} onClick={async () => { const title = prompt("Maintenance title"); if (!title) return; try { const nw = await businessDashboardApi.createMaintenanceWindow({ title, startAt: new Date().toISOString() }); setMaintenance((p) => [...p, nw?.data || nw]); showToast("Created", "success"); } catch (e) { showToast(e.message, "error"); } }}>+ Schedule Window</button>
           </section>
         )}
 
@@ -417,6 +569,16 @@ export default function Settings({ showToast }) {
           </section>
         )}
       </div>
+      <ConfirmModal
+        open={!!confirmation}
+        title={confirmation?.title}
+        message={confirmation?.message}
+        confirmLabel={confirmation?.confirmLabel}
+        variant="Danger"
+        busy={Boolean(confirmation && pendingMutations[confirmation.key])}
+        onConfirm={executeConfirmation}
+        onCancel={() => setConfirmation(null)}
+      />
     </div>
   );
 }

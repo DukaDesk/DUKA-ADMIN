@@ -1,18 +1,9 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Users, Store, DollarSign } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { BarChart3, DollarSign, Store, Users } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { toneBackground } from "../../utils/badgeTones";
 import styles from "./Analytics.module.css";
-
-function metricCount(data, keys = ["total", "count"]) {
-  const sources = [data, data?.data, data?.meta, data?.data?.meta];
-  for (const source of sources) {
-    for (const key of keys) {
-      if (source?.[key] !== undefined && source?.[key] !== null) return source[key];
-    }
-  }
-  return "—";
-}
 
 function Stat({ label, value, icon: Icon, color }) {
   return (
@@ -24,83 +15,133 @@ function Stat({ label, value, icon: Icon, color }) {
   );
 }
 
-export default function Analytics({ showToast }) {
+function formatPeriod(period) {
+  const date = new Date(`${period}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? period
+    : new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(Number(value));
+}
+
+function EmptyChart({ message }) {
+  return <div className={styles.chartEmpty}>{message}</div>;
+}
+
+export default function Analytics() {
+  const [analytics, setAnalytics] = useState(null);
   const [revenue, setRevenue] = useState(null);
-  const [users, setUsers] = useState(null);
-  const [merchants, setMerchants] = useState(null);
-  const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState([]);
 
   useEffect(() => {
     let active = true;
+    const dateTo = new Date();
+    const dateFrom = new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const params = {
+      dateFrom: dateFrom.toISOString(),
+      dateTo: dateTo.toISOString(),
+      groupBy: "day",
+    };
+
     Promise.allSettled([
-      businessDashboardApi.getRevenueReport({}).catch(() => null),
-      businessDashboardApi.getUserAnalytics({}).catch(() => null),
-      businessDashboardApi.getPlatformMerchants({ status: "active", page: 1, limit: 1 }).catch(() => null),
-      businessDashboardApi.getSavedReports({}).catch(() => ({ data: [] })),
-    ]).then(([rev, usr, merchantResult, sav]) => {
+      businessDashboardApi.getBffAnalytics(params),
+      businessDashboardApi.getBffRevenue(params),
+    ]).then(([analyticsResult, revenueResult]) => {
       if (!active) return;
-      if (rev.status === "fulfilled" && rev.value) setRevenue(rev.value?.data || rev.value);
-      if (usr.status === "fulfilled" && usr.value) setUsers(usr.value?.data || usr.value);
-      if (merchantResult.status === "fulfilled" && merchantResult.value) setMerchants(merchantResult.value);
-      if (sav.status === "fulfilled" && sav.value) {
-        const list = sav.value?.data || sav.value?.reports || sav.value?.items || sav.value || [];
-        setSaved(Array.isArray(list) ? list : []);
+      const nextErrors = [];
+      if (analyticsResult.status === "fulfilled") {
+        setAnalytics(analyticsResult.value?.data ?? analyticsResult.value);
+      } else {
+        nextErrors.push(`Platform activity: ${analyticsResult.reason?.message || "Unable to load data"}`);
       }
-    }).catch((e) => { if (active) setError(e.message || "Unable to load analytics"); })
-      .finally(() => { if (active) setLoading(false); });
+      if (revenueResult.status === "fulfilled") {
+        setRevenue(revenueResult.value?.data ?? revenueResult.value);
+      } else {
+        nextErrors.push(`Revenue: ${revenueResult.reason?.message || "Unable to load data"}`);
+      }
+      setErrors(nextErrors);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+
     return () => { active = false; };
   }, []);
 
-  const handleCreate = async () => {
-    const name = prompt("Report name");
-    if (!name) return;
-    try {
-      await businessDashboardApi.createReport({ name, metric: "revenue", type: "custom" });
-      showToast?.("Report created", "success");
-      const res = await businessDashboardApi.getSavedReports({}).catch(() => ({ data: [] }));
-      const list = res?.data || res?.reports || [];
-      setSaved(Array.isArray(list) ? list : []);
-    } catch (e) { showToast?.(e.message, "error"); }
-  };
+  if (loading) return <div className={styles.loading} aria-live="polite">Loading platform analytics…</div>;
 
-  if (loading) return <div className={styles.loading} aria-live="polite">Loading analytics…</div>;
+  const revenueTrend = analytics?.revenueTrend || [];
+  const transactionTrend = analytics?.orderVolume || [];
+  const revenueValue = revenue?.revenue;
+  const transactionCount = revenue?.transactionCount;
+  const activeUsers = analytics?.activeUsers;
+  const activeMerchants = analytics?.activeTenants;
 
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
-        <div><h2 className={styles.title}>Analytics & Reports</h2><p className={styles.subtitle}>Revenue, user and merchant analytics.</p></div>
-        <button className={styles.createBtn} onClick={handleCreate}>+ New Report</button>
+        <div>
+          <h2 className={styles.title}>Platform Analytics</h2>
+          <p className={styles.subtitle}>Paid transactions and platform activity over the last 30 days.</p>
+        </div>
+        <span className={styles.period}>Last 30 days</span>
       </header>
-      {error && <div className={styles.error} role="alert">{error}</div>}
+
+      {errors.length > 0 && (
+        <div className={styles.error} role="alert">
+          <strong>Some analytics are unavailable.</strong>
+          {errors.map((message) => <div key={message}>{message}</div>)}
+        </div>
+      )}
+
       <div className={styles.statsGrid}>
-        <Stat label="Revenue (period)" value={revenue ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(Number(revenue.revenue ?? revenue.total ?? 0)) : "—"} icon={DollarSign} color="var(--green)" />
-        <Stat label="Transactions" value={revenue?.transactionCount ?? revenue?.count ?? "—"} icon={BarChart3} color="var(--blue)" />
-        <Stat label="Active Users" value={users?.activeCount ?? users?.total ?? "—"} icon={Users} color="var(--purple)" />
-        <Stat label="Active Merchants" value={metricCount(merchants, ["activeCount", "total", "count"])} icon={Store} color="var(--amber)" />
+        <Stat label="Revenue" value={revenueValue == null ? "—" : formatCurrency(revenueValue)} icon={DollarSign} color="var(--green)" />
+        <Stat label="Transactions" value={transactionCount == null ? "—" : Number(transactionCount).toLocaleString()} icon={BarChart3} color="var(--blue)" />
+        <Stat label="Active Users · 30 days" value={activeUsers == null ? "—" : Number(activeUsers).toLocaleString()} icon={Users} color="var(--purple)" />
+        <Stat label="Published Merchants" value={activeMerchants == null ? "—" : Number(activeMerchants).toLocaleString()} icon={Store} color="var(--amber)" />
       </div>
 
-      <div className={styles.cardsGrid}>
+      <div className={styles.chartsGrid}>
         <article className={styles.card}>
-          <h3 className={styles.cardTitle}>Revenue Report</h3>
-          <pre className={styles.json}>{revenue ? JSON.stringify(revenue, null, 2) : "No data yet"}</pre>
+          <h3 className={styles.cardTitle}>Revenue trend</h3>
+          {revenueTrend.length === 0 ? <EmptyChart message="No paid transactions in this period." /> : (
+            <div className={styles.chart} role="img" aria-label="Revenue trend over the last 30 days">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueTrend} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
+                  <XAxis dataKey="period" tickFormatter={formatPeriod} tick={{ fontSize: 11 }} />
+                  <YAxis tickFormatter={(value) => new Intl.NumberFormat("en-NG", { notation: "compact" }).format(value)} tick={{ fontSize: 11 }} />
+                  <Tooltip labelFormatter={formatPeriod} formatter={(value) => formatCurrency(value)} />
+                  <Area type="monotone" dataKey="revenue" stroke="var(--green)" fill="var(--green)" fillOpacity={0.16} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </article>
+
         <article className={styles.card}>
-          <h3 className={styles.cardTitle}>User Analytics</h3>
-          <pre className={styles.json}>{users ? JSON.stringify(users, null, 2) : "No data yet"}</pre>
+          <h3 className={styles.cardTitle}>Transactions</h3>
+          {transactionTrend.length === 0 ? <EmptyChart message="No paid transactions in this period." /> : (
+            <div className={styles.chart} role="img" aria-label="Daily paid transaction count over the last 30 days">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={transactionTrend} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
+                  <XAxis dataKey="period" tickFormatter={formatPeriod} tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip labelFormatter={formatPeriod} />
+                  <Bar dataKey="count" name="Transactions" fill="var(--blue)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </article>
       </div>
-
-      <section className={styles.savedSection} aria-labelledby="saved-reports">
-        <h3 id="saved-reports" className={styles.sectionTitle}>Saved Reports ({saved.length})</h3>
-        {saved.length === 0 ? <p className={styles.empty}>No saved reports. Create one to persist filters.</p> : saved.map((r) => (
-          <div key={r.id} className={styles.savedItem}>
-            <div><strong>{r.name}</strong> <span style={{ fontSize: 11, color: "var(--gray-500)" }}>{r.metric || r.type} · {r.period || ""}</span></div>
-            <button onClick={async () => { try { await businessDashboardApi.deleteReport(r.id); setSaved((p) => p.filter((x) => x.id !== r.id)); showToast?.("Deleted", "success"); } catch (e) { showToast?.(e.message, "error"); } }} style={{ fontSize: 11, color: "var(--red)", background: "none", border: "none", cursor: "pointer" }}>Delete</button>
-          </div>
-        ))}
-      </section>
     </section>
   );
 }
