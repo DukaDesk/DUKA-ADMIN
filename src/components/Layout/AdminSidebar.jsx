@@ -22,7 +22,7 @@ const navItems = [
 // label, icon, state and prop is unchanged — items are only organised under
 // non-clickable section headers. Special rows:
 // - Notifications opens the existing AdminTopbar dropdown via a window event.
-// - Tickets routes to the existing audit page as a placeholder (no reports route exists).
+// - Tickets routes to the Support Tickets case/task workflow.
 const navSections = [
   { label: "PLATFORM", ids: ["dashboard", "analytics", "infrastructure", "audit"] },
   { label: "MANAGEMENT", ids: ["merchants", "subscriptions", "marketing"] },
@@ -33,7 +33,7 @@ const navSections = [
 
 const specialItems = {
   __notifications: { id: "__notifications", icon: Bell, label: "Notifications", action: "notifications" },
-  __tickets: { id: "__tickets", icon: Ticket, label: "Tickets", route: "audit" },
+  __tickets: { id: "__tickets", icon: Ticket, label: "Tickets", route: "support" },
 };
 
 function AdminSidebar({ page, setPage, admin, showToast, sidebarOpen, closeSidebar }) {

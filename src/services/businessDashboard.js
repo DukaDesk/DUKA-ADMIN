@@ -81,10 +81,6 @@ export const businessDashboardApi = {
   getTenant: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
   updateTenantById: (id, patch) => apiClient.put(`${ADMIN}/merchants/${id}`, patch),
   suspendTenant: (id) => apiClient.post(`${ADMIN}/merchants/${id}/suspend`),
-  getMyTenants: (params) => {
-    const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
-    return apiClient.get(`/tenants${queryString(normalized)}`);
-  },
   getAuditLog: (params) => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`),
   getPlatformStats: () => apiClient.get(`${ADMIN}/stats`),
   getPlatformMerchants: (params) => {
@@ -208,9 +204,7 @@ export const businessDashboardApi = {
   listInvites: (params) => apiClient.get(`${ADMIN}/invites${queryString(params || {})}`),
   revokeInvite: (id) => apiClient.delete(`${ADMIN}/invites/${id}`),
   validateInvite: (token) => apiClient.get(`/auth/invites/validate${queryString({ token })}`, { retry: 0 }),
-  // Admin users — create for invite fallback when user not found
-  createUser: (payload) => apiClient.post(`${ADMIN}/users`, payload),
-  inviteUser: (id, payload) => apiClient.post(`${ADMIN}/users/${id}/invite`, payload),
+  // Admin users — role assignment and approval
   assignRoles: (id, payload) => apiClient.post(`${ADMIN}/users/${id}/roles`, payload),
   approveUser: (id) => apiClient.post(`${ADMIN}/users/${id}/approve`),
   rejectUser: (id, payload) => {
@@ -235,6 +229,25 @@ export const businessDashboardApi = {
   // Administration domain — KB: Platform Operations, Maintenance Windows, Policies (graceful 404 -> empty, not banner; 500 logged)
   getMaintenanceWindows: (params) => apiClient.get(`${ADMIN}/maintenance${queryString(params)}`),
   getPolicies: (params) => apiClient.get(`${ADMIN}/policies${queryString(params)}`),
+  // Governed policy lifecycle — draft → in_review → published → archived
+  createPolicy: (payload) => apiClient.post(`${ADMIN}/policies`, payload),
+  updatePolicy: (id, payload) => apiClient.put(`${ADMIN}/policies/${id}`, payload),
+  submitPolicy: (id) => apiClient.post(`${ADMIN}/policies/${id}/submit`),
+  publishPolicy: (id) => apiClient.post(`${ADMIN}/policies/${id}/publish`),
+  archivePolicy: (id) => apiClient.post(`${ADMIN}/policies/${id}/archive`),
+  // Support tickets — canonical case/task workflow (assignment + escalation, audited)
+  getSupportTickets: (params) => apiClient.get(`${ADMIN}/support-tickets${queryString({ page: 1, limit: 20, ...params })}`),
+  getSupportTicket: (id) => apiClient.get(`${ADMIN}/support-tickets/${id}`),
+  createSupportTicket: (payload) => apiClient.post(`${ADMIN}/support-tickets`, payload),
+  assignSupportTicket: (id, assigneeId) => apiClient.post(`${ADMIN}/support-tickets/${id}/assign`, { assigneeId }),
+  escalateSupportTicket: (id, note) => apiClient.post(`${ADMIN}/support-tickets/${id}/escalate`, { note }),
+  resolveSupportTicket: (id, resolution) => apiClient.post(`${ADMIN}/support-tickets/${id}/resolve`, { resolution }),
+  commentSupportTicket: (id, message) => apiClient.post(`${ADMIN}/support-tickets/${id}/comments`, { message }),
+  // Operational reports/exports — server-enforced scope, audited
+  exportReport: async (report, params) => {
+    const res = await apiClient.get(`${ADMIN}/reports/${report}/export${queryString(params)}`);
+    return res?.data ?? res;
+  },
   getAlerts: (params) => apiClient.get(`${ADMIN}/alerts${queryString(params)}`),
   // Analytics reports — live requires tenantId
   getRevenueReport: (params) => apiClient.get(`/analytics/reports/revenue${queryString(params)}`),

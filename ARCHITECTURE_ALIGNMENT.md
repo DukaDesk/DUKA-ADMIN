@@ -64,7 +64,6 @@ Aligns with `C:\Users\DELL\Documents\dukadesk-knowledge-base` @ 2026-07-13, comm
 | Legacy role aliases (`admin`, `finance`, `investor`, `marketing`, `hr`, `moderator`, `analyst`) map to KB `platform_operator`/`support_agent` | Existing sessions (`getdukadesk`, `finance` investor) require healing; strict KB roles `Super Admin/Platform Operator/Support Agent` are primary, aliases deprecated | 2026-09-16 |
 | Custom chart components (SVG) instead of `recharts` usage | User instruction “yes use the chart components” — keep `RevenueChart`/`MerchantGrowthChart` SVG, with tenant second series | 2026-09-16 |
 | Message Bus / mobile manifest via `GET /bff/mobile/tenant/:slug/manifest` not in KB UI-0003 but needed for tenant correlation | Live swagger BFF Tenant Dashboard (`§29`) defines it; used in `getMerchantEnriched` | 2026-09-16 |
-| Express backend vs NestJS KB framework | Practicality; `backend/railway.json` Nixpacks with `node src/index.js` per deployment | 2026-09-16 |
 
 ## 7. Compliance Notes
 
