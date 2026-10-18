@@ -98,9 +98,11 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
 test.describe("Merchant app review queue", () => {
   test("queue shortcuts sync with the app review filter", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
+    await authenticatedPage.waitForLoadState("networkidle");
     const appStatus = authenticatedPage.getByRole("combobox", { name: "App Review" });
     const needsReview = authenticatedPage.getByRole("button", { name: "Needs Review", exact: true });
 
+    await expect(appStatus).toBeVisible();
     await expect(needsReview).toHaveAttribute("aria-pressed", "false");
     await needsReview.click();
     await expect(needsReview).toHaveAttribute("aria-pressed", "true");
