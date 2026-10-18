@@ -17,6 +17,8 @@ function Toast({ toast, onDismiss }) {
   return (
     <div
       className={styles.wrapper}
+      role={toast.type === "error" ? "alert" : "status"}
+      aria-live={toast.type === "error" ? "assertive" : "polite"}
       style={{ background: c.bg, border: `1px solid ${c.border}`, borderLeft: `4px solid ${c.border}` }}
     >
       <span className={styles.icon} style={{ color: c.border }}><Icon size={14} /></span>
