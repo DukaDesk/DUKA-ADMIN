@@ -25,6 +25,7 @@ const ROLE_PERMISSIONS = {
     "product:read", "product:update", "product:delete", "catalog:manage",
     "analytics:read", "reports:read",
     "marketing:read", "campaign:read",
+    "support:access",
   ],
   support_agent: [
     "support:access",
@@ -75,6 +76,7 @@ export const PAGE_PERMISSIONS = {
   analytics: "analytics:read",
   marketing: "marketing:read",
   infrastructure: "system:monitor",
+  support: "support:access",
 };
 
 function normalizeRole(role) {

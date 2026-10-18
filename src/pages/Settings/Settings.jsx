@@ -5,9 +5,11 @@ import ConfirmModal from "../../components/UI/ConfirmModal";
 import RemoteTablePage from "../../components/UI/RemoteTablePage";
 import { Modal } from "../../components/UI/Modal";
 import Field from "../../components/UI/Field";
+import ExportButton from "../../components/UI/ExportButton";
 import { maskEmail } from "../../utils/maskEmail";
 import { canViewEmail, isInvestor, canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
+import { toneBackground } from "../../utils/badgeTones";
 import styles from "./Settings.module.css";
 
 const TABS = [
@@ -19,6 +21,13 @@ const TABS = [
   { id: "maintenance", label: "Maintenance" },
   { id: "policies", label: "Policies" },
 ];
+
+const POLICY_STATUS_TONES = {
+  draft: "var(--gray-500)",
+  in_review: "var(--amber)",
+  published: "var(--green)",
+  archived: "var(--gray-500)",
+};
 
 const SETTING_CATEGORIES = {
   security: [
@@ -43,8 +52,9 @@ function normalizeSettingValues(response) {
   return settings && typeof settings === "object" ? settings : {};
 }
 
-// KB Strict SEC-0002: Platform roles are Super Admin, Platform Operator, Support Agent. Legacy kept as fallback.
-const ROLE_OPTIONS = ["platform_operator", "support_agent", "super_admin"];
+// KB Strict SEC-0002: Platform roles are Super Admin, Platform Operator, Operations, Support Agent. Legacy kept as fallback.
+const ROLE_OPTIONS = ["platform_operator", "operations", "support_agent", "super_admin"];
+const ROLE_LABELS = { super_admin: "Super Admin", platform_operator: "Platform Operator", operations: "Operations", support_agent: "Support Agent" };
 
 export default function Settings({ showToast }) {
   const { admin } = useAuth();
@@ -420,7 +430,7 @@ export default function Settings({ showToast }) {
                 {!generatedLink ? (
                   <>
                     <Field label="Email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="user@example.com" />
-                    <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r === "super_admin" ? "Super Admin" : r === "platform_operator" ? "Platform Operator" : r === "support_agent" ? "Support Agent" : r}</option>)}</select></label>
+                    <label style={{ fontSize: 12 }}>Role <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)}>{ROLE_OPTIONS.map((r) => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}</select></label>
                     <p style={{ fontSize: 11, color: "var(--gray-500)", margin: 0 }}>Single-use link, bound to this email and role, expires in 7 days. Share it directly with the new admin.</p>
                     <button
                       className={styles.inviteBtn}
@@ -559,13 +569,80 @@ export default function Settings({ showToast }) {
 
         {activeTab === "policies" && (
           <section className={styles.section} aria-label="Platform policies">
-            <h3 className={styles.sectionTitle}>Platform Policies</h3>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 className={styles.sectionTitle}>Platform Policies</h3>
+              <ExportButton report="policies" showToast={showToast} />
+            </div>
+            <p className={styles.empty}>Governed lifecycle: draft → in review → published → archived.</p>
             {policies.length === 0 && <p className={styles.empty}>No policies configured.</p>}
-            {policies.map((p) => (
-              <div key={p.id || p.key} style={{ padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8 }}>
-                <strong style={{ fontSize: 13 }}>{p.name || p.key || p.id}</strong><div style={{ fontSize: 11, color: "var(--gray-500)" }}>{p.description || p.rule || ""}</div>
-              </div>
-            ))}
+            {policies.map((p) => {
+              const status = String(p.status || "draft").toLowerCase();
+              const color = POLICY_STATUS_TONES[status] || "var(--gray-500)";
+              const canPublish = admin?.role === "super_admin";
+              return (
+                <div key={p.id || p.key} style={{ padding: 12, border: "1px solid var(--gray-100)", borderRadius: 8, marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                    <div>
+                      <strong style={{ fontSize: 13 }}>{p.title || p.name || p.key}</strong>
+                      <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: toneBackground(color), color, textTransform: "capitalize" }}>
+                        {status.replace(/_/g, " ")}
+                      </span>
+                      <div style={{ fontSize: 11, color: "var(--gray-500)", marginTop: 4 }}>
+                        {p.key} · v{p.version ?? 1}{p.category ? ` · ${p.category}` : ""}{p.effectiveAt ? ` · effective ${new Date(p.effectiveAt).toLocaleDateString()}` : ""}
+                      </div>
+                      {p.body && <div style={{ fontSize: 12, color: "var(--gray-600)", marginTop: 6, whiteSpace: "pre-wrap" }}>{p.body}</div>}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      {status === "draft" && (
+                        <button
+                          type="button"
+                          disabled={readOnly || Boolean(pendingMutations[`policy-submit:${p.id}`])}
+                          onClick={() => runMutation(
+                            `policy-submit:${p.id}`,
+                            () => businessDashboardApi.submitPolicy(p.id),
+                            "Policy submitted for review",
+                            () => setPolicies((prev) => prev.map((x) => (x.id === p.id ? { ...x, status: "in_review" } : x))),
+                          )}
+                          style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--gray-200)", background: "#fff", cursor: "pointer" }}
+                        >
+                          {pendingMutations[`policy-submit:${p.id}`] ? "Submitting…" : "Submit"}
+                        </button>
+                      )}
+                      {status === "in_review" && canPublish && (
+                        <button
+                          type="button"
+                          disabled={Boolean(pendingMutations[`policy-publish:${p.id}`])}
+                          onClick={() => runMutation(
+                            `policy-publish:${p.id}`,
+                            () => businessDashboardApi.publishPolicy(p.id),
+                            "Policy published",
+                            () => setPolicies((prev) => prev.map((x) => (x.id === p.id ? { ...x, status: "published" } : x))),
+                          )}
+                          style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: "none", background: "var(--green)", color: "#fff", cursor: "pointer" }}
+                        >
+                          {pendingMutations[`policy-publish:${p.id}`] ? "Publishing…" : "Publish"}
+                        </button>
+                      )}
+                      {status === "published" && canPublish && (
+                        <button
+                          type="button"
+                          disabled={Boolean(pendingMutations[`policy-archive:${p.id}`])}
+                          onClick={() => runMutation(
+                            `policy-archive:${p.id}`,
+                            () => businessDashboardApi.archivePolicy(p.id),
+                            "Policy archived",
+                            () => setPolicies((prev) => prev.map((x) => (x.id === p.id ? { ...x, status: "archived" } : x))),
+                          )}
+                          style={{ fontSize: 11, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--gray-200)", background: "#fff", cursor: "pointer" }}
+                        >
+                          {pendingMutations[`policy-archive:${p.id}`] ? "Archiving…" : "Archive"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </section>
         )}
       </div>

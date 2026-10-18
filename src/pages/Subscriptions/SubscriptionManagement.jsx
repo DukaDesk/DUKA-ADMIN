@@ -2,6 +2,8 @@ import { useCallback, useState } from "react";
 import { Eye, ArrowLeftRight, Pause, X } from "lucide-react";
 import EnhancedRemoteTablePage from "../../components/UI/EnhancedRemoteTablePage";
 import ConfirmModal from "../../components/UI/ConfirmModal";
+import ExportButton from "../../components/UI/ExportButton";
+import SlideOver from "../../components/UI/SlideOver";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { canPerform } from "../../services/permissions";
 import { useAuth } from "../../context/AuthContext";
@@ -51,7 +53,23 @@ export default function SubscriptionManagement({ showToast }) {
   const [tableKey, setTableKey] = useState(0);
   const [confirmation, setConfirmation] = useState(null);
   const [mutationBusy, setMutationBusy] = useState(false);
+  const [detail, setDetail] = useState(null);
+  const [capabilities, setCapabilities] = useState(undefined);
   const refresh = () => setTableKey((k) => k + 1);
+
+  const openDetail = async (row) => {
+    setDetail(row);
+    setCapabilities(undefined);
+    try {
+      const response = await businessDashboardApi.getPlans();
+      const payload = response?.success === true ? response.data : response;
+      const plans = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.plans) ? payload.plans : [];
+      const match = plans.find((p) => p.slug === row.plan || p.name === row.planName || p.id === row.planId);
+      setCapabilities(match ? { features: match.features || {}, limits: match.limits || {}, name: match.name } : null);
+    } catch {
+      setCapabilities(null);
+    }
+  };
 
   const load = useCallback(async (params) => {
     const response = await businessDashboardApi.getSubscriptions(params);
@@ -158,9 +176,7 @@ export default function SubscriptionManagement({ showToast }) {
       icon: Eye,
       variant: "Ghost",
       ariaLabel: (row) => `View subscription for ${row.merchantName}`,
-      onClick: (row) => {
-        showToast?.(`${row.merchantName}: ${row.planName} • ${row.status}`, "info");
-      },
+      onClick: (row) => openDetail(row),
     },
     {
       key: "change_plan",
@@ -193,6 +209,12 @@ export default function SubscriptionManagement({ showToast }) {
 
   return (
     <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: "var(--gray-500)" }} role="note">
+          {canManage ? "Platform operator view — merchant subscriptions are managed here." : "Read-only view — your role cannot change plans, pause, or cancel."}
+        </span>
+        <ExportButton report="subscriptions" showToast={showToast} />
+      </div>
       <EnhancedRemoteTablePage
         key={tableKey}
         title="Subscriptions"
@@ -210,6 +232,35 @@ export default function SubscriptionManagement({ showToast }) {
         actions={actions}
         emptyMessage="No subscriptions found matching your criteria."
       />
+      <SlideOver open={!!detail} onClose={() => setDetail(null)} title={detail?.merchantName || "Subscription"}>
+        {detail && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13 }}>
+            <div><strong>Plan:</strong> {detail.planName || detail.plan || "—"}</div>
+            <div><strong>Status:</strong> {String(detail.status || "—").replace("_", " ")}</div>
+            <div><strong>Renews:</strong> {detail.currentPeriodEnd ? new Date(detail.currentPeriodEnd).toLocaleDateString() : "—"}</div>
+            <div><strong>Started:</strong> {detail.createdAt ? new Date(detail.createdAt).toLocaleDateString() : "—"}</div>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Plan capabilities</div>
+              {capabilities === undefined && <p style={{ color: "var(--gray-500)", margin: 0 }}>Loading capabilities…</p>}
+              {capabilities === null && <p style={{ color: "var(--gray-500)", margin: 0 }}>Capability details unavailable for this plan.</p>}
+              {capabilities && (
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {Object.entries(capabilities.limits || {}).map(([k, v]) => (
+                    <li key={`limit-${k}`}><strong>{k.replace(/([A-Z])/g, " $1")}:</strong> {String(v)}</li>
+                  ))}
+                  {Object.entries(capabilities.features || {}).map(([k, v]) => (
+                    <li key={`feature-${k}`}>{k.replace(/([A-Z])/g, " $1")}: {typeof v === "boolean" ? (v ? "included" : "not included") : String(v)}</li>
+                  ))}
+                  {Object.keys(capabilities.limits || {}).length === 0 && Object.keys(capabilities.features || {}).length === 0 && (
+                    <li>No capability metadata published for this plan.</li>
+                  )}
+                </ul>
+              )}
+            </div>
+            {!canManage && <div role="note" style={{ fontSize: 12, color: "var(--gray-500)" }}>Read-only — financial detail is displayed without management controls.</div>}
+          </div>
+        )}
+      </SlideOver>
       <ConfirmModal
         open={!!confirmation}
         title={confirmation?.kind === "change_plan" ? "Change subscription plan?"
