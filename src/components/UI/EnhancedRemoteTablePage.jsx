@@ -65,6 +65,7 @@ export default function EnhancedRemoteTablePage({
   const actionMenuRef = useRef(null);
   const inFlightCountRef = useRef(0);
   const pendingActionsRef = useRef(new Set());
+  const requestSeqRef = useRef(0);
 
   const searchId = `search-${title.replace(/\s+/g, "-").toLowerCase()}`;
   const pageSizeId = `page-size-${title.replace(/\s+/g, "-").toLowerCase()}`;
@@ -103,6 +104,8 @@ export default function EnhancedRemoteTablePage({
   }, [openActionMenu]);
 
   const fetchData = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
+    const isCurrent = () => seq === requestSeqRef.current;
     inFlightCountRef.current += 1;
     setLoading(true);
     setError("");
@@ -116,6 +119,7 @@ export default function EnhancedRemoteTablePage({
         ...filterValues,
       };
       const response = await load(params);
+      if (!isCurrent()) return;
       // Handle envelope success:false even on 200 (backend TransformInterceptor)
       if (response && typeof response === "object" && response.success === false) {
         const raw = response.errors?.join(", ") || response.message || "Request failed";
@@ -139,6 +143,7 @@ export default function EnhancedRemoteTablePage({
         setTotalCount(data.length);
       }
     } catch (err) {
+      if (!isCurrent()) return;
       const status = err?.status;
       const raw = err?.message || "Unable to load this resource.";
       const rid = err?.requestId ? ` (Ref: ${String(err.requestId).slice(0, 8)})` : "";
@@ -155,7 +160,8 @@ export default function EnhancedRemoteTablePage({
       setError(friendly);
     } finally {
       inFlightCountRef.current -= 1;
-      if (inFlightCountRef.current === 0) setLoading(false);
+      // Only the latest request may clear the loading state; stale responses are ignored.
+      if (isCurrent()) setLoading(false);
     }
   }, [load, currentPage, selectedPageSize, searchTerm, sortConfig, filterValues, pagination, title]);
 
@@ -211,7 +217,7 @@ export default function EnhancedRemoteTablePage({
     : (rows.length > 0 ? Object.keys(rows[0]) : []);
 
   return (
-    <section className={styles.section}>
+    <section className={styles.section} aria-busy={loading}>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
           <div className={styles.titleRow}>
@@ -321,27 +327,43 @@ export default function EnhancedRemoteTablePage({
       {!loading && !error && rows.length > 0 && (
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
+            <caption className={styles.visuallyHidden}>{title}</caption>
             <thead>
               <tr>
                 {visibleColumns.map((col) => {
                   const config = typeof col === "string" ? { key: col } : col;
                   const isSortable = sortable && config.sortable !== false;
+                  const label = config.label || labelFor(config.key);
+                  const sorted = sortConfig.key === config.key;
+                  const sortState = sorted ? (sortConfig.direction === "asc" ? "ascending" : "descending") : "none";
                   return (
                     <th
                       key={config.key}
                       className={styles.th + " " + (isSortable ? styles.sortable : "")}
-                      onClick={() => isSortable && handleSort(config.key)}
                       style={{ width: config.width }}
-                      aria-sort={sortConfig.key === config.key ? (sortConfig.direction === "asc" ? "ascending" : "descending") : "none"}
+                      aria-sort={isSortable ? sortState : undefined}
                     >
-                      <div className={styles.thContent}>
-                        <span>{config.label || labelFor(config.key)}</span>
-                        {isSortable && sortConfig.key === config.key && (
-                          <span className={styles.sortIcon} aria-hidden="true">
-                            {sortConfig.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                      {isSortable ? (
+                        <button
+                          type="button"
+                          className={styles.sortButton}
+                          onClick={() => handleSort(config.key)}
+                          aria-label={`Sort by ${label}${sorted ? `, currently ${sortState}` : ""}`}
+                        >
+                          <span className={styles.thContent}>
+                            <span>{label}</span>
+                            {sorted && (
+                              <span className={styles.sortIcon} aria-hidden="true">
+                                {sortConfig.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </div>
+                        </button>
+                      ) : (
+                        <div className={styles.thContent}>
+                          <span>{label}</span>
+                        </div>
+                      )}
                     </th>
                   );
                 })}
