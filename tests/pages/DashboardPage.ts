@@ -13,11 +13,11 @@ export class DashboardPage {
   constructor(page: Page) {
     this.page = page;
     this.title = page.locator("h2:has-text('Platform Overview')");
-    this.subtitle = page.locator("text=Live administrative data");
+    this.subtitle = page.getByText("Complete visibility and control over DukaDesk");
     this.metricCards = page.locator(".metricCard, [class*='metricCard']");
-    this.revenueChart = page.locator("section:has(h3:has-text('Revenue Trend'))");
-    this.merchantChart = page.locator("section:has(h3:has-text('Merchant Growth'))");
-    this.quickStats = page.locator("section:has(h3:has-text('Platform Health'))");
+    this.revenueChart = page.getByRole("region", { name: /Revenue Trend/ });
+    this.merchantChart = page.getByRole("region", { name: /Platform User Growth/ });
+    this.quickStats = page.getByRole("region", { name: "System Metrics" });
     this.refreshTime = page.locator("text=/Last updated:/");
   }
 
