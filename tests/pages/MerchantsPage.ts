@@ -17,9 +17,9 @@ export class MerchantsPage {
   constructor(page: Page) {
     this.page = page;
     this.title = page.locator("h2:has-text('Merchants')");
-    this.searchInput = page.locator('input[type="search"]');
-    this.statusFilter = page.locator('select:has(option:has-text("All Statuses"))');
-    this.planFilter = page.locator('select:has(option:has-text("All Plans"))');
+    this.searchInput = page.getByRole("searchbox", { name: "Search Merchants", exact: true });
+    this.statusFilter = page.getByRole("combobox", { name: "Status" });
+    this.planFilter = page.getByRole("combobox", { name: "Plan" });
     this.table = page.locator("table");
     this.rows = page.locator("tbody tr");
     this.approveButtons = page.locator('button:has-text("Approve")');
@@ -59,7 +59,7 @@ export class MerchantsPage {
   }
 
   async expectRowContains(text: string) {
-    await expect(this.rows.filter({ hasText: text })).toHaveCountGreaterThan(0);
+    await expect(this.rows.filter({ hasText: text }).first()).toBeVisible();
   }
 
   async clickApprove(rowIndex: number = 0) {

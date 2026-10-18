@@ -87,7 +87,7 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
     await authenticatedPage.goto("/marketing");
     await authenticatedPage.waitForLoadState("networkidle");
       await expect(authenticatedPage.locator('h2:has-text("Marketing")')).toBeVisible();
-      await expect(authenticatedPage.getByRole("note")).toContainText("Campaign history and sending are not available");
+      await expect(authenticatedPage.getByRole("note")).toContainText("campaign history and sending are not available");
       await expect(authenticatedPage.locator('h2:has-text("Available Integrations")')).toBeVisible();
       await authenticatedPage.goto("/infrastructure");
       await authenticatedPage.waitForLoadState("networkidle");
@@ -114,7 +114,7 @@ test.describe("Merchant app review queue", () => {
 });
 
 test.describe("Quotas & Audit — Administration domain", () => {
-  test("merchant quota shows live via GET /admin/quotas/:merchantId", async ({ authenticatedPage }) => {
+  test("merchant action menu and review drawer expose live detail", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
     await authenticatedPage.waitForLoadState("networkidle");
     const actionMenu = authenticatedPage.getByRole("button", { name: /Actions for/ }).first();
@@ -125,11 +125,11 @@ test.describe("Quotas & Audit — Administration domain", () => {
       await expect(menu).toContainText("View Details");
       await expect(menu).toContainText(/Suspend|Unsuspend/);
       await expect(menu).toContainText("Delete");
-      await authenticatedPage.locator("h2").click();
+      await authenticatedPage.locator("h2").first().click();
       await expect(actionMenu).toHaveAttribute("aria-expanded", "false");
       await actionMenu.click();
       await authenticatedPage.getByRole("menuitem", { name: /View details for merchant/ }).click();
-      await expect(authenticatedPage.locator('text=Quota:')).toBeVisible({ timeout: 10000 });
+      await expect(authenticatedPage.locator("text=API quota:")).toBeVisible({ timeout: 10000 });
     }
   });
 });

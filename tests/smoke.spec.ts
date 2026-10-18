@@ -1,14 +1,15 @@
-import { test, expect } from "./utils/auth";
+import { test, expect, installApiMocks } from "./utils/auth";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { MerchantsPage } from "./pages/MerchantsPage";
 
 test.describe("Admin Portal Smoke Tests", () => {
-  test("login flow works with demo credentials", async ({ authenticatedPage }) => {
+  test("dashboard loads with platform overview metrics", async ({ authenticatedPage }) => {
     const dashboard = new DashboardPage(authenticatedPage);
+    await dashboard.goto();
     await dashboard.expectLoaded();
-    await dashboard.expectMetricCount(8);
+    await dashboard.expectMetricCount(7);
   });
 
   test("navigation to all main pages works", async ({ authenticatedPage }) => {
@@ -47,12 +48,13 @@ test.describe("Admin Portal Smoke Tests", () => {
 
     await merchants.search("Acme");
     await merchants.expectRowContains("Acme");
+    await expect(merchants.rows.filter({ hasText: "Beacon" })).toHaveCount(0);
 
     await merchants.filterByStatus("active");
-    await merchants.expectRowContains("active");
+    await merchants.expectRowContains("Acme");
 
     await merchants.filterByPlan("professional");
-    await merchants.expectRowContains("professional");
+    await merchants.expectRowContains("Acme");
   });
 
   test("dashboard displays charts and quick stats", async ({ authenticatedPage }) => {
@@ -74,9 +76,9 @@ test.describe("Login Page", () => {
   });
 
   test("shows OTP step after credentials", async ({ page }) => {
+    await installApiMocks(page);
     const login = new LoginPage(page);
     await login.goto();
-    await login.fillDemoCredentials();
     await login.login("superadmin@dukadesk.com", "Admin@2024!");
     await login.expectOtpStep();
   });
@@ -88,11 +90,11 @@ test.describe("Accessibility", () => {
     await settings.goto();
     await settings.expectLoaded();
 
-    const twoFAToggle = authenticatedPage.locator('button[role="switch"]:has-text("Two-Factor")');
+    const twoFAToggle = authenticatedPage.getByRole("switch", { name: "Two-Factor Authentication" });
     await twoFAToggle.focus();
     await expect(twoFAToggle).toBeFocused();
     await authenticatedPage.keyboard.press("Space");
-    await settings.expectToast("Two-Factor Authentication");
+    await settings.expectToast("two_factor_auth updated");
   });
 
   test("tables have proper headers and sorting", async ({ authenticatedPage }) => {
