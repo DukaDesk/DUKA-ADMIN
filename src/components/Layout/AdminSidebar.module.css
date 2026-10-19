@@ -463,6 +463,9 @@
   .sidebar {
     width: 100% !important;
     max-width: 100vw;
+    /* Full-width drawer must be offset by its own width, not a fixed 300px,
+       or part of it stays on-screen and overlays the content. */
+    left: -100%;
   }
 }
 
