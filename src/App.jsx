@@ -46,12 +46,18 @@ export default function App() {
   const [page, setPageState] = useState(() => {
     if (!admin) return "login";
     const path = location.pathname.replace(/^\//, "") || "dashboard";
-    return PAGE_ROUTES.includes(path) ? path : "404";
+    if (path === "403") return "403";
+    if (!PAGE_ROUTES.includes(path)) return "404";
+    return canAccessPage(admin, path) ? path : "403";
   });
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [forbiddenMeta, setForbiddenMeta] = useState(null);
+  const [forbiddenMeta, setForbiddenMeta] = useState(() => {
+    if (!admin) return null;
+    const path = location.pathname.replace(/^\//, "") || "dashboard";
+    return PAGE_ROUTES.includes(path) && !canAccessPage(admin, path) ? { page: path } : null;
+  });
 
   const setPage = (name) => {
     if (!canAccessPage(admin, name)) {

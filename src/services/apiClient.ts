@@ -25,6 +25,16 @@ interface ApiError extends Error {
   status?: number;
   data?: unknown;
   requestId?: string;
+  retryAfterSeconds?: number;
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+  const date = Date.parse(value);
+  if (!Number.isNaN(date)) return Math.max(0, Math.ceil((date - Date.now()) / 1000));
+  return undefined;
 }
 
 function friendlyFromRaw(raw: string, status?: number): string {
@@ -33,6 +43,7 @@ function friendlyFromRaw(raw: string, status?: number): string {
   if (raw.includes("Cannot GET")) return "This feature is not available yet.";
   if (status === 401) return "Session expired. Please sign in again.";
   if (status === 403) return "You do not have permission for this action.";
+  if (status === 429) return "Too many requests. Please slow down and try again.";
   return raw.length > 180 ? raw.slice(0, 180) + "..." : raw;
 }
 
@@ -53,8 +64,10 @@ async function sleep(ms: number): Promise<void> {
 }
 
 function isRetryableError(error: ApiError): boolean {
+  // 429 (throttled) is surfaced immediately with Retry-After guidance rather
+  // than silently retried, so the operator sees the limit and can act.
   if (!error.status) return true;
-  return error.status >= 500 || error.status === 429 || error.status === 0;
+  return error.status >= 500 || error.status === 0;
 }
 
 function expireSession(): void {
@@ -154,22 +167,25 @@ export async function request<T>(
       }
 
       if (!response.ok) {
-        let message = "API request failed";
         let errorData: unknown;
         const rid = response.headers.get("x-railway-request-id") || response.headers.get("x-request-id") || response.headers.get("request-id") || "";
+        const retryAfterSeconds = response.status === 429 ? parseRetryAfter(response.headers.get("retry-after")) : undefined;
+        let raw = "API request failed";
         try {
           errorData = await response.json();
           const body = errorData as { message?: string | string[]; errors?: string[]; error?: string; success?: boolean };
-          const raw = (Array.isArray(body.message) ? body.message.join(", ") : body.message) || body.errors?.join(", ") || body.error || message;
-          message = friendlyFromRaw(raw, response.status);
-          if (rid) message = `${message} (Ref: ${rid.slice(0, 8)})`;
+          raw = (Array.isArray(body.message) ? body.message.join(", ") : body.message) || body.errors?.join(", ") || body.error || raw;
         } catch {
           // No JSON body
         }
-        const error = new Error(Array.isArray(message) ? message.join(", ") : message) as ApiError;
+        let message = friendlyFromRaw(raw, response.status);
+        if (rid) message = `${message} (Ref: ${rid.slice(0, 8)})`;
+        if (retryAfterSeconds != null) message = `${message} Retry in ${retryAfterSeconds}s.`;
+        const error = new Error(message) as ApiError;
         error.status = response.status;
         error.data = errorData;
-        (error as ApiError).requestId = rid || undefined;
+        error.requestId = rid || undefined;
+        error.retryAfterSeconds = retryAfterSeconds;
         if (rid) console.warn("[API]", endpoint, response.status, rid);
         throw error;
       }
