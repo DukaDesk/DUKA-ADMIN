@@ -63,6 +63,8 @@ export default function EnhancedRemoteTablePage({
   const [openActionMenu, setOpenActionMenu] = useState(null);
   const [pendingActions, setPendingActions] = useState({});
   const actionMenuRef = useRef(null);
+  const actionMenuAnchorRef = useRef(null);
+  const menuInitialFocusRef = useRef("first");
   const inFlightCountRef = useRef(0);
   const pendingActionsRef = useRef(new Set());
   const requestSeqRef = useRef(0);
@@ -87,8 +89,24 @@ export default function EnhancedRemoteTablePage({
     }
   };
 
+  const focusActionMenuItem = (position) => {
+    const items = Array.from(actionMenuRef.current?.querySelectorAll('[role="menuitem"]:not([disabled])') || []);
+    if (!items.length) return;
+    const currentIndex = items.indexOf(document.activeElement);
+    let nextIndex = 0;
+    if (position === "last") nextIndex = items.length - 1;
+    else if (position === "next") nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % items.length;
+    else if (position === "previous") nextIndex = currentIndex < 0 ? items.length - 1 : (currentIndex - 1 + items.length) % items.length;
+    items[nextIndex].focus();
+  };
+
   useEffect(() => {
     if (openActionMenu === null) return undefined;
+    if (menuInitialFocusRef.current !== "none") {
+      const items = Array.from(actionMenuRef.current?.querySelectorAll('[role="menuitem"]:not([disabled])') || []);
+      const initialItem = menuInitialFocusRef.current === "last" ? items[items.length - 1] : items[0];
+      initialItem?.focus({ preventScroll: true });
+    }
     const handlePointerDown = (event) => {
       if (!actionMenuRef.current?.contains(event.target)) setOpenActionMenu(null);
     };
@@ -212,6 +230,8 @@ export default function EnhancedRemoteTablePage({
 
   const totalPages = Math.ceil(totalCount / selectedPageSize) || 1;
 
+  const showBlockingLoading = loading && rows.length === 0;
+
   const visibleColumns = columnConfig.length > 0
     ? columnConfig
     : (rows.length > 0 ? Object.keys(rows[0]) : []);
@@ -306,7 +326,7 @@ export default function EnhancedRemoteTablePage({
         </div>
       </header>
 
-      {loading && (
+      {showBlockingLoading && (
         <div className={styles.loading} aria-live="polite" aria-busy="true">
           <span className={styles.spinner} />
           {loadingMessage}
@@ -320,11 +340,11 @@ export default function EnhancedRemoteTablePage({
         </div>
       )}
 
-      {!loading && !error && rows.length === 0 && (
+      {!showBlockingLoading && !error && rows.length === 0 && (
         <p className={styles.empty}>{emptyMessage}</p>
       )}
 
-      {!loading && !error && rows.length > 0 && (
+      {!showBlockingLoading && !error && rows.length > 0 && (
         <div className={styles.tableWrapper}>
           <table className={styles.table}>
             <caption className={styles.visuallyHidden}>{title}</caption>
@@ -403,23 +423,74 @@ export default function EnhancedRemoteTablePage({
                       {actionsDisplay === "menu" ? (() => {
                         const rowMenuKey = String(row[rowKey] ?? index);
                         const menuIsOpen = openActionMenu === rowMenuKey;
+                        const menuId = `action-menu-${rowMenuKey}`;
                         return (
                           <div className={styles.actionMenu} ref={menuIsOpen ? actionMenuRef : null}>
                             <button
                               type="button"
                               className={styles.actionMenuTrigger}
+                              id={`${menuId}-trigger`}
                               aria-label={`Actions for ${row.name || "row"}`}
                               aria-haspopup="menu"
+                              aria-controls={menuId}
                               aria-expanded={menuIsOpen}
                               onClick={(event) => {
                                 event.stopPropagation();
-                                setOpenActionMenu(menuIsOpen ? null : rowMenuKey);
+                                if (menuIsOpen) {
+                                  setOpenActionMenu(null);
+                                  return;
+                                }
+                                menuInitialFocusRef.current = event.detail === 0 ? "first" : "none";
+                                actionMenuAnchorRef.current = event.currentTarget;
+                                setOpenActionMenu(rowMenuKey);
+                              }}
+                              onKeyDown={(event) => {
+                                if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                if (menuIsOpen) {
+                                  focusActionMenuItem(event.key === "ArrowUp" ? "last" : "first");
+                                  return;
+                                }
+                                menuInitialFocusRef.current = event.key === "ArrowUp" ? "last" : "first";
+                                actionMenuAnchorRef.current = event.currentTarget;
+                                setOpenActionMenu(rowMenuKey);
                               }}
                             >
                               <EllipsisVertical size={18} aria-hidden="true" />
                             </button>
                             {menuIsOpen && (
-                              <div className={styles.actionMenuList} role="menu">
+                              <div
+                                id={menuId}
+                                className={styles.actionMenuList}
+                                role="menu"
+                                aria-labelledby={`${menuId}-trigger`}
+                                onKeyDown={(event) => {
+                                  if (event.key === "Escape") {
+                                    event.stopPropagation();
+                                    setOpenActionMenu(null);
+                                    actionMenuAnchorRef.current?.focus();
+                                    return;
+                                  }
+                                  if (event.key === "Tab") {
+                                    setOpenActionMenu(null);
+                                    return;
+                                  }
+                                  if (event.key === "ArrowDown") {
+                                    event.preventDefault();
+                                    focusActionMenuItem("next");
+                                  } else if (event.key === "ArrowUp") {
+                                    event.preventDefault();
+                                    focusActionMenuItem("previous");
+                                  } else if (event.key === "Home") {
+                                    event.preventDefault();
+                                    focusActionMenuItem("first");
+                                  } else if (event.key === "End") {
+                                    event.preventDefault();
+                                    focusActionMenuItem("last");
+                                  }
+                                }}
+                              >
                                 {actions.map((action) => {
                                   const ActionIcon = action.icon;
                                   const actionLabel = typeof action.label === "function" ? action.label(row) : action.label;
@@ -431,6 +502,7 @@ export default function EnhancedRemoteTablePage({
                                       type="button"
                                       className={`${styles.actionMenuItem} ${action.variant === "Danger" ? styles.actionMenuDanger : ""}`}
                                       role="menuitem"
+                                      tabIndex={-1}
                                       onClick={(event) => {
                                         event.stopPropagation();
                                         setOpenActionMenu(null);
@@ -481,7 +553,7 @@ export default function EnhancedRemoteTablePage({
         </div>
       )}
 
-      {pagination && totalPages > 1 && !loading && !error && (
+      {pagination && totalPages > 1 && !showBlockingLoading && !error && (
         <nav className={styles.pagination} aria-label="Pagination">
           <div className={styles.pageSize}>
             <label htmlFor={pageSizeId} className={styles.visuallyHidden}>
