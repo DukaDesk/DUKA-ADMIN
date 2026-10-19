@@ -33,7 +33,7 @@ test.describe("Rate limiting", () => {
 test.describe("Merchant mutations", () => {
   test("successful suspend confirms with a success toast", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
-    await authenticatedPage.waitForLoadState("networkidle");
+    await expect(authenticatedPage.getByRole("button", { name: /Actions for Acme Store/ })).toBeVisible({ timeout: 10000 });
 
     await authenticatedPage.getByRole("button", { name: /Actions for Acme Store/ }).click();
     await authenticatedPage.getByRole("menuitem", { name: /Suspend merchant Acme Store/ }).click();
@@ -55,7 +55,7 @@ test.describe("Merchant mutations", () => {
     );
 
     await authenticatedPage.goto("/merchants");
-    await authenticatedPage.waitForLoadState("networkidle");
+    await expect(authenticatedPage.getByRole("button", { name: /Actions for Acme Store/ })).toBeVisible({ timeout: 10000 });
 
     await authenticatedPage.getByRole("button", { name: /Actions for Acme Store/ }).click();
     await authenticatedPage.getByRole("menuitem", { name: /Suspend merchant Acme Store/ }).click();
@@ -71,9 +71,7 @@ test.describe("Role gating", () => {
     await seedSession(authenticatedPage, { ...ADMIN, id: "ops-1", name: "Ops Operator", email: "ops@dukadesk.com", role: "operations" });
 
     await authenticatedPage.goto("/merchants");
-    await authenticatedPage.waitForLoadState("networkidle");
-
-    await expect(authenticatedPage.getByRole("columnheader", { name: /App Review/ })).toBeVisible();
+    await expect(authenticatedPage.getByRole("columnheader", { name: /App Review/ })).toBeVisible({ timeout: 10000 });
 
     await authenticatedPage.getByRole("button", { name: /Actions for/ }).first().click();
     const menu = authenticatedPage.getByRole("menu");
@@ -94,7 +92,6 @@ test.describe("Role gating", () => {
 test.describe("Metric accuracy", () => {
   test("dashboard metrics reflect the live payload", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/dashboard");
-    await authenticatedPage.waitForLoadState("networkidle");
 
     const metrics = authenticatedPage.getByRole("region", { name: "Key metrics" });
     await expect(metrics.locator("article", { hasText: "Total Merchants" })).toContainText("12");
@@ -135,7 +132,7 @@ test.describe("Cross-merchant scoping", () => {
     });
 
     await authenticatedPage.goto("/merchants");
-    await authenticatedPage.waitForLoadState("networkidle");
+    await expect(authenticatedPage.getByRole("button", { name: "Actions for Beacon Books" })).toBeVisible({ timeout: 10000 });
 
     await authenticatedPage.getByRole("button", { name: "Actions for Beacon Books" }).click();
     await authenticatedPage.getByRole("menuitem", { name: "View details for merchant Beacon Books" }).click();
@@ -147,10 +144,38 @@ test.describe("Cross-merchant scoping", () => {
   });
 });
 
+test.describe("Keyboard access", () => {
+  test("row action menus open, navigate, and close with the keyboard", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/merchants");
+    const trigger = authenticatedPage.getByRole("button", { name: "Actions for Acme Store" });
+    await expect(trigger).toBeVisible({ timeout: 10000 });
+
+    await trigger.focus();
+    await authenticatedPage.keyboard.press("ArrowDown");
+
+    const menu = authenticatedPage.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(menu.getByRole("menuitem").first()).toBeFocused();
+
+    await authenticatedPage.keyboard.press("End");
+    await expect(menu.getByRole("menuitem").last()).toBeFocused();
+
+    await authenticatedPage.keyboard.press("Home");
+    await expect(menu.getByRole("menuitem").first()).toBeFocused();
+    await authenticatedPage.keyboard.press("ArrowDown");
+    await expect(menu.getByRole("menuitem").nth(1)).toBeFocused();
+
+    await authenticatedPage.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+});
+
 test.describe("Audit visibility", () => {
   test("audit log surfaces actor, action and outcome", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/audit");
-    await authenticatedPage.waitForLoadState("networkidle");
 
     await expect(authenticatedPage.getByRole("heading", { name: "Audit Log", level: 2 })).toBeVisible();
     await expect(authenticatedPage.getByText("superadmin@dukadesk.com").first()).toBeVisible();
