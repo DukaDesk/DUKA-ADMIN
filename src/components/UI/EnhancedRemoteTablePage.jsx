@@ -505,6 +505,7 @@ export default function EnhancedRemoteTablePage({
                                       tabIndex={-1}
                                       onClick={(event) => {
                                         event.stopPropagation();
+                                        actionMenuAnchorRef.current?.focus({ preventScroll: true });
                                         setOpenActionMenu(null);
                                         void invokeAction(action, row);
                                       }}

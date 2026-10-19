@@ -171,6 +171,33 @@ test.describe("Keyboard access", () => {
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
+
+  test("confirm dialogs trap focus, close on Escape, and restore trigger focus", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/merchants");
+    const trigger = authenticatedPage.getByRole("button", { name: "Actions for Acme Store" });
+    await expect(trigger).toBeVisible({ timeout: 10000 });
+
+    await trigger.focus();
+    await authenticatedPage.keyboard.press("ArrowDown");
+    await authenticatedPage.keyboard.press("ArrowDown");
+    await expect(authenticatedPage.getByRole("menuitem", { name: /Suspend merchant Acme Store/ })).toBeFocused();
+    await authenticatedPage.keyboard.press("Enter");
+
+    const dialog = authenticatedPage.getByRole("dialog", { name: "Suspend merchant?" });
+    await expect(dialog).toBeVisible();
+
+    const cancel = dialog.getByRole("button", { name: "Cancel" });
+    await expect(cancel).toBeFocused();
+
+    await authenticatedPage.keyboard.press("Tab");
+    await expect(dialog.getByRole("button", { name: "Suspend", exact: true })).toBeFocused();
+    await authenticatedPage.keyboard.press("Tab");
+    await expect(cancel).toBeFocused();
+
+    await authenticatedPage.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
 });
 
 test.describe("Audit visibility", () => {
