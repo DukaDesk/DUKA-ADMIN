@@ -3,6 +3,10 @@ import { test, expect, ADMIN, seedSession } from "./utils/auth";
 // P0 acceptance coverage (#24): operator-facing behaviours that must hold with
 // live-only data — throttling feedback, mutation success/failure, role gating,
 // and metric accuracy. Runs against the deterministic mock layer.
+//
+// A generous per-test timeout keeps cold Vite compilation from flaking the first
+// test locally; CI serves a prebuilt artifact, so it completes well within this.
+test.describe.configure({ timeout: 60_000 });
 
 test.describe("Rate limiting", () => {
   test("throttled requests surface Retry-After guidance instead of retrying silently", async ({ authenticatedPage }) => {
@@ -97,5 +101,61 @@ test.describe("Metric accuracy", () => {
     await expect(metrics.locator("article", { hasText: "Active Merchants" })).toContainText("8");
     await expect(metrics.locator("article", { hasText: "Pending Review" })).toContainText("3");
     await expect(metrics.locator("article", { hasText: "Total Subscriptions" })).toContainText("10");
+  });
+});
+
+test.describe("Session lifecycle", () => {
+  test("a revoked session returns the operator to sign-in", async ({ authenticatedPage }) => {
+    await authenticatedPage.route("**/api/v1/auth/refresh", (route) =>
+      route.fulfill({
+        status: 401,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ success: false, message: "Unauthorized" }),
+      })
+    );
+    await authenticatedPage.route("**/api/v1/bff/admin/overview**", (route) =>
+      route.fulfill({
+        status: 401,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ success: false, message: "Unauthorized" }),
+      })
+    );
+
+    await authenticatedPage.goto("/dashboard");
+    await expect(authenticatedPage.getByRole("heading", { name: "Admin Sign In" })).toBeVisible({ timeout: 10000 });
+  });
+});
+
+test.describe("Cross-merchant scoping", () => {
+  test("opening a merchant review only requests that merchant's records", async ({ authenticatedPage }) => {
+    const merchantRequests: string[] = [];
+    authenticatedPage.on("request", (request) => {
+      const url = request.url();
+      if (url.includes("/api/v1/admin/merchants/")) merchantRequests.push(url);
+    });
+
+    await authenticatedPage.goto("/merchants");
+    await authenticatedPage.waitForLoadState("networkidle");
+
+    await authenticatedPage.getByRole("button", { name: "Actions for Beacon Books" }).click();
+    await authenticatedPage.getByRole("menuitem", { name: "View details for merchant Beacon Books" }).click();
+    await expect(authenticatedPage.locator("text=API quota:")).toBeVisible({ timeout: 10000 });
+
+    expect(merchantRequests.length).toBeGreaterThan(0);
+    expect(merchantRequests.every((url) => url.includes("/merchants/m2/"))).toBe(true);
+    expect(merchantRequests.some((url) => url.includes("/merchants/m1/"))).toBe(false);
+  });
+});
+
+test.describe("Audit visibility", () => {
+  test("audit log surfaces actor, action and outcome", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/audit");
+    await authenticatedPage.waitForLoadState("networkidle");
+
+    await expect(authenticatedPage.getByRole("heading", { name: "Audit Log", level: 2 })).toBeVisible();
+    await expect(authenticatedPage.getByText("superadmin@dukadesk.com").first()).toBeVisible();
+    const table = authenticatedPage.getByRole("table");
+    await expect(table.getByText("Merchant Approved (Site Builder)")).toBeVisible();
+    await expect(table.getByText("success", { exact: true }).first()).toBeVisible();
   });
 });
