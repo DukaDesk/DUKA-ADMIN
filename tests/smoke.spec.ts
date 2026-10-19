@@ -24,7 +24,6 @@ test.describe("Admin Portal Smoke Tests", () => {
 
     for (const { path, title } of pages) {
       await authenticatedPage.goto(path);
-      await authenticatedPage.waitForLoadState("networkidle");
       await expect(authenticatedPage.locator(`h2:has-text("${title}")`)).toBeVisible({ timeout: 10000 });
     }
   });
@@ -39,6 +38,29 @@ test.describe("Admin Portal Smoke Tests", () => {
       await settings.clickTab(tab);
       await settings.expectTabActive(tab);
     }
+  });
+
+  test("settings tabs work with the keyboard", async ({ authenticatedPage }) => {
+    const settings = new SettingsPage(authenticatedPage);
+    await settings.goto();
+    await settings.expectLoaded();
+
+    const security = authenticatedPage.getByRole("tab", { name: "Security" });
+    const notifications = authenticatedPage.getByRole("tab", { name: "Notifications" });
+    await expect(security).toHaveAttribute("tabindex", "0");
+    await expect(notifications).toHaveAttribute("tabindex", "-1");
+
+    await security.focus();
+    await authenticatedPage.keyboard.press("ArrowRight");
+    await expect(notifications).toBeFocused();
+    await expect(notifications).toHaveAttribute("aria-selected", "true");
+
+    await authenticatedPage.keyboard.press("End");
+    await expect(authenticatedPage.getByRole("tab", { name: "Policies" })).toBeFocused();
+
+    await authenticatedPage.keyboard.press("Home");
+    await expect(security).toBeFocused();
+    await expect(security).toHaveAttribute("aria-selected", "true");
   });
 
   test("merchants page search and filters work", async ({ authenticatedPage }) => {

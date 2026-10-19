@@ -75,6 +75,7 @@ export default function Settings({ showToast }) {
   const [invites, setInvites] = useState([]);
   const [pendingMutations, setPendingMutations] = useState({});
   const pendingMutationsRef = useRef(new Set());
+  const tabListRef = useRef(null);
   const [confirmation, setConfirmation] = useState(null);
 
   const loadInvites = useCallback(async () => {
@@ -213,6 +214,24 @@ export default function Settings({ showToast }) {
 
   const categorySettings = SETTING_CATEGORIES[activeTab] || [];
 
+  const handleTabKeyDown = (event) => {
+    const handledKeys = ["ArrowRight", "ArrowLeft", "Home", "End"];
+    if (!handledKeys.includes(event.key)) return;
+    const tabs = Array.from(tabListRef.current?.querySelectorAll('[role="tab"]') || []);
+    if (!tabs.length) return;
+    event.preventDefault();
+    const currentIndex = tabs.findIndex((tab) => tab === event.currentTarget);
+    const lastIndex = tabs.length - 1;
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1;
+    if (event.key === "ArrowLeft") nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = lastIndex;
+    const nextTab = tabs[nextIndex];
+    setActiveTab(nextTab.id.replace(/^tab-/, ""));
+    nextTab.focus();
+  };
+
   return (
     <div className={styles.wrapper}>
       <h2 className={styles.pageTitle}>Settings</h2>
@@ -220,7 +239,7 @@ export default function Settings({ showToast }) {
 
       {error && <div className={styles.error} role="alert">{error}</div>}
 
-      <nav className={styles.tabs} aria-label="Settings categories" role="tablist">
+      <nav ref={tabListRef} className={styles.tabs} aria-label="Settings categories" role="tablist">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -228,8 +247,10 @@ export default function Settings({ showToast }) {
             aria-selected={activeTab === tab.id}
             aria-controls={`panel-${tab.id}`}
             id={`tab-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ""}`}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={handleTabKeyDown}
           >
             {tab.label}
           </button>
