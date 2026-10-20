@@ -430,7 +430,7 @@ export default function EnhancedRemoteTablePage({
                               type="button"
                               className={styles.actionMenuTrigger}
                               id={`${menuId}-trigger`}
-                              aria-label={`Actions for ${row.name || "row"}`}
+                              aria-label={`Actions for ${row.name || row.merchantName || "row"}`}
                               aria-haspopup="menu"
                               aria-controls={menuId}
                               aria-expanded={menuIsOpen}
