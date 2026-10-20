@@ -142,6 +142,7 @@ export const businessDashboardApi = {
   getMerchantAppReview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/apps/review`),
   getMerchantPreview: (merchantId) => apiClient.get(`${ADMIN}/merchants/${merchantId}/preview`),
   approveApp: (merchantId) => apiClient.post(`${ADMIN}/merchants/${merchantId}/apps/approve`),
+  verifyPassword: (password) => apiClient.post("/auth/verify-password", { password }),
   rejectApp: (merchantId, payload) => {
     const body = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : payload ? { reason: String(payload) } : {};
     return apiClient.post(`${ADMIN}/merchants/${merchantId}/apps/reject`, body);
