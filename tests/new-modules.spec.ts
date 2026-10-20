@@ -113,9 +113,60 @@ test.describe("Merchant app review queue", () => {
     await expect(allApps).toHaveAttribute("aria-pressed", "true");
     await expect(appStatus).toHaveValue("");
   });
+
+  test("submitted app preview renders the submitted screens", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/merchants");
+    await authenticatedPage.getByRole("button", { name: "Actions for Beacon Books" }).click();
+    await authenticatedPage.getByRole("menuitem", { name: "View details for merchant Beacon Books" }).click();
+
+    const review = authenticatedPage.getByRole("dialog", { name: "Review Beacon Books" });
+    await expect(review).toContainText("Screens: 2");
+
+    const phone = review.getByRole("img", { name: /^Phone preview of Beacon Books App/ });
+    await expect(phone).toHaveAttribute("aria-label", /Home/);
+
+    const screen = review.getByRole("combobox", { name: "Screen" });
+    await expect(screen).toHaveValue("0");
+    await expect(screen.locator("option")).toHaveCount(2);
+
+    await review.getByRole("button", { name: "Next screen" }).click();
+    await expect(phone).toHaveAttribute("aria-label", /Menu/);
+  });
+
+  test("unverified merchant approval requires password re-authentication", async ({ authenticatedPage }) => {
+    const approveCalls: string[] = [];
+    authenticatedPage.on("request", (request) => {
+      if (request.method() === "POST" && request.url().includes("/apps/approve")) approveCalls.push(request.url());
+    });
+
+    await authenticatedPage.goto("/merchants");
+    await authenticatedPage.getByRole("button", { name: "Actions for Beacon Books" }).click();
+    await authenticatedPage.getByRole("menuitem", { name: "View details for merchant Beacon Books" }).click();
+
+    const review = authenticatedPage.getByRole("dialog", { name: "Review Beacon Books" });
+    await expect(review).toContainText("Approval is allowed without verification");
+    await review.getByRole("button", { name: "Approve App" }).click();
+
+    const prompt = authenticatedPage.getByRole("dialog", { name: "Confirm your password" });
+    await expect(prompt).toContainText("is not verified");
+    await prompt.getByRole("button", { name: "Verify & Approve" }).click();
+    await expect(prompt.getByRole("alert")).toHaveText("Enter your password to continue");
+
+    await prompt.getByLabel("Admin password").fill("wrong-password");
+    await prompt.getByRole("button", { name: "Verify & Approve" }).click();
+    await expect(prompt.getByRole("alert")).toHaveText("Incorrect password. Please try again.");
+    expect(approveCalls).toHaveLength(0);
+
+    await prompt.getByLabel("Admin password").fill("AdminPass123!");
+    await prompt.getByRole("button", { name: "Verify & Approve" }).click();
+
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Beacon Books app approved" })).toBeVisible();
+    await expect(prompt).toHaveCount(0);
+    expect(approveCalls).toHaveLength(1);
+  });
 });
 
-test.describe("Quotas & Audit â€” Administration domain", () => {
+test.describe("Quotas & Audit - Administration domain", () => {
   test("merchant action menu and review drawer expose live detail", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
 

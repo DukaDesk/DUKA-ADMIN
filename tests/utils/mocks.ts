@@ -157,6 +157,11 @@ export async function installApiMocks(page: Page) {
     if (path === "/auth/refresh") {
       return reply(route, envelope({ accessToken: "refreshed-access-token", refreshToken: "refreshed-refresh-token", user: { id: ADMIN.id, email: ADMIN.email, role: ADMIN.role } }));
     }
+    if (path === "/auth/verify-password") {
+      const body = (request.postDataJSON() || {}) as { password?: string };
+      if (body.password === "AdminPass123!") return reply(route, envelope({ verified: true }));
+      return reply(route, { success: false, errors: ["Invalid password"] }, 401);
+    }
 
     // Dashboard / BFF
     if (path === "/bff/admin/overview") return reply(route, envelope(OVERVIEW));
@@ -216,14 +221,30 @@ export async function installApiMocks(page: Page) {
     if (path.startsWith("/admin/reports/")) return reply(route, envelope({ filename: "export.csv", rows: 0, csv: "" }));
 
     // Merchant review sub-resources
-    if (/^\/admin\/merchants\/[^/]+\/review$/.test(path)) {
+    if (/^\/admin\/merchants\/[^/]+\/preview$/.test(path)) {
+      const id = path.split("/")[3];
+      const merchant = MERCHANTS.find((m) => m.id === id) || MERCHANTS[0];
       return reply(route, envelope({
-        tenant: { id: "m1", name: "Acme Store", verificationStatus: "verified", appStatus: "approved" },
+        source: "review",
+        releaseVersion: 3,
+        app: { name: `${merchant.name} App` },
+        theme: { colors: { primary: "#F4A026", background: "#FCF8FA", textPrimary: "#0F0F1A" } },
+        pages: [
+          { id: "home", slug: "home", name: "Home", isHome: true, sections: [{ id: "hero-1", type: "hero", props: { title: "Welcome" } }] },
+          { id: "menu", slug: "menu", name: "Menu", sections: [{ id: "text-1", type: "text", props: { text: "Browse our picks" } }] },
+        ],
+      }));
+    }
+    if (/^\/admin\/merchants\/[^/]+\/review$/.test(path)) {
+      const id = path.split("/")[3];
+      const merchant = MERCHANTS.find((m) => m.id === id) || MERCHANTS[0];
+      return reply(route, envelope({
+        tenant: { id: merchant.id, name: merchant.name, verificationStatus: merchant.verificationStatus, appStatus: merchant.appStatus },
         quota: { used: 10, limit: 1000 },
         compliance: [],
         releases: [],
         draftPages: [],
-        app: { name: "Acme Store App" },
+        app: { name: `${merchant.name} App` },
       }));
     }
     if (/^\/admin\/merchants\/[^/]+$/.test(path)) {
