@@ -60,6 +60,9 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState("");
   const [approveConfirmOpen, setApproveConfirmOpen] = useState(false);
+  const [passwordPromptOpen, setPasswordPromptOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,6 +144,39 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
     if (busy) return;
     const approved = await runAction("approve", () => businessDashboardApi.approveApp(merchantId), "merchant.app_approve", `${tenant.name || "Merchant"} app approved — now live`);
     if (approved) setApproveConfirmOpen(false);
+  };
+
+  // Approval is allowed even when the merchant is not credential-verified; in
+  // that case the operator must re-authenticate before the app goes live.
+  const beginApproveApp = () => {
+    if (busy || !canApproveApp) return;
+    if (verification === "verified") {
+      setApproveConfirmOpen(true);
+      return;
+    }
+    setPassword("");
+    setPasswordError("");
+    setPasswordPromptOpen(true);
+  };
+
+  const approveWithPassword = async () => {
+    if (busy) return;
+    if (!password) { setPasswordError("Enter your password to continue"); return; }
+    setPasswordError("");
+    setBusy("verify-password");
+    try {
+      await businessDashboardApi.verifyPassword(password);
+    } catch (err) {
+      setPasswordError(err.message || "Incorrect password");
+      setBusy("");
+      return;
+    }
+    setBusy("");
+    const approved = await runAction("approve", () => businessDashboardApi.approveApp(merchantId), "merchant.app_approve", `${tenant.name || "Merchant"} app approved — now live`);
+    if (approved) {
+      setPasswordPromptOpen(false);
+      setPassword("");
+    }
   };
 
   const submitDecline = () => {
@@ -298,14 +334,14 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
         <button
           type="button"
           disabled={!canReviewApps || !canApproveApp || busy}
-          onClick={() => setApproveConfirmOpen(true)}
+          onClick={beginApproveApp}
           style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", background: "var(--green)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: canReviewApps && canApproveApp && !busy ? "pointer" : "not-allowed", opacity: canReviewApps && canApproveApp && !busy ? 1 : 0.6 }}
           title={canApproveApp ? "Approve app and publish live" : appStatus === "approved" ? "App is already approved" : "Waiting for the merchant to submit the app for review"}
         >
           <Check size={16} aria-hidden="true" /> {busy === "approve" ? "Approving…" : "Approve App"}
         </button>
         <span style={{ fontSize: 12, color: "var(--gray-500)" }}>
-          {!canReviewApps ? "Read-only access." : appStatus === "in_review" && hasPreview ? "Review the app and approve when ready." : appStatus === "in_review" ? "Submitted apps can be approved without credentials or a preview." : appStatus === "approved" ? "App is live." : "Waiting for the merchant to submit an app for review."}
+          {!canReviewApps ? "Read-only access." : appStatus === "in_review" && verification !== "verified" ? "Approval is allowed without verification — you will confirm your password." : appStatus === "in_review" && hasPreview ? "Review the app and approve when ready." : appStatus === "in_review" ? "Submitted apps can be approved without credentials or a preview." : appStatus === "approved" ? "App is live." : "Waiting for the merchant to submit an app for review."}
         </span>
         <span style={{ flex: 1 }} />
         {canReviewApps && appStatus === "in_review" && (
@@ -329,6 +365,30 @@ export default function MerchantReview({ merchantId, admin, canManage, canReview
             <button onClick={() => setDeclineMode(null)} style={{ padding: "8px 16px", background: "var(--gray-100)", border: "1px solid var(--gray-200)", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
             <button onClick={submitDecline} disabled={busy} style={{ padding: "8px 16px", background: "var(--red)", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}>
               {busy === "decline" ? "Declining…" : "Confirm Decline"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+      <Modal isOpen={passwordPromptOpen} onClose={() => { if (!busy) { setPasswordPromptOpen(false); setPassword(""); setPasswordError(""); } }} title="Confirm your password">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <p style={{ fontSize: 13, color: "var(--gray-600)", margin: 0 }}>
+            <strong>{tenant.name || "This merchant"}</strong> is not verified. Enter your admin password to approve and publish their app anyway.
+          </p>
+          <Field
+            label="Admin password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setPasswordError(""); }}
+            onKeyDown={(e) => { if (e.key === "Enter") approveWithPassword(); }}
+            placeholder="Enter your password"
+            required
+          />
+          {passwordError && <div role="alert" style={{ fontSize: 12, color: "var(--red)", background: "#FEF2F2", padding: 8, borderRadius: 6 }}>{passwordError}</div>}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button type="button" disabled={busy} onClick={() => { setPasswordPromptOpen(false); setPassword(""); setPasswordError(""); }} style={{ padding: "8px 16px", background: "var(--gray-100)", border: "1px solid var(--gray-200)", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
+            <button type="button" onClick={approveWithPassword} disabled={busy} style={{ padding: "8px 16px", background: "var(--green)", color: "#fff", border: "none", borderRadius: 6, cursor: busy ? "not-allowed" : "pointer", fontWeight: 600, opacity: busy ? 0.7 : 1 }}>
+              {busy === "verify-password" ? "Checking…" : busy === "approve" ? "Approving…" : "Verify & Approve"}
             </button>
           </div>
         </div>
