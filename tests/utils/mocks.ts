@@ -65,8 +65,41 @@ const AUDIT = [
   { id: "e2", timestamp: "2026-10-18T09:30:00.000Z", adminEmail: "ops@dukadesk.com", action: "login", targetType: "admin", targetId: "u2", outcome: "success" },
 ];
 const SUBSCRIPTIONS = [
-  { id: "s1", merchantId: "m1", merchantName: "Acme Store", planName: "Professional", status: "active", amount: 25000, currentPeriodEnd: "2026-11-05T00:00:00.000Z", createdAt: "2026-01-05T00:00:00.000Z" },
-  { id: "s2", merchantId: "m2", merchantName: "Beacon Books", planName: "Starter", status: "trialing", amount: 5000, currentPeriodEnd: "2026-11-10T00:00:00.000Z", createdAt: "2026-02-10T00:00:00.000Z" },
+  { id: "s1", merchantId: "m1", merchantName: "Acme Store", plan: "professional", planId: "plan-pro", planName: "Professional", status: "active", amount: 25000, amountIsMajorUnits: true, currentPeriodEnd: "2026-11-05T00:00:00.000Z", createdAt: "2026-01-05T00:00:00.000Z" },
+  { id: "s2", merchantId: "m2", merchantName: "Beacon Books", plan: "starter", planId: "plan-starter", planName: "Starter", status: "trialing", amount: 5000, amountIsMajorUnits: true, currentPeriodEnd: "2026-11-10T00:00:00.000Z", createdAt: "2026-02-10T00:00:00.000Z" },
+];
+const PLANS = [
+  {
+    id: "plan-pro",
+    slug: "professional",
+    name: "Professional",
+    price: 25000,
+    currency: "NGN",
+    features: { customDomain: true, advancedAnalytics: true },
+    limits: { maxProducts: 500, storageGb: 10 },
+  },
+  {
+    id: "plan-starter",
+    slug: "starter",
+    name: "Starter",
+    price: 5000,
+    currency: "NGN",
+    features: { customDomain: false },
+    limits: { maxProducts: 50 },
+  },
+  {
+    id: "plan-ent",
+    slug: "enterprise",
+    name: "Enterprise",
+    price: 120000,
+    currency: "NGN",
+    features: { customDomain: true, advancedAnalytics: true, prioritySupport: true },
+    limits: { maxProducts: 10000, storageGb: 500 },
+  },
+];
+const LISTINGS = [
+  { id: "l1", name: "Acme Loyalty", slug: "acme-loyalty", category: "marketing", merchantName: "Acme Store", status: "pending_review", downloads: 120, rating: 4.5, featured: false, createdAt: "2026-03-01T00:00:00.000Z" },
+  { id: "l2", name: "Beacon Bookings", slug: "beacon-bookings", category: "booking", merchantName: "Beacon Books", status: "published", downloads: 540, rating: 4.8, featured: true, createdAt: "2026-02-15T00:00:00.000Z" },
 ];
 const INTEGRATIONS = [
   { provider: "mailchimp", label: "Mailchimp", description: "Email marketing and audiences", oauthRequired: true },
@@ -166,7 +199,7 @@ export async function installApiMocks(page: Page) {
     if (/^\/admin\/settings\/[^/]+$/.test(path)) return reply(route, envelope({}));
     if (path === "/admin/feature-flags") return reply(route, envelope(FEATURE_FLAGS));
     if (/^\/admin\/feature-flags\/[^/]+$/.test(path)) return reply(route, envelope({}));
-    if (path === "/admin/plans") return reply(route, envelope([]));
+    if (path === "/admin/plans") return reply(route, envelope(PLANS));
     if (path === "/admin/announcements") return reply(route, envelope([], 0));
     if (path.startsWith("/admin/announcements/")) return reply(route, envelope({}));
     if (path === "/admin/maintenance") return reply(route, envelope([], 0));
@@ -201,9 +234,32 @@ export async function installApiMocks(page: Page) {
     if (path.startsWith("/admin/merchants/")) return reply(route, envelope({}));
 
     // Marketplace
-    if (path === "/marketplace/listings/all") return reply(route, envelope([], 0));
-    if (path === "/marketplace/stats") return reply(route, envelope({ totalListings: 0, pending: 0 }));
-    if (path.startsWith("/marketplace/listings/")) return reply(route, envelope({}));
+    if (path === "/marketplace/listings/all") {
+      if (method !== "GET") return reply(route, envelope({}));
+      const search = (q.get("search") || "").toLowerCase();
+      const status = q.get("status");
+      const category = q.get("category");
+      const sort = q.get("sort") || "createdAt";
+      const direction = q.get("order") === "asc" ? 1 : -1;
+      let list = LISTINGS.slice();
+      if (search) list = list.filter((l) => l.name.toLowerCase().includes(search) || l.merchantName.toLowerCase().includes(search));
+      if (status) list = list.filter((l) => l.status === status);
+      if (category) list = list.filter((l) => l.category === category);
+      list.sort((a, b) => (a[sort] > b[sort] ? 1 : a[sort] < b[sort] ? -1 : 0) * direction);
+      const total = list.length;
+      const limit = Number(q.get("limit") || 10) || 10;
+      const currentPage = Number(q.get("page") || 1) || 1;
+      const start = (currentPage - 1) * limit;
+      return reply(route, envelope(list.slice(start, start + limit), total));
+    }
+    if (path === "/marketplace/stats") return reply(route, envelope({ totalListings: LISTINGS.length, pending: LISTINGS.filter((l) => l.status === "pending_review").length }));
+    const listingMatch = path.match(/^\/marketplace\/listings\/([^/]+)$/);
+    if (listingMatch) {
+      const listing = LISTINGS.find((l) => l.slug === decodeURIComponent(listingMatch[1])) || LISTINGS[0];
+      if (method === "DELETE") return reply(route, envelope({}));
+      if (method === "PUT") return reply(route, envelope({ ...listing, ...(request.postDataJSON() || {}) }));
+      return reply(route, envelope(listing));
+    }
 
     // Health / infrastructure
     if (path === "/health") return reply(route, envelope({ status: "ok", checks: { database: "ok" }, uptime: 90061 }));

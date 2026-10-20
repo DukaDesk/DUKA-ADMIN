@@ -63,21 +63,21 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
   for (const { path, title, spec } of pages) {
     test(`${title} page loads live (${spec})`, async ({ authenticatedPage }) => {
       await authenticatedPage.goto(path);
-      await authenticatedPage.waitForLoadState("networkidle");
+
       // Title from page h2 or header
       await expect(authenticatedPage.locator(`h2:has-text("${title}"), h3:has-text("${title}")`).first()).toBeVisible({ timeout: 10000 });
-      // No mock banner — ensure live data or emptyMessage, not error with mock
+      // No mock banner â€” ensure live data or emptyMessage, not error with mock
       await expect(authenticatedPage.locator('[role="alert"]')).toHaveCount(0);
     });
   }
 
   test("platform analytics shows B2B metrics without booking analytics", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/analytics");
-    await authenticatedPage.waitForLoadState("networkidle");
+
     await expect(authenticatedPage.locator('h2:has-text("Platform Analytics")')).toBeVisible();
     await expect(authenticatedPage.getByText("Revenue", { exact: true })).toBeVisible();
     await expect(authenticatedPage.getByText("Transactions", { exact: true }).first()).toBeVisible();
-    await expect(authenticatedPage.getByText("Active Users · 30 days", { exact: true })).toBeVisible();
+    await expect(authenticatedPage.getByText(/Active Users .* 30 days/)).toBeVisible();
     await expect(authenticatedPage.getByText("Published Merchants", { exact: true })).toBeVisible();
     await expect(authenticatedPage.getByText("Bookings", { exact: true })).toHaveCount(0);
     await expect(authenticatedPage.getByText("Booking Analytics", { exact: true })).toHaveCount(0);
@@ -85,12 +85,12 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
 
   test("marketing shows supported integrations and infrastructure overview renders", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/marketing");
-    await authenticatedPage.waitForLoadState("networkidle");
+
       await expect(authenticatedPage.locator('h2:has-text("Marketing")')).toBeVisible();
       await expect(authenticatedPage.getByRole("note")).toContainText("campaign history and sending are not available");
       await expect(authenticatedPage.locator('h2:has-text("Available Integrations")')).toBeVisible();
       await authenticatedPage.goto("/infrastructure");
-      await authenticatedPage.waitForLoadState("networkidle");
+
       await expect(authenticatedPage.locator('h2:has-text("Infrastructure")')).toBeVisible();
     });
 });
@@ -98,7 +98,7 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
 test.describe("Merchant app review queue", () => {
   test("queue shortcuts sync with the app review filter", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
-    await authenticatedPage.waitForLoadState("networkidle");
+
     const appStatus = authenticatedPage.getByRole("combobox", { name: "App Review" });
     const needsReview = authenticatedPage.getByRole("button", { name: "Needs Review", exact: true });
 
@@ -115,10 +115,10 @@ test.describe("Merchant app review queue", () => {
   });
 });
 
-test.describe("Quotas & Audit — Administration domain", () => {
+test.describe("Quotas & Audit â€” Administration domain", () => {
   test("merchant action menu and review drawer expose live detail", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/merchants");
-    await authenticatedPage.waitForLoadState("networkidle");
+
     const actionMenu = authenticatedPage.getByRole("button", { name: /Actions for/ }).first();
     if (await actionMenu.isVisible()) {
       await actionMenu.click();
@@ -133,5 +133,76 @@ test.describe("Quotas & Audit — Administration domain", () => {
       await authenticatedPage.getByRole("menuitem", { name: /View details for merchant/ }).click();
       await expect(authenticatedPage.locator("text=API quota:")).toBeVisible({ timeout: 10000 });
     }
+  });
+});
+
+test.describe("Marketplace moderation", () => {
+  test("lists live-shaped listings and scopes category/search filters", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/marketplace");
+    await expect(authenticatedPage.getByRole("heading", { name: "Marketplace Listings", level: 2 })).toBeVisible();
+
+    const table = authenticatedPage.getByRole("table");
+    await expect(table).toContainText("Acme Loyalty");
+    await expect(table).toContainText("Beacon Bookings");
+    await expect(table).toContainText("Acme Store");
+    await expect(table).toContainText("pending review");
+    await expect(table).toContainText("540");
+
+    await authenticatedPage.getByRole("combobox", { name: "Category" }).selectOption("booking");
+    await expect(table).toContainText("Beacon Bookings");
+    await expect(table).not.toContainText("Acme Loyalty");
+
+    await authenticatedPage.getByRole("searchbox", { name: "Search Marketplace Listings" }).fill("Acme");
+    await expect(authenticatedPage.getByText("No marketplace listings found matching your criteria.")).toBeVisible();
+  });
+
+  test("moderating a listing confirms via toast and row selection reveals bulk actions", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/marketplace");
+
+    await authenticatedPage.getByRole("button", { name: "Approve listing Acme Loyalty" }).click();
+    await expect(authenticatedPage.getByRole("status")).toContainText("Acme Loyalty approved");
+
+    await authenticatedPage.getByRole("table").getByText("Beacon Bookings").click();
+    const bulk = authenticatedPage.getByRole("toolbar", { name: "Bulk actions" });
+    await expect(bulk).toContainText("1 selected");
+    await expect(bulk.getByRole("button", { name: "Approve (1)" })).toBeVisible();
+    await bulk.getByRole("button", { name: "Clear" }).click();
+    await expect(bulk).toHaveCount(0);
+  });
+});
+
+test.describe("Subscription governance", () => {
+  test("shows the platform view and authoritative plan capabilities", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/subscriptions");
+    await expect(authenticatedPage.getByRole("heading", { name: "Subscriptions", level: 2 })).toBeVisible();
+    await expect(authenticatedPage.getByRole("note").filter({ hasText: "Platform operator view" })).toBeVisible();
+
+    const table = authenticatedPage.getByRole("table");
+    await expect(table).toContainText("Acme Store");
+    await expect(table).toContainText("Professional");
+    await expect(table).toContainText("active");
+    await expect(table).toContainText("25,000");
+    await expect(authenticatedPage.getByRole("button", { name: "View subscription for Acme Store" })).toBeVisible();
+    await expect(authenticatedPage.getByRole("button", { name: "Change plan for Beacon Books" })).toBeVisible();
+
+    await authenticatedPage.getByRole("button", { name: "View subscription for Acme Store" }).click();
+
+    const drawer = authenticatedPage.getByRole("dialog", { name: "Acme Store" });
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toContainText("Plan capabilities");
+    await expect(drawer).toContainText("max Products");
+    await expect(drawer).toContainText("custom Domain: included");
+  });
+
+  test("changing a plan requires confirmation and reports success", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/subscriptions");
+
+    await authenticatedPage.getByRole("button", { name: "Change plan for Acme Store" }).click();
+
+    const dialog = authenticatedPage.getByRole("dialog", { name: "Change subscription plan?" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "Change Plan" }).click();
+
+    await expect(authenticatedPage.getByRole("status")).toContainText("Plan updated for Acme Store");
   });
 });
