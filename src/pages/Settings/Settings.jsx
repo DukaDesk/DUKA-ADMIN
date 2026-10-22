@@ -17,6 +17,7 @@ const TABS = [
   { id: "notifications", label: "Notifications" },
   { id: "features", label: "Feature Flags" },
   { id: "platform", label: "Platform Config" },
+  { id: "promo", label: "Promo Feed" },
   { id: "team", label: "Admin Team" },
   { id: "maintenance", label: "Maintenance" },
   { id: "policies", label: "Policies" },
@@ -56,10 +57,97 @@ function normalizeSettingValues(response) {
 const ROLE_OPTIONS = ["platform_operator", "operations", "support_agent", "super_admin"];
 const ROLE_LABELS = { super_admin: "Super Admin", platform_operator: "Platform Operator", operations: "Operations", support_agent: "Support Agent" };
 
+// Promo-post lifetime is fixed in the backend (24h purge); admins control
+// the per-tier daily post quota via each plan's limits JSON.
+export const PROMO_FREE_DEFAULT_DAILY = 5;
+
+function PromoFeedSection({ plans, planReadOnly, runMutation }) {
+  const [drafts, setDrafts] = useState({});
+  useEffect(() => {
+    setDrafts((prev) => {
+      const next = {};
+      plans.forEach((plan) => {
+        const stored = plan?.limits?.dailyPromoPosts;
+        next[plan.id] = prev[plan.id] ?? (stored == null ? "" : String(stored));
+      });
+      return next;
+    });
+  }, [plans]);
+
+  const save = (plan) => {
+    const current = (Array.isArray(plans) ? plans : []).find((p) => p.id === plan.id);
+    const raw = String(drafts[plan.id] ?? "").trim();
+    const limits = { ...(current?.limits || {}) };
+    const operation = () => {
+      if (!raw) {
+        delete limits.dailyPromoPosts;
+      } else {
+        const value = Number(raw);
+        if (!Number.isInteger(value) || value < 1 || value > 100000) {
+          return Promise.reject(new Error("Enter a whole number between 1 and 100000, or clear for the Free default of 5"));
+        }
+        limits.dailyPromoPosts = value;
+      }
+      return businessDashboardApi.updatePlan(plan.id, { limits });
+    };
+    runMutation(
+      `plan:${plan.id}`,
+      operation,
+      `${plan.name} updated`,
+      () => businessDashboardApi.getPlans(),
+    );
+  };
+
+  if (plans.length === 0) return <p className={styles.empty}>No plans configured yet — create plans under Subscriptions first.</p>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {plans.map((plan) => {
+        const activeSubs = plan._count?.subscriptions ?? null;
+        return (
+          <div key={plan.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: 10, border: "1px solid var(--gray-100)", borderRadius: 8, flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 180px", minWidth: 160 }}>
+              <div style={{ fontWeight: 600 }}>{plan.name}</div>
+              <div style={{ fontSize: 12, color: "var(--gray-500)" }}>
+                {plan.slug} · {plan.currency} {plan.price}
+                {activeSubs != null ? ` · ${activeSubs} subscribers` : ""}
+                {typeof plan.limits?.dailyPromoPosts === "number" ? ` · now ${plan.limits.dailyPromoPosts}/day` : ` · Free default ${PROMO_FREE_DEFAULT_DAILY}/day`}
+              </div>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--gray-600)" }}>
+              Daily promo posts
+              <input
+                type="number"
+                min={1}
+                max={100000}
+                step={1}
+                value={drafts[plan.id] ?? ""}
+                placeholder={String(PROMO_FREE_DEFAULT_DAILY)}
+                disabled={planReadOnly}
+                onChange={(e) => setDrafts((prev) => ({ ...prev, [plan.id]: e.target.value }))}
+                style={{ width: 96, padding: "6px 10px", border: "1px solid var(--gray-200)", borderRadius: 8 }}
+                aria-label={`Daily promo posts for ${plan.name}`}
+              />
+            </label>
+            <button
+              onClick={() => save(plan)}
+              disabled={planReadOnly}
+              style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid var(--gray-200)", background: planReadOnly ? "var(--gray-100)" : "#111827", color: planReadOnly ? "var(--gray-400)" : "#fff", cursor: planReadOnly ? "not-allowed" : "pointer", fontWeight: 600 }}
+            >
+              Save
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Settings({ showToast }) {
   const { admin } = useAuth();
   // KB Strict: Support Agent (and legacy investor) is read-only for team management — only Super Admin / Platform Operator can invite/manage
   const readOnly = isInvestor(admin) || !canPerform(admin, "users:manage");
+  // Plan/limit edits (Promo Feed quotas) follow subscriptions:manage.
+  const planReadOnly = isInvestor(admin) || !canPerform(admin, "subscriptions:manage");
   const [activeTab, setActiveTab] = useState("security");
   const [allSettings, setAllSettings] = useState({});
   const [featureFlags, setFeatureFlags] = useState([]);
@@ -388,6 +476,16 @@ export default function Settings({ showToast }) {
                 </table>
               </div>
             )}
+          </section>
+        )}
+
+        {activeTab === "promo" && (
+          <section className={styles.section} aria-label="Promo feed configuration">
+            <h3 className={styles.sectionTitle}>Promo Feed</h3>
+            <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--gray-500)" }}>
+              Promo posts run for 24 hours and are then deleted from the database. Set how many promo posts each tier may publish per day; tenants without a configured plan follow the Free default of {PROMO_FREE_DEFAULT_DAILY}/day (quota counts the UTC day).
+            </p>
+            <PromoFeedSection plans={plans} planReadOnly={planReadOnly} runMutation={runMutation} />
           </section>
         )}
 

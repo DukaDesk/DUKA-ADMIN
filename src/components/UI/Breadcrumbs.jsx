@@ -11,6 +11,7 @@ const LABELS = {
   marketplace: "Marketplace",
   analytics: "Analytics & Reports",
   marketing: "Marketing",
+  messaging: "Platform Messaging",
   audit: "Audit Log",
   subscriptions: "Subscriptions",
   infrastructure: "Infrastructure",
