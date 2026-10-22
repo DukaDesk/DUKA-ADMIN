@@ -152,7 +152,6 @@ export default function Promotions({ showToast }) {
     <div className={styles.wrapper}>
       <div className={styles.headerRow}>
         <div>
-          <h2 className={styles.pageTitle}>Promotions</h2>
           <p className={styles.pageDesc}>Post DukaDesk-owned promos to the mobile app Feed — videos or images with a caption. Posts run for 24 hours, then are removed from the database.</p>
         </div>
         <button className={styles.composeBtn} onClick={() => { setCaption(""); setMedia([]); setComposeOpen(true); }}><Sparkles size={15} /> New Promo</button>
@@ -213,7 +212,6 @@ export default function Promotions({ showToast }) {
                 ))}
               </div>
             )}
-            <span className={styles.hint}>Post reaches every mobile user's Feed instantly — the app Feed needs no storefront button, so promo posts are announced media.</span>
           </div>
         </div>
 

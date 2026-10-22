@@ -168,7 +168,6 @@ export default function Infrastructure() {
     <section className={styles.page}>
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Infrastructure</h2>
           <p className={styles.subtitle}>Deployment activity, backup coverage, and platform health at a glance.</p>
         </div>
         <span className={styles.liveIndicator}><span /> Platform overview</span>

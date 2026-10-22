@@ -303,7 +303,6 @@ export default function Settings({ showToast }) {
 
   return (
     <div className={styles.wrapper}>
-      <h2 className={styles.pageTitle}>Settings</h2>
       <p className={styles.pageDesc}>Manage admin portal configuration, security, and platform settings.</p>
 
       {error && <div className={styles.error} role="alert">{error}</div>}

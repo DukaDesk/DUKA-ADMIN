@@ -221,7 +221,6 @@ export default function EnhancedRemoteTablePage({
       <header className={styles.header}>
         <div className={styles.titleBlock}>
           <div className={styles.titleRow}>
-            <h2 className={styles.title}>{title}</h2>
             {titleTooltip && (
               <button
                 type="button"

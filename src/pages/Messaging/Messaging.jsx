@@ -212,9 +212,7 @@ export default function Messaging({ showToast }) {
   return (
     <div className={styles.wrapper}>
       <div className={styles.headerRow}>
-        <div>
-          <h2 className={styles.pageTitle}>Platform Messaging</h2>
-        </div>
+        <div />
         <button className={styles.composeBtn} onClick={() => { resetComposer(); setComposeOpen(true); }}>New Message</button>
       </div>
 

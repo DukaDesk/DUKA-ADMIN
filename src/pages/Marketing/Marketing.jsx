@@ -20,7 +20,6 @@ export default function Marketing() {
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <header>
-        <h2 style={{ margin: 0, color: "var(--navy)", fontSize: 22, fontWeight: 700 }}>Marketing</h2>
         <p style={{ margin: "4px 0 0", color: "var(--gray-500)", fontSize: 13 }}>
           Review available integration providers.
         </p>

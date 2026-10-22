@@ -2,23 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { Menu, Bell, Search } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { getKbRoleLabel } from "../../services/permissions";
+import Breadcrumbs from "../UI/Breadcrumbs";
 import api from "../../services/api";
 import styles from "./AdminTopbar.module.css";
-
-const pageLabels = {
-  dashboard: "Platform Overview",
-  merchants: "Merchant Management",
-  "pending-admins": "Pending Admins",
-  marketplace: "Marketplace",
-  analytics: "Analytics & Reports",
-  marketing: "Marketing",
-  messaging: "Platform Messaging",
-  promotions: "Promotions",
-  audit: "Audit Log",
-  subscriptions: "Subscriptions",
-  infrastructure: "Infrastructure",
-  settings: "Platform Configuration",
-};
 
 function AdminTopbar({ page, onMenuClick, setPage }) {
   const { admin, logout } = useAuth();
@@ -56,7 +42,7 @@ function AdminTopbar({ page, onMenuClick, setPage }) {
 
   return (
     <header className={styles.topbar}>
-      <div className={styles.leftSection}><button className={styles.menuBtn} onClick={onMenuClick} aria-label="Open navigation"><Menu size={20} /></button><h1 className={styles.pageTitle}>{pageLabels[page] || "Admin Portal"}</h1></div>
+      <div className={styles.leftSection}><button className={styles.menuBtn} onClick={onMenuClick} aria-label="Open navigation"><Menu size={20} /></button><Breadcrumbs page={page} setPage={setPage} /></div>
       <div className={styles.searchCenter}>
         <form className={styles.searchWrapper} role="search" onSubmit={handleSearchSubmit}>
           <Search size={16} className={styles.searchIcon} aria-hidden="true" />

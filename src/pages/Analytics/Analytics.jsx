@@ -87,7 +87,6 @@ export default function Analytics() {
     <section className={styles.wrapper}>
       <header className={styles.header}>
         <div>
-          <h2 className={styles.title}>Platform Analytics</h2>
           <p className={styles.subtitle}>Paid transactions and platform activity over the last 30 days.</p>
         </div>
         <span className={styles.period}>Last 30 days</span>
