@@ -13,6 +13,7 @@ const pageLabels = {
   analytics: "Analytics & Reports",
   marketing: "Marketing",
   messaging: "Platform Messaging",
+  promotions: "Promotions",
   audit: "Audit Log",
   subscriptions: "Subscriptions",
   infrastructure: "Infrastructure",

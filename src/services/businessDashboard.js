@@ -178,6 +178,11 @@ export const businessDashboardApi = {
   replyMessage: (id, body) => apiClient.post(`${ADMIN}/messages/${id}/replies`, { body }),
   deleteMessage: (id) => apiClient.delete(`${ADMIN}/messages/${id}`),
   uploadMessageMedia: (file) => uploadFile(`${ADMIN}/media/upload`, file),
+  getMessageRecipients: () => apiClient.get(`${ADMIN}/messages/recipients`),
+  // Platform promotions — DukaDesk-owned promo posts on the app feed
+  listPromoPosts: (params) => apiClient.get(`${ADMIN}/promo-posts${queryString({ page: 1, limit: 20, ...params })}`),
+  createPromoPost: (payload) => apiClient.post(`${ADMIN}/promo-posts`, payload),
+  deletePromoPost: (id) => apiClient.delete(`${ADMIN}/promo-posts/${id}`),
   // Feature flags
   getFeatureFlags: () => apiClient.get(`${ADMIN}/feature-flags`),
   getFeatureFlag: (key) => apiClient.get(`${ADMIN}/feature-flags/${key}`),

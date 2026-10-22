@@ -24,11 +24,12 @@ const Infrastructure = lazy(() => import("./pages/Infrastructure/Infrastructure"
 const Register = lazy(() => import("./pages/Auth/Register"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 const Messaging = lazy(() => import("./pages/Messaging/Messaging"));
+const Promotions = lazy(() => import("./pages/Promotions/Promotions"));
 const SupportTickets = lazy(() => import("./pages/Support/SupportTickets"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Forbidden = lazy(() => import("./pages/Forbidden/Forbidden"));
 
-const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register", "analytics", "marketing", "infrastructure", "support", "messaging"];
+const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register", "analytics", "marketing", "infrastructure", "support", "messaging", "promotions"];
 
 function Loading() {
   return (
@@ -174,6 +175,7 @@ return (
               {page === "pending-admins" && <PendingAdmins showToast={showToast} />}
               {page === "settings" && <Settings showToast={showToast} />}
               {page === "messaging" && <Messaging showToast={showToast} />}
+    {page === "promotions" && <Promotions showToast={showToast} />}
               {page === "support" && <SupportTickets showToast={showToast} />}
               {page === "403" && <Forbidden setPage={setPage} requiredPermission={forbiddenMeta?.page} />}
               {page === "404" && <NotFound setPage={setPage} />}
