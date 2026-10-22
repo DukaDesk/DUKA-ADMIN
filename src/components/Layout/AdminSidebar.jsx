@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, BarChart3, Megaphone, Server, Bell, Ticket } from "lucide-react";
+import { LayoutDashboard, Store, Puzzle, ClipboardList, CreditCard, Settings, ChevronLeft, ChevronRight, X, LogOut, UserCheck, Menu, BarChart3, Megaphone, Server, Bell, Ticket, MessageSquare } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { useAuth } from "../../context/AuthContext";
 import { canAccessPage, getKbRoleLabel } from "../../services/permissions";
@@ -12,6 +12,7 @@ const navItems = [
   { id: "marketplace", icon: Puzzle, label: "Marketplace" },
   { id: "analytics", icon: BarChart3, label: "Analytics" },
   { id: "marketing", icon: Megaphone, label: "Marketing" },
+{ id: "messaging", icon: MessageSquare, label: "Messaging" },
   { id: "audit", icon: ClipboardList, label: "Audit Log" },
   { id: "subscriptions", icon: CreditCard, label: "Subscriptions" },
   { id: "infrastructure", icon: Server, label: "Infrastructure" },
@@ -25,7 +26,7 @@ const navItems = [
 // - Tickets routes to the Support Tickets case/task workflow.
 const navSections = [
   { label: "PLATFORM", ids: ["dashboard", "analytics", "infrastructure", "audit"] },
-  { label: "MANAGEMENT", ids: ["merchants", "subscriptions", "marketing"] },
+  { label: "MANAGEMENT", ids: ["merchants", "subscriptions", "marketing", "messaging"] },
   { label: "MODERATION", ids: ["pending-admins", "marketplace"] },
   { label: "ACCOUNT", ids: ["__notifications", "settings"] },
   { label: "SUPPORT", ids: ["__tickets"] },

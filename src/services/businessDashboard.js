@@ -3,7 +3,7 @@
  * Administration domain per ARCHITECTURE/domains/administration.md owns: Platform Configuration, Audit Logs, Monitoring, Feature Flags, System Health
  * Merchant is a separate portal (Site Builder) — distinct from Tenant App (mobile). Correlation via BFF when merchant has tenantId/slug is good-practice.
  */
-import { apiClient } from "./apiClient";
+import { apiClient, uploadFile } from "./apiClient";
 
 const BFF_ADMIN = "/bff/admin";
 const ADMIN = "/admin";
@@ -171,6 +171,13 @@ export const businessDashboardApi = {
   updatePlan: (id, payload) => apiClient.put(`${ADMIN}/plans/${id}`, payload),
   deletePlan: (id) => apiClient.delete(`${ADMIN}/plans/${id}`),
   updateSubscription: (id, payload) => apiClient.put(`${ADMIN}/subscriptions/${id}`, payload),
+  // Platform comms — broadcasts (merchants/mobile/both) + direct messages
+  getMessages: (params) => apiClient.get(`${ADMIN}/messages${queryString(params)}`),
+  getMessageThread: (id) => apiClient.get(`${ADMIN}/messages/${id}`),
+  createMessage: (payload) => apiClient.post(`${ADMIN}/messages`, payload),
+  replyMessage: (id, body) => apiClient.post(`${ADMIN}/messages/${id}/replies`, { body }),
+  deleteMessage: (id) => apiClient.delete(`${ADMIN}/messages/${id}`),
+  uploadMessageMedia: (file) => uploadFile(`${ADMIN}/media/upload`, file),
   // Feature flags
   getFeatureFlags: () => apiClient.get(`${ADMIN}/feature-flags`),
   getFeatureFlag: (key) => apiClient.get(`${ADMIN}/feature-flags/${key}`),

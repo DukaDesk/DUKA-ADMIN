@@ -220,6 +220,36 @@ export async function request<T>(
   throw lastError!;
 }
 
+/** Multipart upload helper — same auth + error semantics as request(). */
+export async function uploadFile<T>(endpoint: string, file: File): Promise<T> {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(buildUrl(endpoint), {
+    method: "POST",
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: formData,
+  });
+  if (!response.ok) {
+    let raw = "Upload failed";
+    try {
+      const body = (await response.json()) as { message?: string | string[] };
+      raw = (Array.isArray(body.message) ? body.message.join(", ") : body.message) || raw;
+    } catch {
+      // No JSON body
+    }
+    const error = new Error(friendlyFromRaw(raw, response.status)) as ApiError;
+    error.status = response.status;
+    throw error;
+  }
+  const payload = (await response.json()) as unknown as { success?: boolean; data?: unknown } & unknown;
+  if (payload && typeof payload === "object" && "success" in payload && (payload as { success: boolean }).success === false) {
+    const body = payload as { message?: string | string[] };
+    throw new Error(friendlyFromRaw((Array.isArray(body.message) ? body.message.join(", ") : body.message) || "Upload failed", response.status));
+  }
+  return payload as T;
+}
+
 export const apiClient = {
   get: <T>(endpoint: string, config?: RequestConfig) => request<T>("GET", endpoint, undefined, config),
   post: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => request<T>("POST", endpoint, data, config),

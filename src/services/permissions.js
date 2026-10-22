@@ -20,6 +20,7 @@ const ROLE_PERMISSIONS = {
     "audit:read",
     "subscription:read", "subscription:manage", "subscriptions:read", "subscriptions:manage",
     "settings:manage",
+    "messaging:manage", "messaging:read",
     "merchants:email:read",
     "order:read", "order:update_status", "orders:read",
     "product:read", "product:update", "product:delete", "catalog:manage",
@@ -71,6 +72,7 @@ export const PAGE_PERMISSIONS = {
   audit: "audit:read",
   subscriptions: "subscriptions:read", // subscription:read alias
   settings: "settings:manage",
+  messaging: "messaging:manage",
   "pending-admins": "users:manage",
   users: "users:read",
   analytics: "analytics:read",
