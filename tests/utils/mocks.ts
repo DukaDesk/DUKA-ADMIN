@@ -91,7 +91,7 @@ const PLANS = [
     price: 5000,
     currency: "NGN",
     features: { customDomain: false },
-    limits: { maxProducts: 50 },
+    limits: { maxProducts: 50, dailyPromoPosts: 3 },
   },
   {
     id: "plan-ent",
@@ -211,6 +211,12 @@ export async function installApiMocks(page: Page) {
     if (path === "/admin/feature-flags") return reply(route, envelope(FEATURE_FLAGS));
     if (/^\/admin\/feature-flags\/[^/]+$/.test(path)) return reply(route, envelope({}));
     if (path === "/admin/plans") return reply(route, envelope(PLANS));
+    if (/^\/admin\/plans\/[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const plan = PLANS.find((item) => item.id === id) || PLANS[0];
+      if (method === "PUT") return reply(route, envelope({ ...plan, ...(request.postDataJSON() || {}) }));
+      return reply(route, envelope(plan));
+    }
     if (path === "/admin/announcements") return reply(route, envelope([], 0));
     if (path.startsWith("/admin/announcements/")) return reply(route, envelope({}));
     if (path === "/admin/maintenance") return reply(route, envelope([], 0));

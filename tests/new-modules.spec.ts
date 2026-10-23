@@ -318,3 +318,48 @@ test.describe("Platform messaging", () => {
     await expect(authenticatedPage.getByRole("button", { name: "Open Holiday hours" })).toHaveCount(0);
   });
 });
+
+test.describe("Promo feed quotas", () => {
+  test("per-tier quotas show defaults and save through the plan API", async ({ authenticatedPage }) => {
+    const updates: Array<{ url: string; body: unknown }> = [];
+    authenticatedPage.on("request", (request) => {
+      if (request.method() === "PUT" && request.url().includes("/admin/plans/")) {
+        updates.push({ url: request.url(), body: request.postDataJSON() });
+      }
+    });
+
+    await authenticatedPage.goto("/settings");
+    await authenticatedPage.getByRole("tab", { name: "Promo Feed" }).click();
+
+    const panel = authenticatedPage.getByRole("tabpanel");
+    await expect(panel).toContainText("Promo posts run for 24 hours");
+    await expect(panel).toContainText("Free default 5/day");
+    await expect(panel).toContainText("now 3/day");
+
+    await panel.getByLabel("Daily promo posts for Professional").fill("7");
+    await panel.getByRole("button", { name: "Save" }).first().click();
+
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Professional updated" })).toBeVisible();
+    expect(updates).toHaveLength(1);
+    expect(updates[0].url).toContain("/admin/plans/plan-pro");
+    expect(updates[0].body).toEqual({ limits: { maxProducts: 500, storageGb: 10, dailyPromoPosts: 7 } });
+    await expect(panel).toContainText("now 7/day");
+  });
+
+  test("invalid quotas are rejected before any request is sent", async ({ authenticatedPage }) => {
+    let updates = 0;
+    authenticatedPage.on("request", (request) => {
+      if (request.method() === "PUT" && request.url().includes("/admin/plans/")) updates += 1;
+    });
+
+    await authenticatedPage.goto("/settings");
+    await authenticatedPage.getByRole("tab", { name: "Promo Feed" }).click();
+
+    const panel = authenticatedPage.getByRole("tabpanel");
+    await panel.getByLabel("Daily promo posts for Professional").fill("0");
+    await panel.getByRole("button", { name: "Save" }).first().click();
+
+    await expect(authenticatedPage.getByRole("alert").filter({ hasText: "whole number between 1 and 100000" })).toBeVisible();
+    expect(updates).toBe(0);
+  });
+});
