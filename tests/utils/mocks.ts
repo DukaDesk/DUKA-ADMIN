@@ -68,6 +68,12 @@ const SUBSCRIPTIONS = [
   { id: "s1", merchantId: "m1", merchantName: "Acme Store", plan: "professional", planId: "plan-pro", planName: "Professional", status: "active", amount: 25000, amountIsMajorUnits: true, currentPeriodEnd: "2026-11-05T00:00:00.000Z", createdAt: "2026-01-05T00:00:00.000Z" },
   { id: "s2", merchantId: "m2", merchantName: "Beacon Books", plan: "starter", planId: "plan-starter", planName: "Starter", status: "trialing", amount: 5000, amountIsMajorUnits: true, currentPeriodEnd: "2026-11-10T00:00:00.000Z", createdAt: "2026-02-10T00:00:00.000Z" },
 ];
+
+const MESSAGES = [
+  { id: "msg1", kind: "broadcast", audience: "mobile", title: "Holiday hours", body: "We are open 9-5 during the holidays.", createdAt: "2026-10-19T09:00:00.000Z", _count: { replies: 2, reads: 41 } },
+  { id: "msg2", kind: "direct", tenantId: "m1", tenant: { id: "m1", name: "Acme Store" }, title: "", body: "Your documents are approved.", createdAt: "2026-10-20T10:00:00.000Z", _count: { replies: 0, reads: 1 } },
+];
+
 const PLANS = [
   {
     id: "plan-pro",
@@ -219,6 +225,34 @@ export async function installApiMocks(page: Page) {
     if (path === "/admin/support-tickets") return reply(route, envelope([], 0));
     if (/^\/admin\/support-tickets\/[^/]+$/.test(path)) return reply(route, envelope({}));
     if (path.startsWith("/admin/reports/")) return reply(route, envelope({ filename: "export.csv", rows: 0, csv: "" }));
+
+    // Platform messaging
+    if (path === "/admin/messages" && method === "GET") {
+      const kind = q.get("kind");
+      const list = kind && kind !== "all" ? MESSAGES.filter((message) => message.kind === kind) : MESSAGES;
+      return reply(route, envelope(list, list.length));
+    }
+    if (path === "/admin/messages" && method === "POST") {
+      const body = request.postDataJSON() || {};
+      return reply(route, envelope({ id: "msg-new", ...body, createdAt: "2026-10-20T12:00:00.000Z" }));
+    }
+    if (/^\/admin\/messages\/[^/]+\/replies$/.test(path)) {
+      const body = (request.postDataJSON() || {}) as { body?: string };
+      return reply(route, envelope({ id: "reply-new", author: "platform", body: body.body || "", createdAt: "2026-10-20T12:05:00.000Z" }));
+    }
+    if (/^\/admin\/messages\/[^/]+$/.test(path)) {
+      if (method === "DELETE") return reply(route, envelope({ ok: true }));
+      const id = path.split("/").pop();
+      const message = MESSAGES.find((m) => m.id === id) || MESSAGES[0];
+      return reply(route, envelope({
+        ...message,
+        readCount: message._count?.reads ?? 0,
+        replies: [{ id: "r1", author: "merchant", body: "Thanks!", createdAt: "2026-10-19T10:00:00.000Z" }],
+      }));
+    }
+    if (path === "/admin/media/upload") {
+      return reply(route, envelope({ url: "https://cdn.test/media.png" }));
+    }
 
     // Merchant review sub-resources
     if (/^\/admin\/merchants\/[^/]+\/preview$/.test(path)) {
