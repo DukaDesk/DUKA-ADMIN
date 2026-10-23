@@ -298,6 +298,78 @@ test.describe("Platform messaging", () => {
     expect(sent[0]).toMatchObject({ kind: "broadcast", audience: "mobile", title: "Maintenance window", body: "Platform maintenance tonight at 22:00." });
   });
 
+  test("direct messages to a merchant require a tenant id and stay text-only", async ({ authenticatedPage }) => {
+    const sent: Record<string, unknown>[] = [];
+    authenticatedPage.on("request", (request) => {
+      if (request.method() === "POST" && request.url().endsWith("/admin/messages")) sent.push(request.postDataJSON());
+    });
+
+    await authenticatedPage.goto("/messaging");
+    await authenticatedPage.getByRole("button", { name: "New Message" }).click();
+
+    const dialog = authenticatedPage.getByRole("dialog", { name: "New platform message" });
+    await dialog.getByRole("button", { name: "Direct message", exact: true }).click();
+    await dialog.getByRole("button", { name: "Merchant", exact: true }).click();
+
+    const send = dialog.getByRole("button", { name: "Send message" });
+    await expect(dialog.getByLabel(/Merchant tenant id/)).toBeVisible();
+    await expect(dialog.getByText("Merchant DMs are text-only; media is for mobile recipients.")).toBeVisible();
+    await expect(dialog.locator('input[type="file"]')).toHaveCount(0);
+
+    await dialog.getByLabel(/^Message/).fill("Please review your documents.");
+    await expect(send).toBeDisabled();
+
+    await dialog.getByLabel(/Merchant tenant id/).fill("m2");
+    await expect(send).toBeEnabled();
+    await send.click();
+
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Message sent" })).toBeVisible();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toEqual({ kind: "direct", body: "Please review your documents.", tenantId: "m2" });
+  });
+
+  test("media uploads attach to mobile broadcasts and lock for merchant-only audiences", async ({ authenticatedPage }) => {
+    const sent: Record<string, unknown>[] = [];
+    const uploads: string[] = [];
+    authenticatedPage.on("request", (request) => {
+      if (request.method() === "POST" && request.url().endsWith("/admin/messages")) sent.push(request.postDataJSON());
+      if (request.method() === "POST" && request.url().endsWith("/admin/media/upload")) uploads.push(request.url());
+    });
+
+    await authenticatedPage.goto("/messaging");
+    await authenticatedPage.getByRole("button", { name: "New Message" }).click();
+
+    const dialog = authenticatedPage.getByRole("dialog", { name: "New platform message" });
+    const fileInput = dialog.locator('input[type="file"]');
+    await expect(fileInput).toBeVisible();
+
+    await dialog.getByLabel(/^Audience/).selectOption("merchants");
+    await expect(dialog.getByText("Text only — media announcements are restricted to mobile users.")).toBeVisible();
+    await expect(fileInput).toHaveCount(0);
+
+    await dialog.getByLabel(/^Audience/).selectOption("mobile");
+    await expect(fileInput).toBeVisible();
+    await fileInput.setInputFiles({
+      name: "promo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("fake-png"),
+    });
+    await expect(dialog.locator('img[src="https://cdn.test/media.png"]')).toBeVisible();
+
+    await dialog.getByLabel(/^Message/).fill("Weekend promo starts now.");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Message sent" })).toBeVisible();
+    expect(uploads).toHaveLength(1);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toEqual({
+      kind: "broadcast",
+      audience: "mobile",
+      body: "Weekend promo starts now.",
+      media: [{ url: "https://cdn.test/media.png", type: "image" }],
+    });
+  });
+
   test("opening a thread shows replies, sends a reply, and retracts", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/messaging");
     await authenticatedPage.getByRole("button", { name: "Open Holiday hours" }).click();
