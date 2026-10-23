@@ -70,8 +70,6 @@ export default function Messaging({ showToast }) {
   const [mediaUploading, setMediaUploading] = useState(false);
   const [sending, setSending] = useState(false);
 
-  const merchantsCache = useCallback(async () => (await businessDashboardApi.getMerchants({ page: 1, limit: 200 })) ?? [], []);
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
