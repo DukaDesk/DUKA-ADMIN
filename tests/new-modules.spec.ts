@@ -257,3 +257,64 @@ test.describe("Subscription governance", () => {
     await expect(authenticatedPage.getByRole("status")).toContainText("Plan updated for Acme Store");
   });
 });
+
+test.describe("Platform messaging", () => {
+  test("inbox lists broadcasts and directs with kind filters", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/messaging");
+    await expect(authenticatedPage.getByRole("heading", { name: "Platform Messaging", level: 2 })).toBeVisible();
+
+    await expect(authenticatedPage.getByRole("button", { name: "Open Holiday hours" })).toBeVisible();
+    await expect(authenticatedPage.getByRole("button", { name: "Open Direct message" })).toBeVisible();
+    await expect(authenticatedPage.getByText("BROADCAST", { exact: true })).toBeVisible();
+    await expect(authenticatedPage.getByText("DIRECT", { exact: true })).toBeVisible();
+    await expect(authenticatedPage.getByText("41 reads")).toBeVisible();
+
+    await authenticatedPage.getByRole("tab", { name: "Directs" }).click();
+    await expect(authenticatedPage.getByRole("button", { name: "Open Direct message" })).toBeVisible();
+    await expect(authenticatedPage.getByRole("button", { name: "Open Holiday hours" })).toHaveCount(0);
+
+    await authenticatedPage.getByRole("tab", { name: "Broadcasts" }).click();
+    await expect(authenticatedPage.getByRole("button", { name: "Open Holiday hours" })).toBeVisible();
+    await expect(authenticatedPage.getByRole("button", { name: "Open Direct message" })).toHaveCount(0);
+  });
+
+  test("composing a broadcast sends the expected payload", async ({ authenticatedPage }) => {
+    const sent: Record<string, unknown>[] = [];
+    authenticatedPage.on("request", (request) => {
+      if (request.method() === "POST" && request.url().endsWith("/admin/messages")) sent.push(request.postDataJSON());
+    });
+
+    await authenticatedPage.goto("/messaging");
+    await authenticatedPage.getByRole("button", { name: "New Message" }).click();
+
+    const dialog = authenticatedPage.getByRole("dialog", { name: "New platform message" });
+    await dialog.getByLabel("Title (optional)").fill("Maintenance window");
+    await dialog.getByLabel(/^Message/).fill("Platform maintenance tonight at 22:00.");
+    await dialog.getByRole("button", { name: "Send message" }).click();
+
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Message sent" })).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ kind: "broadcast", audience: "mobile", title: "Maintenance window", body: "Platform maintenance tonight at 22:00." });
+  });
+
+  test("opening a thread shows replies, sends a reply, and retracts", async ({ authenticatedPage }) => {
+    await authenticatedPage.goto("/messaging");
+    await authenticatedPage.getByRole("button", { name: "Open Holiday hours" }).click();
+
+    const thread = authenticatedPage.getByRole("dialog", { name: "Holiday hours" });
+    await expect(thread).toContainText("Thanks!");
+
+    await thread.getByRole("textbox").fill("On it now");
+    await thread.getByRole("button", { name: "Reply", exact: true }).click();
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Reply sent" })).toBeVisible();
+    await expect(thread).toContainText("On it now");
+
+    await thread.getByRole("button", { name: "Retract" }).click();
+    const confirm = authenticatedPage.getByRole("dialog", { name: "Retract this message?" });
+    await confirm.getByRole("button", { name: "Retract message" }).click();
+
+    await expect(authenticatedPage.getByRole("status").filter({ hasText: "Message retracted" })).toBeVisible();
+    await expect(authenticatedPage.getByRole("button", { name: "Open Holiday hours" })).toHaveCount(0);
+  });
+});

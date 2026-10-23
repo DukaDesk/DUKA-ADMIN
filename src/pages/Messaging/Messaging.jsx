@@ -238,7 +238,7 @@ export default function Messaging({ showToast }) {
       ) : (
         <div className={styles.list}>
           {messages.map(item => (
-            <button key={item.id} className={styles.card} onClick={() => openThread(item)} aria-label={`Open ${item.title || "message"}`}>
+            <button key={item.id} className={styles.card} onClick={() => openThread(item)} aria-label={`Open ${item.title || (item.kind === "direct" ? "Direct message" : "Announcement")}`}>
               <span className={`${styles.kindBadge} ${item.kind === "direct" ? styles.badgeDirect : styles.badgeBroadcast}`}>{item.kind === "direct" ? "DIRECT" : "BROADCAST"}</span>
               <span className={styles.cardMain}>
                 <span className={styles.cardTitle}>{item.title || (item.kind === "direct" ? "Direct message" : "Announcement")}</span>
