@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { Modal } from "../../components/UI/Modal";
 import ConfirmModal from "../../components/UI/ConfirmModal";
+import VideoTrimModal from "../../components/UI/VideoTrimModal";
 import styles from "./Messaging.module.css";
 
 const AUDIENCE_OPTIONS = [
@@ -59,6 +60,8 @@ export default function Messaging({ showToast }) {
   const [body, setBody] = useState("");
   const [media, setMedia] = useState([]);
   const [mediaUploading, setMediaUploading] = useState(false);
+  // Oversized video waiting to be WhatsApp-trimmed into uploadable sections.
+  const [trimFile, setTrimFile] = useState(null);
   const [sending, setSending] = useState(false);
 
   const [recipients, setRecipients] = useState({ tenants: [], users: [] });
@@ -142,6 +145,13 @@ export default function Messaging({ showToast }) {
     setMediaUploading(true);
     for (const file of files) {
       if (media.length >= 4) { showToast?.("Up to 4 media items per message", "error"); break; }
+      if (file.size > 50 * 1024 * 1024) {
+        // WhatsApp behaviour: too-large videos open the section trimmer
+        // instead of failing.
+        if (String(file.type).startsWith("video")) { setTrimFile(file); continue; }
+        showToast?.(`${file.name} exceeds the 50MB limit`, "error");
+        continue;
+      }
       try {
         const asset = await businessDashboardApi.uploadMessageMedia(file);
         const url = asset?.url || asset?.data?.url;
@@ -152,6 +162,22 @@ export default function Messaging({ showToast }) {
       }
     }
     setMediaUploading(false);
+  };
+
+  // Uploads one WhatsApp-trimmed section of an oversized video.
+  const handleTrimSection = async (blob) => {
+    try {
+      const base = trimFile.name.replace(/\.[^.]+$/, "");
+      const sectionFile = new File([blob], `${base}-section.webm`, { type: blob.type || "video/webm" });
+      const asset = await businessDashboardApi.uploadMessageMedia(sectionFile);
+      const url = asset?.url || asset?.data?.url;
+      if (!url) throw new Error("Upload returned no URL");
+      setMedia(prev => [...prev, { url, type: "video" }]);
+      return true;
+    } catch (err) {
+      showToast?.(`Section upload failed — ${err.message || "try again"}`, "error");
+      return false;
+    }
   };
 
   const openThread = async (message) => {
@@ -379,6 +405,13 @@ export default function Messaging({ showToast }) {
         busy={false}
         onConfirm={deleteMessage}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <VideoTrimModal
+        file={trimFile}
+        onClose={() => setTrimFile(null)}
+        onSection={handleTrimSection}
+        showToast={showToast}
       />
     </div>
   );

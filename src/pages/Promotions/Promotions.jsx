@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { Modal } from "../../components/UI/Modal";
 import ConfirmModal from "../../components/UI/ConfirmModal";
+import VideoTrimModal from "../../components/UI/VideoTrimModal";
 import { Sparkles, Film, Clock3 } from "lucide-react";
 import styles from "./Promotions.module.css";
 
@@ -63,6 +64,8 @@ export default function Promotions({ showToast }) {
   const [caption, setCaption] = useState("");
   const [media, setMedia] = useState([]);
   const [mediaUploading, setMediaUploading] = useState(false);
+  // Oversized video waiting to be WhatsApp-trimmed into uploadable sections.
+  const [trimFile, setTrimFile] = useState(null);
   const [posting, setPosting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [tick, setTick] = useState(0);
@@ -95,7 +98,13 @@ export default function Promotions({ showToast }) {
     setMediaUploading(true);
     for (const file of files) {
       if (media.length >= MEDIA_MAX_ITEMS) { showToast?.(`Up to ${MEDIA_MAX_ITEMS} media items per post`, "error"); break; }
-      if (file.size > MEDIA_MAX_BYTES) { showToast?.(`${file.name} exceeds the 50MB limit`, "error"); continue; }
+      if (file.size > MEDIA_MAX_BYTES) {
+        // WhatsApp behaviour: too-large videos open the section trimmer
+        // instead of failing.
+        if (String(file.type).startsWith("video")) { setTrimFile(file); continue; }
+        showToast?.(`${file.name} exceeds the 50MB limit`, "error");
+        continue;
+      }
       try {
         if (String(file.type).startsWith("video")) {
           const duration = await readVideoDurationSeconds(file);
@@ -113,6 +122,22 @@ export default function Promotions({ showToast }) {
       }
     }
     setMediaUploading(false);
+  };
+
+  // Uploads one WhatsApp-trimmed section of an oversized video.
+  const handleTrimSection = async (blob) => {
+    try {
+      const base = trimFile.name.replace(/\.[^.]+$/, "");
+      const sectionFile = new File([blob], `${base}-section.webm`, { type: blob.type || "video/webm" });
+      const asset = await businessDashboardApi.uploadMessageMedia(sectionFile);
+      const url = asset?.url || asset?.data?.url;
+      if (!url) throw new Error("Upload returned no URL");
+      setMedia(prev => [...prev, { url, type: "video" }]);
+      return true;
+    } catch (err) {
+      showToast?.(`Section upload failed — ${err.message || "try again"}`, "error");
+      return false;
+    }
   };
 
   const submitPost = async () => {
@@ -228,6 +253,14 @@ export default function Promotions({ showToast }) {
         busy={false}
         onConfirm={deletePost}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <VideoTrimModal
+        file={trimFile}
+        maxSeconds={VIDEO_MAX_SECONDS}
+        onClose={() => setTrimFile(null)}
+        onSection={handleTrimSection}
+        showToast={showToast}
       />
     </div>
   );
