@@ -61,7 +61,8 @@ test("settings tabs render inside the shell and switch panels @visual", async ({
 
   const tablist = authenticatedPage.getByRole("tablist", { name: "Settings categories" });
   await expect(tablist).toBeVisible();
-  await expect(tablist.getByRole("tab")).toHaveCount(7);
+  await expect(tablist.getByRole("tab")).toHaveCount(8);
+  await expect(tablist.getByRole("tab", { name: "Promo Feed" })).toBeVisible();
 
   const featureFlags = authenticatedPage.getByRole("tab", { name: "Feature Flags" });
   await featureFlags.click();
