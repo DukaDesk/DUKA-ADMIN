@@ -160,7 +160,6 @@ return (
       <AdminSidebar page={page} setPage={setPage} admin={admin} showToast={showToast} sidebarOpen={sidebarOpen} closeSidebar={closeSidebar} />
       <div className={styles.mainArea}>
         <AdminTopbar page={page} showToast={showToast} setPage={setPage} onMenuClick={() => setSidebarOpen(true)} />
-        <Breadcrumbs page={page} setPage={setPage} />
         <main className={styles.content}>
           <ErrorBoundary>
             <Suspense fallback={<Loading />}>
