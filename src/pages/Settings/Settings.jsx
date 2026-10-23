@@ -303,8 +303,6 @@ export default function Settings({ showToast }) {
 
   return (
     <div className={styles.wrapper}>
-      <p className={styles.pageDesc}>Manage admin portal configuration, security, and platform settings.</p>
-
       {error && <div className={styles.error} role="alert">{error}</div>}
 
       <nav className={styles.tabs} aria-label="Settings categories" role="tablist">

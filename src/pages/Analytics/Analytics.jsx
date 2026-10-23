@@ -86,9 +86,7 @@ export default function Analytics() {
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.subtitle}>Paid transactions and platform activity over the last 30 days.</p>
-        </div>
+        <div />
         <span className={styles.period}>Last 30 days</span>
       </header>
 

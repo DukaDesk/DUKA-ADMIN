@@ -19,11 +19,7 @@ export default function Marketing() {
 
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <header>
-        <p style={{ margin: "4px 0 0", color: "var(--gray-500)", fontSize: 13 }}>
-          Review available integration providers.
-        </p>
-      </header>
+      <header />
       <div role="note" style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: 12, border: "1px solid var(--gray-200)", borderRadius: 8, color: "var(--gray-600)", background: "#fff", fontSize: 13 }}>
         <Info size={16} aria-hidden="true" />
         <span>Campaign delivery is tenant-scoped. Platform campaign history and sending are not available in this portal.</span>

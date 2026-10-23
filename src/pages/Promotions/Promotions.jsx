@@ -151,9 +151,7 @@ export default function Promotions({ showToast }) {
   return (
     <div className={styles.wrapper}>
       <div className={styles.headerRow}>
-        <div>
-          <p className={styles.pageDesc}>Post DukaDesk-owned promos to the mobile app Feed — videos or images with a caption. Posts run for 24 hours, then are removed from the database.</p>
-        </div>
+        <div />
         <button className={styles.composeBtn} onClick={() => { setCaption(""); setMedia([]); setComposeOpen(true); }}><Sparkles size={15} /> New Promo</button>
       </div>
 
