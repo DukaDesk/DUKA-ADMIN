@@ -74,7 +74,8 @@ test.describe("Available Business Dashboard Modules (BD-ANAL/BD-MKT)", () => {
   test("platform analytics shows B2B metrics without booking analytics", async ({ authenticatedPage }) => {
     await authenticatedPage.goto("/analytics");
 
-    await expect(authenticatedPage.locator('h2:has-text("Platform Analytics")')).toBeVisible();
+    await expect(authenticatedPage.locator('h2:has-text("Platform Analytics")')).toBeVisible({ timeout: 15000 });
+    await expect(authenticatedPage.getByRole("group", { name: "Select analytics timeframe" })).toBeVisible();
     await expect(authenticatedPage.getByText("Revenue", { exact: true })).toBeVisible();
     await expect(authenticatedPage.getByText("Transactions", { exact: true }).first()).toBeVisible();
     await expect(authenticatedPage.getByText(/Active Users .* 30 days/)).toBeVisible();

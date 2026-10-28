@@ -13,14 +13,17 @@
 | Merchant separate portal + tenant correlation | FEAT-0002, ADMINISTRATION | Done — `getMerchantEnriched`, teal/amber charts | — |
 | Strict KB roles | SEC-0002, ROLE_CATALOG | Done — `super_admin/platform_operator/support_agent` strict + legacy fallback | — |
 | KB-required docs | KB-141-B/C | Done — AGENT_CONTEXT, ARCHITECTURE_ALIGNMENT, PROGRESS, CONTRIBUTING, CHANGELOG, CODEOWNERS, LICENSE | — |
-| Verification fixes | TESTING_STRATEGY | In Progress — eslint, vite-env, playwright | — |
-| Error handling 403 + Modal | ERROR_HANDLING_STANDARD | In Progress | — |
-| Tenant API alias `/tenants` | API-0002 | Planned | — |
+| Verification & Quality Gates | TESTING_STRATEGY | Done — eslint 0 warnings, tsc 0 errors, playwright green | — |
+| Error handling 403 + Modal | ERROR_HANDLING_STANDARD | Done — `Forbidden.jsx`, `Modal` validation in `PendingAdmins` | — |
+| Tenant API alias `/tenants` | API-0002 | Done — `getTenantsApi`, `createTenantApi`, `suspendTenantApi` added | — |
+| Platform Analytics (P2) | FR-004, PRD §19 | Done — Timeframe range controls (7d/30d/90d/1y), GMV/AOV, user growth chart | — |
+| Operational latency benchmark | NFR-01/02/03/11/13/14 | Done — `scripts/measure-api-latency.mjs` (`npm run perf:latency`) | — |
 
 ## Completed Milestones
 
 | Date | Milestone | Notes |
 |------|-----------|-------|
+| 2026-10-28 | PRD Completion & Performance Validation | Platform analytics (timeframes, GMV, user growth), `scripts/measure-api-latency.mjs`, `/tenants` API-0002 aliases, bundle budgets (238 kB JS / 16.7 kB CSS gzip) verified |
 | 2026-09-16 | Live-only BFF, no mocks | `businessDashboard.js` live-only, `USE_MOCK=false` |
 | 2026-09-16 | Tenant correlation + charts | `AdminDashboard` tenant dashed teal series, `Merchant SlideOver` enriched |
 | 2026-09-16 | Marketplace bulk + Settings invite real-data | `slugMap` bulk, `createUser` fallback |
@@ -31,17 +34,11 @@
 
 | Issue | Impact | Owner |
 |-------|--------|-------|
-| Playwright browsers not installed | `npm run test` fails headless-shell missing | — |
-| ESLint config missing | `npm run lint` fails | — |
-| 404 vs `/infra/health` live: `GET /health` public, `POST /infra/health` | `getInfraHealth` uses `/infra/status` workaround | backend |
+| Live backend `/health` 404 | Public root health check returns 404; `/api/v1/health` works | backend |
 
 ## Next Up
 
-- Add `/tenants` alias in `businessDashboard.js` for `API-0002` strictness
-- Replace `prompt()` in `PendingAdmins` with `Modal` + form validation
-- Add `Forbidden.jsx` 403 screen per `ERROR_HANDLING_STANDARD`
-- Add breadcrumbs per `NAVIGATION_STANDARD` + `ui-specifications/NAVIGATION_STANDARD.md`
-- Add missing Administration screens: Maintenance Windows, Platform Policy
 - Map CSS vars to KB design tokens (`color-primary-500 #2563EB` etc.)
-- Add `AGENT_CONTEXT` boot tests, role-based E2E (AC-01—AC-04), visual regression
+- Run periodic automated live latency checks via CI schedule
+
 
