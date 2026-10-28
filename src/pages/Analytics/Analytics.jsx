@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BarChart3, DollarSign, Store, Users } from "lucide-react";
+import { BarChart3, DollarSign, Store, Users, TrendingUp, CreditCard } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { toneBackground } from "../../utils/badgeTones";
 import styles from "./Analytics.module.css";
+
+const PERIOD_OPTIONS = [
+  { days: 7, label: "7 days", groupBy: "day" },
+  { days: 30, label: "30 days", groupBy: "day" },
+  { days: 90, label: "90 days", groupBy: "week" },
+  { days: 365, label: "12 months", groupBy: "month" },
+];
 
 function Stat({ label, value, icon: Icon, color }) {
   return (
@@ -35,19 +42,22 @@ function EmptyChart({ message }) {
 }
 
 export default function Analytics() {
+  const [selectedDays, setSelectedDays] = useState(30);
   const [analytics, setAnalytics] = useState(null);
   const [revenue, setRevenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState([]);
 
-  useEffect(() => {
+  const fetchData = useCallback((days) => {
     let active = true;
+    setLoading(true);
     const dateTo = new Date();
-    const dateFrom = new Date(dateTo.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const dateFrom = new Date(dateTo.getTime() - days * 24 * 60 * 60 * 1000);
+    const option = PERIOD_OPTIONS.find((opt) => opt.days === days) || PERIOD_OPTIONS[1];
     const params = {
       dateFrom: dateFrom.toISOString(),
       dateTo: dateTo.toISOString(),
-      groupBy: "day",
+      groupBy: option.groupBy,
     };
 
     Promise.allSettled([
@@ -74,23 +84,50 @@ export default function Analytics() {
     return () => { active = false; };
   }, []);
 
-  if (loading) return <div className={styles.loading} aria-live="polite">Loading platform analytics…</div>;
+  useEffect(() => {
+    const cleanup = fetchData(selectedDays);
+    return cleanup;
+  }, [fetchData, selectedDays]);
+
+  if (loading && !analytics && !revenue) {
+    return <div className={styles.loading} aria-live="polite">Loading platform analytics…</div>;
+  }
 
   const revenueTrend = analytics?.revenueTrend || [];
   const transactionTrend = analytics?.orderVolume || [];
+  const userGrowth = analytics?.userGrowth || [];
   const revenueValue = revenue?.revenue;
   const transactionCount = revenue?.transactionCount;
   const activeUsers = analytics?.activeUsers;
   const activeMerchants = analytics?.activeTenants;
+  const gmvValue = analytics?.gmv;
+  const avgOrderValue = (revenueValue != null && transactionCount > 0)
+    ? Math.round(Number(revenueValue) / Number(transactionCount))
+    : null;
 
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
         <div>
           <h2 className={styles.title}>Platform Analytics</h2>
-          <p className={styles.subtitle}>Paid transactions and platform activity over the last 30 days.</p>
+          <p className={styles.subtitle}>Paid transactions and platform activity over the last {selectedDays} days.</p>
         </div>
-        <span className={styles.period}>Last 30 days</span>
+        <div className={styles.controls}>
+          <div className={styles.periodGroup} role="group" aria-label="Select analytics timeframe">
+            {PERIOD_OPTIONS.map((opt) => (
+              <button
+                key={opt.days}
+                type="button"
+                className={`${styles.periodBtn} ${selectedDays === opt.days ? styles.periodBtnActive : ""}`}
+                onClick={() => setSelectedDays(opt.days)}
+                aria-pressed={selectedDays === opt.days}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <span className={styles.period}>Last {selectedDays} days</span>
+        </div>
       </header>
 
       {errors.length > 0 && (
@@ -103,15 +140,21 @@ export default function Analytics() {
       <div className={styles.statsGrid}>
         <Stat label="Revenue" value={revenueValue == null ? "—" : formatCurrency(revenueValue)} icon={DollarSign} color="var(--green)" />
         <Stat label="Transactions" value={transactionCount == null ? "—" : Number(transactionCount).toLocaleString()} icon={BarChart3} color="var(--blue)" />
-        <Stat label="Active Users · 30 days" value={activeUsers == null ? "—" : Number(activeUsers).toLocaleString()} icon={Users} color="var(--purple)" />
+        <Stat label={selectedDays === 30 ? "Active Users · 30 days" : `Active Users · ${selectedDays} days`} value={activeUsers == null ? "—" : Number(activeUsers).toLocaleString()} icon={Users} color="var(--purple)" />
         <Stat label="Published Merchants" value={activeMerchants == null ? "—" : Number(activeMerchants).toLocaleString()} icon={Store} color="var(--amber)" />
+        {gmvValue != null && (
+          <Stat label="Gross Merchandise Value" value={formatCurrency(gmvValue)} icon={TrendingUp} color="var(--teal)" />
+        )}
+        {avgOrderValue != null && (
+          <Stat label="Avg. Transaction" value={formatCurrency(avgOrderValue)} icon={CreditCard} color="var(--indigo)" />
+        )}
       </div>
 
       <div className={styles.chartsGrid}>
         <article className={styles.card}>
           <h3 className={styles.cardTitle}>Revenue trend</h3>
           {revenueTrend.length === 0 ? <EmptyChart message="No paid transactions in this period." /> : (
-            <div className={styles.chart} role="img" aria-label="Revenue trend over the last 30 days">
+            <div className={styles.chart} role="img" aria-label={`Revenue trend over the last ${selectedDays} days`}>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={revenueTrend} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
@@ -128,7 +171,7 @@ export default function Analytics() {
         <article className={styles.card}>
           <h3 className={styles.cardTitle}>Transactions</h3>
           {transactionTrend.length === 0 ? <EmptyChart message="No paid transactions in this period." /> : (
-            <div className={styles.chart} role="img" aria-label="Daily paid transaction count over the last 30 days">
+            <div className={styles.chart} role="img" aria-label={`Daily paid transaction count over the last ${selectedDays} days`}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={transactionTrend} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
@@ -141,6 +184,23 @@ export default function Analytics() {
             </div>
           )}
         </article>
+
+        {userGrowth.length > 0 && (
+          <article className={styles.card}>
+            <h3 className={styles.cardTitle}>User growth</h3>
+            <div className={styles.chart} role="img" aria-label="Platform user growth over periods">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={userGrowth} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--gray-200)" />
+                  <XAxis dataKey="period" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" name="Users" fill="var(--purple)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+        )}
       </div>
     </section>
   );

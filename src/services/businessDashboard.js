@@ -77,10 +77,19 @@ export const businessDashboardApi = {
     const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
     return apiClient.get(`${ADMIN}/merchants${queryString(normalized)}`);
   },
+  // API-0002 canonical /tenants aliases with live fallback
+  getTenantsApi: (params) => {
+    const normalized = params?.status ? { ...params, status: normalizeMerchantStatus(params.status) } : params;
+    return apiClient.get(`/tenants${queryString(normalized)}`).catch(() => apiClient.get(`${ADMIN}/merchants${queryString(normalized)}`));
+  },
   createTenant: (payload) => apiClient.post(`${ADMIN}/merchants`, payload),
+  createTenantApi: (payload) => apiClient.post(`/tenants`, payload).catch(() => apiClient.post(`${ADMIN}/merchants`, payload)),
   getTenant: (id) => apiClient.get(`${ADMIN}/merchants/${id}`),
+  getTenantApi: (id) => apiClient.get(`/tenants/${id}`).catch(() => apiClient.get(`${ADMIN}/merchants/${id}`)),
   updateTenantById: (id, patch) => apiClient.put(`${ADMIN}/merchants/${id}`, patch),
+  updateTenantApi: (id, patch) => apiClient.put(`/tenants/${id}`, patch).catch(() => apiClient.put(`${ADMIN}/merchants/${id}`, patch)),
   suspendTenant: (id) => apiClient.post(`${ADMIN}/merchants/${id}/suspend`),
+  suspendTenantApi: (id) => apiClient.post(`/tenants/${id}/suspend`).catch(() => apiClient.post(`${ADMIN}/merchants/${id}/suspend`)),
   getAuditLog: (params) => apiClient.get(`${BFF_ADMIN}/audit${queryString(params)}`),
   getPlatformStats: () => apiClient.get(`${ADMIN}/stats`),
   getPlatformMerchants: (params) => {
