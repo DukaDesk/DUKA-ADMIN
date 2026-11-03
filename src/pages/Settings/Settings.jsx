@@ -61,7 +61,7 @@ const ROLE_LABELS = { super_admin: "Super Admin", platform_operator: "Platform O
 // the per-tier daily post quota via each plan's limits JSON.
 export const PROMO_FREE_DEFAULT_DAILY = 5;
 
-function PromoFeedSection({ plans, planReadOnly, runMutation }) {
+function PromoFeedSection({ plans, planReadOnly, runMutation, onPlanUpdated }) {
   const [drafts, setDrafts] = useState({});
   useEffect(() => {
     setDrafts((prev) => {
@@ -94,7 +94,7 @@ function PromoFeedSection({ plans, planReadOnly, runMutation }) {
       `plan:${plan.id}`,
       operation,
       `${plan.name} updated`,
-      () => businessDashboardApi.getPlans(),
+      () => onPlanUpdated?.(plan.id, limits),
     );
   };
 
@@ -163,6 +163,7 @@ export default function Settings({ showToast }) {
   const [invites, setInvites] = useState([]);
   const [pendingMutations, setPendingMutations] = useState({});
   const pendingMutationsRef = useRef(new Set());
+  const tabListRef = useRef(null);
   const [confirmation, setConfirmation] = useState(null);
 
   const loadInvites = useCallback(async () => {
@@ -301,11 +302,29 @@ export default function Settings({ showToast }) {
 
   const categorySettings = SETTING_CATEGORIES[activeTab] || [];
 
+  const handleTabKeyDown = (event) => {
+    const handledKeys = ["ArrowRight", "ArrowLeft", "Home", "End"];
+    if (!handledKeys.includes(event.key)) return;
+    const tabs = Array.from(tabListRef.current?.querySelectorAll('[role="tab"]') || []);
+    if (!tabs.length) return;
+    event.preventDefault();
+    const currentIndex = tabs.findIndex((tab) => tab === event.currentTarget);
+    const lastIndex = tabs.length - 1;
+    let nextIndex = currentIndex;
+    if (event.key === "ArrowRight") nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1;
+    if (event.key === "ArrowLeft") nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = lastIndex;
+    const nextTab = tabs[nextIndex];
+    setActiveTab(nextTab.id.replace(/^tab-/, ""));
+    nextTab.focus();
+  };
+
   return (
     <div className={styles.wrapper}>
       {error && <div className={styles.error} role="alert">{error}</div>}
 
-      <nav className={styles.tabs} aria-label="Settings categories" role="tablist">
+      <nav ref={tabListRef} className={styles.tabs} aria-label="Settings categories" role="tablist">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -313,8 +332,10 @@ export default function Settings({ showToast }) {
             aria-selected={activeTab === tab.id}
             aria-controls={`panel-${tab.id}`}
             id={`tab-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ""}`}
             onClick={() => setActiveTab(tab.id)}
+            onKeyDown={handleTabKeyDown}
           >
             {tab.label}
           </button>
@@ -461,7 +482,7 @@ export default function Settings({ showToast }) {
             <p style={{ margin: "0 0 14px", fontSize: 13, color: "var(--gray-500)" }}>
               Promo posts run for 24 hours and are then deleted from the database. Set how many promo posts each tier may publish per day; tenants without a configured plan follow the Free default of {PROMO_FREE_DEFAULT_DAILY}/day (quota counts the UTC day).
             </p>
-            <PromoFeedSection plans={plans} planReadOnly={planReadOnly} runMutation={runMutation} />
+            <PromoFeedSection planReadOnly={planReadOnly} plans={plans} runMutation={runMutation} onPlanUpdated={(id, limits) => setPlans((prev) => prev.map((plan) => (plan.id === id ? { ...plan, limits } : plan)))} />
           </section>
         )}
 

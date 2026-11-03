@@ -37,10 +37,11 @@ function parseRetryAfter(value: string | null): number | undefined {
   return undefined;
 }
 
-function friendlyFromRaw(raw: string, status?: number): string {
+function friendlyFromRaw(raw: string, status?: number, endpoint?: string): string {
   if (!raw) return "Request failed";
   if (raw.includes("prisma") || raw.includes("Unknown field")) return "Service temporarily unavailable. Please try again.";
   if (raw.includes("Cannot GET")) return "This feature is not available yet.";
+  if (status === 401 && endpoint === "/auth/verify-password") return "Incorrect password. Please try again.";
   if (status === 401) return "Session expired. Please sign in again.";
   if (status === 403) return "You do not have permission for this action.";
   if (status === 429) return "Too many requests. Please slow down and try again.";
@@ -178,7 +179,7 @@ export async function request<T>(
         } catch {
           // No JSON body
         }
-        let message = friendlyFromRaw(raw, response.status);
+        let message = friendlyFromRaw(raw, response.status, endpoint);
         if (rid) message = `${message} (Ref: ${rid.slice(0, 8)})`;
         if (retryAfterSeconds != null) message = `${message} Retry in ${retryAfterSeconds}s.`;
         const error = new Error(message) as ApiError;
@@ -197,7 +198,7 @@ export async function request<T>(
         const rid = response.headers.get("x-railway-request-id") || response.headers.get("x-request-id") || "";
         const body = payload as { message?: string | string[]; errors?: string[]; error?: string };
         const raw = (Array.isArray(body.message) ? body.message.join(", ") : body.message) || body.errors?.join(", ") || body.error || "Request failed";
-        const friendly = friendlyFromRaw(raw, response.status);
+        const friendly = friendlyFromRaw(raw, response.status, endpoint);
         const message = rid ? `${friendly} (Ref: ${rid.slice(0, 8)})` : friendly;
         const error = new Error(message) as ApiError;
         error.status = response.status;

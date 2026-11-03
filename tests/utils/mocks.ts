@@ -65,8 +65,47 @@ const AUDIT = [
   { id: "e2", timestamp: "2026-10-18T09:30:00.000Z", adminEmail: "ops@dukadesk.com", action: "login", targetType: "admin", targetId: "u2", outcome: "success" },
 ];
 const SUBSCRIPTIONS = [
-  { id: "s1", merchantId: "m1", merchantName: "Acme Store", planName: "Professional", status: "active", amount: 25000, currentPeriodEnd: "2026-11-05T00:00:00.000Z", createdAt: "2026-01-05T00:00:00.000Z" },
-  { id: "s2", merchantId: "m2", merchantName: "Beacon Books", planName: "Starter", status: "trialing", amount: 5000, currentPeriodEnd: "2026-11-10T00:00:00.000Z", createdAt: "2026-02-10T00:00:00.000Z" },
+  { id: "s1", merchantId: "m1", merchantName: "Acme Store", plan: "professional", planId: "plan-pro", planName: "Professional", status: "active", amount: 25000, amountIsMajorUnits: true, currentPeriodEnd: "2026-11-05T00:00:00.000Z", createdAt: "2026-01-05T00:00:00.000Z" },
+  { id: "s2", merchantId: "m2", merchantName: "Beacon Books", plan: "starter", planId: "plan-starter", planName: "Starter", status: "trialing", amount: 5000, amountIsMajorUnits: true, currentPeriodEnd: "2026-11-10T00:00:00.000Z", createdAt: "2026-02-10T00:00:00.000Z" },
+];
+
+const MESSAGES = [
+  { id: "msg1", kind: "broadcast", audience: "mobile", title: "Holiday hours", body: "We are open 9-5 during the holidays.", createdAt: "2026-10-19T09:00:00.000Z", _count: { replies: 2, reads: 41 } },
+  { id: "msg2", kind: "direct", tenantId: "m1", tenant: { id: "m1", name: "Acme Store" }, title: "", body: "Your documents are approved.", createdAt: "2026-10-20T10:00:00.000Z", _count: { replies: 0, reads: 1 } },
+];
+
+const PLANS = [
+  {
+    id: "plan-pro",
+    slug: "professional",
+    name: "Professional",
+    price: 25000,
+    currency: "NGN",
+    features: { customDomain: true, advancedAnalytics: true },
+    limits: { maxProducts: 500, storageGb: 10 },
+  },
+  {
+    id: "plan-starter",
+    slug: "starter",
+    name: "Starter",
+    price: 5000,
+    currency: "NGN",
+    features: { customDomain: false },
+    limits: { maxProducts: 50, dailyPromoPosts: 3 },
+  },
+  {
+    id: "plan-ent",
+    slug: "enterprise",
+    name: "Enterprise",
+    price: 120000,
+    currency: "NGN",
+    features: { customDomain: true, advancedAnalytics: true, prioritySupport: true },
+    limits: { maxProducts: 10000, storageGb: 500 },
+  },
+];
+const LISTINGS = [
+  { id: "l1", name: "Acme Loyalty", slug: "acme-loyalty", category: "marketing", merchantName: "Acme Store", status: "pending_review", downloads: 120, rating: 4.5, featured: false, createdAt: "2026-03-01T00:00:00.000Z" },
+  { id: "l2", name: "Beacon Bookings", slug: "beacon-bookings", category: "booking", merchantName: "Beacon Books", status: "published", downloads: 540, rating: 4.8, featured: true, createdAt: "2026-02-15T00:00:00.000Z" },
 ];
 const INTEGRATIONS = [
   { provider: "mailchimp", label: "Mailchimp", description: "Email marketing and audiences", oauthRequired: true },
@@ -124,6 +163,11 @@ export async function installApiMocks(page: Page) {
     if (path === "/auth/refresh") {
       return reply(route, envelope({ accessToken: "refreshed-access-token", refreshToken: "refreshed-refresh-token", user: { id: ADMIN.id, email: ADMIN.email, role: ADMIN.role } }));
     }
+    if (path === "/auth/verify-password") {
+      const body = (request.postDataJSON() || {}) as { password?: string };
+      if (body.password === "AdminPass123!") return reply(route, envelope({ verified: true }));
+      return reply(route, { success: false, errors: ["Invalid password"] }, 401);
+    }
 
     // Dashboard / BFF
     if (path === "/bff/admin/overview") return reply(route, envelope(OVERVIEW));
@@ -166,7 +210,13 @@ export async function installApiMocks(page: Page) {
     if (/^\/admin\/settings\/[^/]+$/.test(path)) return reply(route, envelope({}));
     if (path === "/admin/feature-flags") return reply(route, envelope(FEATURE_FLAGS));
     if (/^\/admin\/feature-flags\/[^/]+$/.test(path)) return reply(route, envelope({}));
-    if (path === "/admin/plans") return reply(route, envelope([]));
+    if (path === "/admin/plans") return reply(route, envelope(PLANS));
+    if (/^\/admin\/plans\/[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const plan = PLANS.find((item) => item.id === id) || PLANS[0];
+      if (method === "PUT") return reply(route, envelope({ ...plan, ...(request.postDataJSON() || {}) }));
+      return reply(route, envelope(plan));
+    }
     if (path === "/admin/announcements") return reply(route, envelope([], 0));
     if (path.startsWith("/admin/announcements/")) return reply(route, envelope({}));
     if (path === "/admin/maintenance") return reply(route, envelope([], 0));
@@ -182,15 +232,59 @@ export async function installApiMocks(page: Page) {
     if (/^\/admin\/support-tickets\/[^/]+$/.test(path)) return reply(route, envelope({}));
     if (path.startsWith("/admin/reports/")) return reply(route, envelope({ filename: "export.csv", rows: 0, csv: "" }));
 
-    // Merchant review sub-resources
-    if (/^\/admin\/merchants\/[^/]+\/review$/.test(path)) {
+    // Platform messaging
+    if (path === "/admin/messages" && method === "GET") {
+      const kind = q.get("kind");
+      const list = kind && kind !== "all" ? MESSAGES.filter((message) => message.kind === kind) : MESSAGES;
+      return reply(route, envelope(list, list.length));
+    }
+    if (path === "/admin/messages" && method === "POST") {
+      const body = request.postDataJSON() || {};
+      return reply(route, envelope({ id: "msg-new", ...body, createdAt: "2026-10-20T12:00:00.000Z" }));
+    }
+    if (/^\/admin\/messages\/[^/]+\/replies$/.test(path)) {
+      const body = (request.postDataJSON() || {}) as { body?: string };
+      return reply(route, envelope({ id: "reply-new", author: "platform", body: body.body || "", createdAt: "2026-10-20T12:05:00.000Z" }));
+    }
+    if (/^\/admin\/messages\/[^/]+$/.test(path)) {
+      if (method === "DELETE") return reply(route, envelope({ ok: true }));
+      const id = path.split("/").pop();
+      const message = MESSAGES.find((m) => m.id === id) || MESSAGES[0];
       return reply(route, envelope({
-        tenant: { id: "m1", name: "Acme Store", verificationStatus: "verified", appStatus: "approved" },
+        ...message,
+        readCount: message._count?.reads ?? 0,
+        replies: [{ id: "r1", author: "merchant", body: "Thanks!", createdAt: "2026-10-19T10:00:00.000Z" }],
+      }));
+    }
+    if (path === "/admin/media/upload") {
+      return reply(route, envelope({ url: "https://cdn.test/media.png" }));
+    }
+
+    // Merchant review sub-resources
+    if (/^\/admin\/merchants\/[^/]+\/preview$/.test(path)) {
+      const id = path.split("/")[3];
+      const merchant = MERCHANTS.find((m) => m.id === id) || MERCHANTS[0];
+      return reply(route, envelope({
+        source: "review",
+        releaseVersion: 3,
+        app: { name: `${merchant.name} App` },
+        theme: { colors: { primary: "#F4A026", background: "#FCF8FA", textPrimary: "#0F0F1A" } },
+        pages: [
+          { id: "home", slug: "home", name: "Home", isHome: true, sections: [{ id: "hero-1", type: "hero", props: { title: "Welcome" } }] },
+          { id: "menu", slug: "menu", name: "Menu", sections: [{ id: "text-1", type: "text", props: { text: "Browse our picks" } }] },
+        ],
+      }));
+    }
+    if (/^\/admin\/merchants\/[^/]+\/review$/.test(path)) {
+      const id = path.split("/")[3];
+      const merchant = MERCHANTS.find((m) => m.id === id) || MERCHANTS[0];
+      return reply(route, envelope({
+        tenant: { id: merchant.id, name: merchant.name, verificationStatus: merchant.verificationStatus, appStatus: merchant.appStatus },
         quota: { used: 10, limit: 1000 },
         compliance: [],
         releases: [],
         draftPages: [],
-        app: { name: "Acme Store App" },
+        app: { name: `${merchant.name} App` },
       }));
     }
     if (/^\/admin\/merchants\/[^/]+$/.test(path)) {
@@ -201,9 +295,32 @@ export async function installApiMocks(page: Page) {
     if (path.startsWith("/admin/merchants/")) return reply(route, envelope({}));
 
     // Marketplace
-    if (path === "/marketplace/listings/all") return reply(route, envelope([], 0));
-    if (path === "/marketplace/stats") return reply(route, envelope({ totalListings: 0, pending: 0 }));
-    if (path.startsWith("/marketplace/listings/")) return reply(route, envelope({}));
+    if (path === "/marketplace/listings/all") {
+      if (method !== "GET") return reply(route, envelope({}));
+      const search = (q.get("search") || "").toLowerCase();
+      const status = q.get("status");
+      const category = q.get("category");
+      const sort = q.get("sort") || "createdAt";
+      const direction = q.get("order") === "asc" ? 1 : -1;
+      let list = LISTINGS.slice();
+      if (search) list = list.filter((l) => l.name.toLowerCase().includes(search) || l.merchantName.toLowerCase().includes(search));
+      if (status) list = list.filter((l) => l.status === status);
+      if (category) list = list.filter((l) => l.category === category);
+      list.sort((a, b) => (a[sort] > b[sort] ? 1 : a[sort] < b[sort] ? -1 : 0) * direction);
+      const total = list.length;
+      const limit = Number(q.get("limit") || 10) || 10;
+      const currentPage = Number(q.get("page") || 1) || 1;
+      const start = (currentPage - 1) * limit;
+      return reply(route, envelope(list.slice(start, start + limit), total));
+    }
+    if (path === "/marketplace/stats") return reply(route, envelope({ totalListings: LISTINGS.length, pending: LISTINGS.filter((l) => l.status === "pending_review").length }));
+    const listingMatch = path.match(/^\/marketplace\/listings\/([^/]+)$/);
+    if (listingMatch) {
+      const listing = LISTINGS.find((l) => l.slug === decodeURIComponent(listingMatch[1])) || LISTINGS[0];
+      if (method === "DELETE") return reply(route, envelope({}));
+      if (method === "PUT") return reply(route, envelope({ ...listing, ...(request.postDataJSON() || {}) }));
+      return reply(route, envelope(listing));
+    }
 
     // Health / infrastructure
     if (path === "/health") return reply(route, envelope({ status: "ok", checks: { database: "ok" }, uptime: 90061 }));

@@ -174,7 +174,13 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  width: 100%;
   padding: 14px 16px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: #fff;
+  border: 0;
   border-bottom: 1px solid var(--gray-50);
   cursor: pointer;
   transition: background 0.1s;
@@ -200,15 +206,19 @@
 
 .notifItemContent {
   flex: 1;
+  display: block;
+  min-width: 0;
 }
 
 .notifItemText {
+  display: block;
   font-size: 13px;
   color: var(--navy);
   line-height: 1.4;
 }
 
 .notifItemTime {
+  display: block;
   font-size: 11px;
   color: var(--gray-400);
   margin-top: 4px;

@@ -2,7 +2,12 @@
 .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--navy); margin: 0 0 4px; }
 .subtitle { color: var(--gray-500); font-size: 13px; margin: 0; }
-.period { color: var(--gray-600); font-size: 12px; font-weight: 600; padding: 8px 12px; border: 1px solid var(--gray-200); border-radius: 8px; background: #fff; }
+.controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.periodGroup { display: inline-flex; background: var(--gray-100); border-radius: 8px; padding: 3px; border: 1px solid var(--gray-200); }
+.periodBtn { border: none; background: transparent; color: var(--gray-600); font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.periodBtn:hover { color: var(--navy); }
+.periodBtnActive { background: #fff; color: var(--navy); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+.period { color: var(--gray-600); font-size: 12px; font-weight: 600; padding: 6px 10px; border: 1px solid var(--gray-200); border-radius: 8px; background: #fff; }
 .error { display: grid; gap: 4px; background: #FEF2F2; color: var(--red); padding: 12px 16px; border-radius: 8px; font-size: 13px; }
 .loading { color: var(--gray-500); font-size: 13px; padding: 24px; }
 .statsGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }

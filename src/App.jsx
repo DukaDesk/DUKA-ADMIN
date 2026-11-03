@@ -6,7 +6,6 @@ import Toast from "./components/UI/Toast";
 import AdminLogin from "./components/Auth/AdminLogin";
 import AdminSidebar from "./components/Layout/AdminSidebar";
 import AdminTopbar from "./components/Layout/AdminTopbar";
-import Breadcrumbs from "./components/UI/Breadcrumbs";
 import { canAccessPage, getDefaultPage } from "./services/permissions";
 import ErrorBoundary from "./components/UI/ErrorBoundary";
 import styles from "./App.module.css";

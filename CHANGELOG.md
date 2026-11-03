@@ -5,6 +5,11 @@ All notable changes to the Admin Portal follow `Keep a Changelog` and `VERSIONIN
 ## [Unreleased]
 
 ### Added
+- Interactive timeframe filtering (`7d`, `30d`, `90d`, `12m`) with dynamic grouping in Platform Analytics (`FR-004`, `UI-0003`)
+- B2B platform commerce metrics: Gross Merchandise Value (GMV) and Average Transaction Value in Analytics
+- Platform User Growth trend chart (`analytics.userGrowth`)
+- Representative API list/read latency & scalability benchmarking script (`scripts/measure-api-latency.mjs`, `npm run perf:latency`) per `NFR-01/02/03/11/13/14`
+- Canonical `API-0002` `/tenants` aliases in `businessDashboard.js` (`getTenantsApi`, `createTenantApi`, `getTenantApi`, `updateTenantApi`, `suspendTenantApi`)
 - Strict KB alignment (`knowledge-base/README.md`, `AGENT_CONTEXT.md`, `ARCHITECTURE_ALIGNMENT.md` updated to KB 0.3.x, SEC-0002/ROLE_CATALOG)
 - Tenant correlation via `getMerchantEnriched` (BFF tenant summary/analytics/manifest + quota) with teal vs amber coloring per `FEAT-0002`
 - Dashboard tenant second series in `RevenueChart`/`MerchantGrowthChart`

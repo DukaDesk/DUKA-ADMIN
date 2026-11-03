@@ -68,7 +68,7 @@ export default function Promotions({ showToast }) {
   const [trimFile, setTrimFile] = useState(null);
   const [posting, setPosting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
   const load = () => {
     setLoading(true);
