@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { Modal } from "../../components/UI/Modal";
 import ConfirmModal from "../../components/UI/ConfirmModal";
@@ -222,7 +222,7 @@ export default function Promotions({ showToast }) {
           </label>
 
           <div className={styles.fieldLabel}>
-            Media — up to {MEDIA_MAX_ITEMS}, images or videos (≤{VIDEO_MAX_SECONDS}s, 50MB)
+            Media
             <input type="file" accept="image/*,video/*" multiple onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
             {mediaUploading && <span className={styles.hint}>Uploading…</span>}
             {media.length > 0 && (
