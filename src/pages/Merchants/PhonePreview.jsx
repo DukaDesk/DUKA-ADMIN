@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import SharedAppPreview from "@dukadesk/merchant-app-preview-runtime";
 
 const DEFAULT_THEME = {
   primary: "#F4A026",
@@ -653,11 +654,104 @@ function PreviewSection({ section, tokens, onNavigate, activeScreenId, bare }) {
   );
 }
 
+function screensFromManifest(manifest) {
+  if (Array.isArray(manifest?.screens)) {
+    return Object.fromEntries(
+      manifest.screens
+        .filter((screen) => screen && typeof screen === "object")
+        .map((screen, index) => [screen.screenId || screen.slug || String(index), screen]),
+    );
+  }
+  return manifest?.screens && typeof manifest.screens === "object" ? manifest.screens : {};
+}
+
+function ManifestPhonePreview({ preview, manifest, screens }) {
+  const screenIds = Object.keys(screens);
+  const initialScreenId = screenIds.includes(manifest.navigation?.initialScreen)
+    ? manifest.navigation.initialScreen
+    : screenIds.includes(manifest.navigation?.root?.initialRoute)
+      ? manifest.navigation.root.initialRoute
+      : screenIds[0];
+  const [selectedScreenId, setSelectedScreenId] = useState(initialScreenId);
+  useEffect(() => setSelectedScreenId(initialScreenId), [initialScreenId]);
+  const appName = manifest.identity?.displayName || manifest.meta?.appName || manifest.name || preview?.tenant?.name || "App preview";
+  const sourceLabel = preview?.source === "review"
+    ? `Submitted design${preview?.releaseVersion ? ` v${preview.releaseVersion}` : ""} · awaiting approval`
+    : preview?.source === "published"
+      ? `Live app${preview?.releaseVersion ? ` v${preview.releaseVersion}` : ""}`
+      : "Draft preview · not yet live";
+  const tokens = previewTheme(manifest.theme);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, width: 300 }} aria-label="App screens">
+        <label style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}>Screen</span>
+          <select
+            value={screenIds.includes(selectedScreenId) ? selectedScreenId : initialScreenId}
+            onChange={(event) => setSelectedScreenId(event.target.value)}
+            style={{ width: "100%", height: 28, padding: "0 8px", borderRadius: 7, border: "1px solid var(--gray-200)", background: "#fff", color: "var(--navy)", fontSize: 12, fontWeight: 600 }}
+          >
+            {screenIds.map((id) => (
+              <option key={id} value={id}>{screens[id].title || screens[id].name || id}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div
+        role="img"
+        aria-label={`Phone preview of ${appName}`}
+        style={{
+          width: 300,
+          height: 620,
+          background: "#111827",
+          borderRadius: 40,
+          padding: 10,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{
+          width: "100%",
+          height: "100%",
+          background: tokens.background,
+          borderRadius: 30,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          fontFamily: tokens.fontFamily,
+        }}>
+          <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
+            <div style={{ width: 90, height: 18, background: "#111827", borderRadius: 9999 }} />
+          </div>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <SharedAppPreview
+              manifest={manifest}
+              screens={screens}
+              initialScreenId={initialScreenId}
+              controlledScreenId={selectedScreenId}
+              readOnly
+            />
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--gray-500)", textAlign: "center" }}>
+        {screenIds.length} screen{screenIds.length === 1 ? "" : "s"} · {sourceLabel}
+      </div>
+    </div>
+  );
+}
+
 export default function PhonePreview({ preview }) {
   const pages = preview?.pages || preview?.screens || preview?.draftPages || preview?.app?.pages || [];
   const homeIdx = Math.max(0, pages.findIndex((page) => page.isHome));
   const [screenIdx, setScreenIdx] = useState(homeIdx);
   useEffect(() => setScreenIdx(homeIdx), [preview, homeIdx]);
+  const manifest = preview?.manifest;
+  const manifestScreens = screensFromManifest(manifest);
+  if (manifest && Object.keys(manifestScreens).length > 0) {
+    return <ManifestPhonePreview preview={preview} manifest={manifest} screens={manifestScreens} />;
+  }
 
   const tokens = previewTheme(preview?.theme || preview?.app?.theme);
   const navigation = preview?.navigation;
