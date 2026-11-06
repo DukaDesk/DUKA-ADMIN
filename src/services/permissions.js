@@ -21,6 +21,7 @@ const ROLE_PERMISSIONS = {
     "subscription:read", "subscription:manage", "subscriptions:read", "subscriptions:manage",
     "settings:manage",
     "messaging:manage", "messaging:read",
+    "promotions:manage", "promotions:read",
     "merchants:email:read",
     "order:read", "order:update_status", "orders:read",
     "product:read", "product:update", "product:delete", "catalog:manage",
@@ -73,6 +74,7 @@ export const PAGE_PERMISSIONS = {
   subscriptions: "subscriptions:read", // subscription:read alias
   settings: "settings:manage",
   messaging: "messaging:manage",
+  promotions: "promotions:manage",
   "pending-admins": "users:manage",
   users: "users:read",
   analytics: "analytics:read",

@@ -6,7 +6,6 @@ import Toast from "./components/UI/Toast";
 import AdminLogin from "./components/Auth/AdminLogin";
 import AdminSidebar from "./components/Layout/AdminSidebar";
 import AdminTopbar from "./components/Layout/AdminTopbar";
-import Breadcrumbs from "./components/UI/Breadcrumbs";
 import { canAccessPage, getDefaultPage } from "./services/permissions";
 import ErrorBoundary from "./components/UI/ErrorBoundary";
 import styles from "./App.module.css";
@@ -24,11 +23,12 @@ const Infrastructure = lazy(() => import("./pages/Infrastructure/Infrastructure"
 const Register = lazy(() => import("./pages/Auth/Register"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
 const Messaging = lazy(() => import("./pages/Messaging/Messaging"));
+const Promotions = lazy(() => import("./pages/Promotions/Promotions"));
 const SupportTickets = lazy(() => import("./pages/Support/SupportTickets"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Forbidden = lazy(() => import("./pages/Forbidden/Forbidden"));
 
-const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register", "analytics", "marketing", "infrastructure", "support", "messaging"];
+const PAGE_ROUTES = ["dashboard", "merchants", "marketplace", "audit", "subscriptions", "settings", "pending-admins", "register", "analytics", "marketing", "infrastructure", "support", "messaging", "promotions"];
 
 function Loading() {
   return (
@@ -159,7 +159,6 @@ return (
       <AdminSidebar page={page} setPage={setPage} admin={admin} showToast={showToast} sidebarOpen={sidebarOpen} closeSidebar={closeSidebar} />
       <div className={styles.mainArea}>
         <AdminTopbar page={page} showToast={showToast} setPage={setPage} onMenuClick={() => setSidebarOpen(true)} />
-        <Breadcrumbs page={page} setPage={setPage} />
         <main className={styles.content}>
           <ErrorBoundary>
             <Suspense fallback={<Loading />}>
@@ -174,6 +173,7 @@ return (
               {page === "pending-admins" && <PendingAdmins showToast={showToast} />}
               {page === "settings" && <Settings showToast={showToast} />}
               {page === "messaging" && <Messaging showToast={showToast} />}
+    {page === "promotions" && <Promotions showToast={showToast} />}
               {page === "support" && <SupportTickets showToast={showToast} />}
               {page === "403" && <Forbidden setPage={setPage} requiredPermission={forbiddenMeta?.page} />}
               {page === "404" && <NotFound setPage={setPage} />}

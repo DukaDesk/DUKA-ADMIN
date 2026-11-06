@@ -2,19 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import { Modal } from "../../components/UI/Modal";
 import ConfirmModal from "../../components/UI/ConfirmModal";
+import VideoTrimModal from "../../components/UI/VideoTrimModal";
 import styles from "./Messaging.module.css";
 
 const AUDIENCE_OPTIONS = [
-  { value: "merchants", label: "Merchants (dashboard)" },
-  { value: "mobile", label: "Mobile users (app inbox)" },
-  { value: "both", label: "Both merchants + mobile users" },
+  { value: "merchants", label: "Merchants only (dashboard)" },
+  { value: "mobile", label: "Mobile users only (app inbox)" },
+  { value: "both", label: "Everyone (merchants + mobile users)" },
 ];
-
-/** Media is allowed only for audiences that include the mobile side. */
-export function mediaAllowed(kind, target) {
-  if (kind === "direct") return Boolean(target.recipientUserId || target.recipientActorId);
-  return target.audience !== "merchants";
-}
 
 export function describeTarget(item) {
   if (item?.kind === "direct") {
@@ -60,15 +55,27 @@ export default function Messaging({ showToast }) {
 
   const [kindChoice, setKindChoice] = useState("broadcast");
   const [audience, setAudience] = useState("mobile");
-  const [targetTenantId, setTargetTenantId] = useState("");
   const [recipientType, setRecipientType] = useState("mobileUser");
-  const [recipientUserId, setRecipientUserId] = useState("");
-  const [recipientActorId, setRecipientActorId] = useState("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [media, setMedia] = useState([]);
   const [mediaUploading, setMediaUploading] = useState(false);
+  // Oversized video waiting to be WhatsApp-trimmed into uploadable sections.
+  const [trimFile, setTrimFile] = useState(null);
   const [sending, setSending] = useState(false);
+
+  const [recipients, setRecipients] = useState({ tenants: [], users: [] });
+  const [recipientsLoading, setRecipientsLoading] = useState(false);
+  const [targetMerchantId, setTargetMerchantId] = useState("");
+  const [recipientUserId, setRecipientUserId] = useState("");
+
+  useEffect(() => {
+    setRecipientsLoading(true);
+    businessDashboardApi.getMessageRecipients()
+      .then((res) => setRecipients({ tenants: res?.tenants || res?.data?.tenants || [], users: res?.users || res?.data?.users || [] }))
+      .catch((err) => showToast?.(err.message || "Failed to load recipient lists", "error"))
+      .finally(() => setRecipientsLoading(false));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,10 +97,9 @@ export default function Messaging({ showToast }) {
   const resetComposer = () => {
     setKindChoice("broadcast");
     setAudience("mobile");
-    setTargetTenantId("");
+    setTargetMerchantId("");
     setRecipientType("mobileUser");
     setRecipientUserId("");
-    setRecipientActorId("");
     setTitle("");
     setBody("");
     setMedia([]);
@@ -103,8 +109,8 @@ export default function Messaging({ showToast }) {
   const canSend = () => {
     if (!body.trim() || body.length > 4000) return false;
     if (kindChoice === "broadcast") return true;
-    if (recipientType === "merchant") return Boolean(targetTenantId);
-    return Boolean(recipientUserId.trim() || recipientActorId.trim());
+    if (recipientType === "merchant") return Boolean(targetMerchantId);
+    return Boolean(recipientUserId);
   };
 
   const submitCompose = async () => {
@@ -116,11 +122,8 @@ export default function Messaging({ showToast }) {
     if (kindChoice === "broadcast") {
       payload.audience = audience;
     } else {
-      if (recipientType === "merchant") payload.tenantId = targetTenantId;
-      else {
-        if (recipientUserId.trim()) payload.recipientUserId = recipientUserId.trim();
-        if (recipientActorId.trim()) payload.recipientActorId = recipientActorId.trim();
-      }
+      if (recipientType === "merchant") payload.tenantId = targetMerchantId;
+      else payload.recipientUserId = recipientUserId;
     }
     if (media.length) payload.media = media.map(item => ({ url: item.url, type: item.type, posterUrl: item.posterUrl || undefined }));
     setSending(true);
@@ -142,6 +145,13 @@ export default function Messaging({ showToast }) {
     setMediaUploading(true);
     for (const file of files) {
       if (media.length >= 4) { showToast?.("Up to 4 media items per message", "error"); break; }
+      if (file.size > 50 * 1024 * 1024) {
+        // WhatsApp behaviour: too-large videos open the section trimmer
+        // instead of failing.
+        if (String(file.type).startsWith("video")) { setTrimFile(file); continue; }
+        showToast?.(`${file.name} exceeds the 50MB limit`, "error");
+        continue;
+      }
       try {
         const asset = await businessDashboardApi.uploadMessageMedia(file);
         const url = asset?.url || asset?.data?.url;
@@ -152,6 +162,22 @@ export default function Messaging({ showToast }) {
       }
     }
     setMediaUploading(false);
+  };
+
+  // Uploads one WhatsApp-trimmed section of an oversized video.
+  const handleTrimSection = async (blob) => {
+    try {
+      const base = trimFile.name.replace(/\.[^.]+$/, "");
+      const sectionFile = new File([blob], `${base}-section.webm`, { type: blob.type || "video/webm" });
+      const asset = await businessDashboardApi.uploadMessageMedia(sectionFile);
+      const url = asset?.url || asset?.data?.url;
+      if (!url) throw new Error("Upload returned no URL");
+      setMedia(prev => [...prev, { url, type: "video" }]);
+      return true;
+    } catch (err) {
+      showToast?.(`Section upload failed — ${err.message || "try again"}`, "error");
+      return false;
+    }
   };
 
   const openThread = async (message) => {
@@ -209,15 +235,10 @@ export default function Messaging({ showToast }) {
     }
   };
 
-  const mediaToggleOn = mediaAllowed(kindChoice, kindChoice === "broadcast" ? { audience } : { recipientUserId, recipientActorId });
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.headerRow}>
-        <div>
-          <h2 className={styles.pageTitle}>Platform Messaging</h2>
-          <p className={styles.pageDesc}>Broadcasts to merchants (dashboards) and mobile users (app inbox) — deliver direct messages when you need a one-to-one thread. Media announcements reach mobile users only.</p>
-        </div>
+        <div />
         <button className={styles.composeBtn} onClick={() => { resetComposer(); setComposeOpen(true); }}>New Message</button>
       </div>
 
@@ -268,7 +289,7 @@ export default function Messaging({ showToast }) {
               <select className={styles.select} value={audience} onChange={(e) => setAudience(e.target.value)}>
                 {AUDIENCE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              {audience === "merchants" && <span className={styles.hint}>Text only — media announcements are restricted to mobile users.</span>}
+              <span className={styles.hint}>Broadcast messages can reach everyone, all mobile users only, or all merchants only.</span>
             </label>
           ) : (
             <>
@@ -282,22 +303,25 @@ export default function Messaging({ showToast }) {
               </div>
               {recipientType === "merchant" ? (
                 <label className={styles.fieldLabel}>
-                  Merchant tenant id
-                  <input className={styles.input} placeholder="Tenant UUID — copy from Merchant Management" value={targetTenantId} onChange={(e) => setTargetTenantId(e.target.value)} />
-                  <span className={styles.hint}>Merchant DMs are text-only; media is for mobile recipients.</span>
+                  Merchant
+                  <select className={styles.select} value={targetMerchantId} onChange={(e) => setTargetMerchantId(e.target.value)}>
+                    <option value="">{recipientsLoading ? "Loading merchants…" : "Select a merchant"}</option>
+                    {recipients.tenants.map(tenant => (
+                      <option key={tenant.id} value={tenant.id}>{tenant.name}{tenant.slug ? ` · ${tenant.slug}` : ""}</option>
+                    ))}
+                  </select>
                 </label>
               ) : (
-                <>
-                  <label className={styles.fieldLabel}>
-                    Recipient user id (signed-in app users)
-                    <input className={styles.input} placeholder="User UUID — optional if actor id provided" value={recipientUserId} onChange={(e) => setRecipientUserId(e.target.value)} />
-                  </label>
-                  <label className={styles.fieldLabel}>
-                    Device actor id (anonymous device key)
-                    <input className={styles.input} placeholder="Actor key — optional if user id provided" value={recipientActorId} onChange={(e) => setRecipientActorId(e.target.value)} />
-                  </label>
-                  <span className={styles.hint}>Provide exactly one — user id wins for signed-in users.</span>
-                </>
+                <label className={styles.fieldLabel}>
+                  Recipient (from users list)
+                  <select className={styles.select} value={recipientUserId} onChange={(e) => setRecipientUserId(e.target.value)}>
+                    <option value="">{recipientsLoading ? "Loading users…" : "Select an app user"}</option>
+                    {recipients.users.map(user => (
+                      <option key={user.id} value={user.id}>{user.name || user.email}{user.email && user.name ? ` · ${user.email}` : ""}</option>
+                    ))}
+                  </select>
+                  <span className={styles.hint}>Users are keyed by their account id — messages land in their app inbox and thread.</span>
+                </label>
               )}
             </>
           )}
@@ -313,24 +337,18 @@ export default function Messaging({ showToast }) {
           </label>
 
           <div className={styles.fieldLabel}>
-            Media (up to 4) — {mediaToggleOn ? "enabled" : "mobile audience only"}
-            {mediaToggleOn ? (
-              <>
-                <input type="file" accept="image/*,video/*" multiple onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
-                {mediaUploading && <span className={styles.hint}>Uploading…</span>}
-                {media.length > 0 && (
-                  <div className={styles.mediaGrid}>
-                    {media.map((item, index) => (
-                      <div key={`${item.url}-${index}`} className={styles.mediaThumb}>
-                        {item.type === "image" ? <img src={item.url} alt="" /> : <span>Video</span>}
-                        <button title="Remove" onClick={() => setMedia(prev => prev.filter(m => m.url !== item.url))}>×</button>
-                      </div>
-                    ))}
+            Media (up to 4) — images or video
+            <input type="file" accept="image/*,video/*" multiple onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
+            {mediaUploading && <span className={styles.hint}>Uploading…</span>}
+            {media.length > 0 && (
+              <div className={styles.mediaGrid}>
+                {media.map((item, index) => (
+                  <div key={`${item.url}-${index}`} className={styles.mediaThumb}>
+                    {item.type === "image" ? <img src={item.url} alt="" /> : <span>Video</span>}
+                    <button title="Remove" onClick={() => setMedia(prev => prev.filter(m => m.url !== item.url))}>×</button>
                   </div>
-                )}
-              </>
-            ) : (
-              <span className={styles.hint}>Attachments unlock for mobile users (mobile / both audiences, or direct to a mobile user).</span>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -387,6 +405,13 @@ export default function Messaging({ showToast }) {
         busy={false}
         onConfirm={deleteMessage}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      <VideoTrimModal
+        file={trimFile}
+        onClose={() => setTrimFile(null)}
+        onSection={handleTrimSection}
+        showToast={showToast}
       />
     </div>
   );

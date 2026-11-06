@@ -241,7 +241,6 @@ export default function EnhancedRemoteTablePage({
       <header className={styles.header}>
         <div className={styles.titleBlock}>
           <div className={styles.titleRow}>
-            <h2 className={styles.title}>{title}</h2>
             {titleTooltip && (
               <button
                 type="button"
@@ -253,7 +252,6 @@ export default function EnhancedRemoteTablePage({
               </button>
             )}
           </div>
-          {description && <p className={styles.description}>{description}</p>}
         </div>
         <div className={styles.toolbar}>
           {refreshIntervalMs > 0 && (
@@ -517,7 +515,8 @@ export default function EnhancedRemoteTablePage({
                                     </button>
                                   );
                                 })}
-                              </div>
+          {titleTooltip && !description && null}
+        </div>
                             )}
                           </div>
                         );

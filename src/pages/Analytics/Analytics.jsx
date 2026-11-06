@@ -108,10 +108,7 @@ export default function Analytics() {
   return (
     <section className={styles.wrapper}>
       <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>Platform Analytics</h2>
-          <p className={styles.subtitle}>Paid transactions and platform activity over the last {selectedDays} days.</p>
-        </div>
+        <div />
         <div className={styles.controls}>
           <div className={styles.periodGroup} role="group" aria-label="Select analytics timeframe">
             {PERIOD_OPTIONS.map((opt) => (

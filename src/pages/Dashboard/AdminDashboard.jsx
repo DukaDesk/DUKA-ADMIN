@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, Shield, BarChart3, Puzzle, Settings } from "lucide-react";
+import { Store, BadgeCheck, Hourglass, Wallet, ClipboardList, CircleDot, BarChart3, Puzzle, Settings } from "lucide-react";
 import { businessDashboardApi } from "../../services/businessDashboard";
 import styles from "./AdminDashboard.module.css";
 
@@ -222,9 +222,7 @@ export default function AdminDashboard({ setPage }) {
     return (
       <section className={styles.dashboard}>
         <header className={styles.header}>
-          <div className={styles.headerLeft}>
-            <h2 className={styles.title}>Platform Overview</h2>
-          </div>
+          <div className={styles.headerLeft} />
         </header>
         <div className={styles.metricsGrid} role="status" aria-live="polite">
         {METRIC_CARDS.map((metric) => <SkeletonCard key={metric.key} />)}
@@ -264,17 +262,7 @@ export default function AdminDashboard({ setPage }) {
   return (
     <section className={styles.dashboard}>
       <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.pageTitleRow}>
-            <span className={styles.shieldIcon} aria-hidden="true">
-              <Shield size={24} />
-            </span>
-            <div>
-              <h2 className={styles.title}>Platform Overview</h2>
-              <p className={styles.subtitle}>Complete visibility and control over DukaDesk</p>
-            </div>
-          </div>
-        </div>
+        <div className={styles.headerLeft} />
         <div className={styles.headerRight}>
           <span className={styles.refreshTime}>Last updated: {lastUpdated ? lastUpdated.toLocaleTimeString() : "—"}</span>
         </div>
